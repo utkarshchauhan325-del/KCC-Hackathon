@@ -1,0 +1,1001 @@
+camera_id,drain_id,area_reference,camera_lat,camera_lon,drain_lat,drain_lon,risk_status,data_type
+CAM-0001,D-0001,Shivajinagar,18.529724,73.845668,18.529628,73.845766,medium,synthetic_map_aligned
+CAM-0002,D-0002,Deccan Gymkhana,18.512035,73.840633,18.511802,73.840674,ok,synthetic_map_aligned
+CAM-0003,D-0003,Navi Peth,18.512329,73.84513,18.51248,73.845113,ok,synthetic_map_aligned
+CAM-0004,D-0004,Swargate,18.505479,73.858948,18.505753,73.859199,ok,synthetic_map_aligned
+CAM-0005,D-0005,Kasba Peth,18.522662,73.863881,18.52247,73.864002,high,synthetic_map_aligned
+CAM-0006,D-0006,Bhawani Peth,18.513121,73.87026,18.513448,73.870284,critical,synthetic_map_aligned
+CAM-0007,D-0007,Guruwar Peth,18.510799,73.857017,18.510629,73.85677,ok,synthetic_map_aligned
+CAM-0008,D-0008,Nana Peth,18.514416,73.87317,18.514412,73.873425,medium,synthetic_map_aligned
+CAM-0009,D-0009,Kothrud,18.497459,73.820615,18.497272,73.820613,low,synthetic_map_aligned
+CAM-0010,D-0010,Karve Nagar,18.486255,73.819554,18.485976,73.819687,medium,synthetic_map_aligned
+CAM-0011,D-0011,Aundh,18.557783,73.80516,18.557904,73.805143,medium,synthetic_map_aligned
+CAM-0012,D-0012,Baner,18.557277,73.787189,18.557071,73.787195,ok,synthetic_map_aligned
+CAM-0013,D-0013,Sus,18.54391,73.782714,18.543788,73.783022,ok,synthetic_map_aligned
+CAM-0014,D-0014,Warje,18.495209,73.820109,18.495138,73.820069,high,synthetic_map_aligned
+CAM-0015,D-0015,Dhankawadi,18.45774,73.854362,18.457784,73.854301,low,synthetic_map_aligned
+CAM-0016,D-0016,Katraj,18.454419,73.858487,18.454375,73.85855,medium,synthetic_map_aligned
+CAM-0017,D-0017,Bibwewadi,18.488517,73.856824,18.488599,73.856567,ok,synthetic_map_aligned
+CAM-0018,D-0018,Dhayari,18.438691,73.813042,18.438577,73.813139,critical,synthetic_map_aligned
+CAM-0019,D-0019,Nanded,18.460445,73.800688,18.460712,73.800998,high,synthetic_map_aligned
+CAM-0020,D-0020,Shivane,18.462132,73.785852,18.461808,73.78602,high,synthetic_map_aligned
+CAM-0021,D-0021,Hadapsar,18.500524,73.930389,18.500553,73.930194,critical,synthetic_map_aligned
+CAM-0022,D-0022,Mundhwa,18.522761,73.953316,18.522724,73.953597,medium,synthetic_map_aligned
+CAM-0023,D-0023,Kharadi,18.552988,73.934759,18.553246,73.934791,low,synthetic_map_aligned
+CAM-0024,D-0024,Viman Nagar,18.56857,73.918527,18.568651,73.918892,high,synthetic_map_aligned
+CAM-0025,D-0025,Dhanori,18.582537,73.884682,18.582681,73.884849,medium,synthetic_map_aligned
+CAM-0026,D-0026,Vishrantwadi,18.570438,73.878925,18.57031,73.87914,ok,synthetic_map_aligned
+CAM-0027,D-0027,Dighi,18.568251,73.908146,18.568077,73.908134,medium,synthetic_map_aligned
+CAM-0028,D-0028,Lohgaon,18.614164,73.919197,18.613959,73.919303,ok,synthetic_map_aligned
+CAM-0029,D-0029,Undri,18.43433,73.913651,18.434423,73.913501,medium,synthetic_map_aligned
+CAM-0030,D-0030,Ambegaon Budruk,18.461343,73.83981,18.461398,73.839552,medium,synthetic_map_aligned
+CAM-0031,D-0031,Ambegaon Khurd,18.429438,73.852338,18.42932,73.85257,high,synthetic_map_aligned
+CAM-0032,D-0032,Shivajinagar,18.529491,73.844167,18.529197,73.844158,low,synthetic_map_aligned
+CAM-0033,D-0033,Deccan Gymkhana,18.512402,73.840927,18.512168,73.841075,medium,synthetic_map_aligned
+CAM-0034,D-0034,Navi Peth,18.509648,73.843439,18.509769,73.843068,high,synthetic_map_aligned
+CAM-0035,D-0035,Swargate,18.501956,73.856015,18.502003,73.855615,medium,synthetic_map_aligned
+CAM-0036,D-0036,Kasba Peth,18.527759,73.859646,18.527887,73.859532,high,synthetic_map_aligned
+CAM-0037,D-0037,Bhawani Peth,18.507773,73.868964,18.507694,73.868835,medium,synthetic_map_aligned
+CAM-0038,D-0038,Guruwar Peth,18.511108,73.862508,18.511051,73.862684,medium,synthetic_map_aligned
+CAM-0039,D-0039,Nana Peth,18.516211,73.866088,18.516232,73.866011,high,synthetic_map_aligned
+CAM-0040,D-0040,Kothrud,18.498244,73.822614,18.498086,73.82298,low,synthetic_map_aligned
+CAM-0041,D-0041,Karve Nagar,18.489588,73.819715,18.489621,73.819544,low,synthetic_map_aligned
+CAM-0042,D-0042,Aundh,18.555366,73.801543,18.555309,73.801387,medium,synthetic_map_aligned
+CAM-0043,D-0043,Baner,18.556584,73.790779,18.55655,73.790895,medium,synthetic_map_aligned
+CAM-0044,D-0044,Sus,18.546218,73.775046,18.546253,73.774791,ok,synthetic_map_aligned
+CAM-0045,D-0045,Warje,18.494211,73.825694,18.493997,73.825884,ok,synthetic_map_aligned
+CAM-0046,D-0046,Dhankawadi,18.457842,73.856098,18.457933,73.856018,ok,synthetic_map_aligned
+CAM-0047,D-0047,Katraj,18.456889,73.859775,18.456935,73.859973,medium,synthetic_map_aligned
+CAM-0048,D-0048,Bibwewadi,18.488433,73.857516,18.488253,73.85737,medium,synthetic_map_aligned
+CAM-0049,D-0049,Dhayari,18.442194,73.808624,18.442352,73.808357,high,synthetic_map_aligned
+CAM-0050,D-0050,Nanded,18.45705,73.797093,18.456981,73.796847,medium,synthetic_map_aligned
+CAM-0051,D-0051,Shivane,18.466054,73.78352,18.466399,73.783452,medium,synthetic_map_aligned
+CAM-0052,D-0052,Hadapsar,18.501501,73.936264,18.50166,73.936499,medium,synthetic_map_aligned
+CAM-0053,D-0053,Mundhwa,18.519868,73.95378,18.519541,73.9539,ok,synthetic_map_aligned
+CAM-0054,D-0054,Kharadi,18.549196,73.937082,18.54899,73.937293,medium,synthetic_map_aligned
+CAM-0055,D-0055,Viman Nagar,18.570269,73.910982,18.570446,73.91077,low,synthetic_map_aligned
+CAM-0056,D-0056,Dhanori,18.579434,73.887846,18.579512,73.888123,medium,synthetic_map_aligned
+CAM-0057,D-0057,Vishrantwadi,18.568091,73.876638,18.567924,73.876567,ok,synthetic_map_aligned
+CAM-0058,D-0058,Dighi,18.574965,73.910716,18.575233,73.91067,ok,synthetic_map_aligned
+CAM-0059,D-0059,Lohgaon,18.620481,73.920999,18.620774,73.921265,medium,synthetic_map_aligned
+CAM-0060,D-0060,Undri,18.434704,73.914471,18.434928,73.914462,critical,synthetic_map_aligned
+CAM-0061,D-0061,Ambegaon Budruk,18.458753,73.840847,18.45857,73.840706,critical,synthetic_map_aligned
+CAM-0062,D-0062,Ambegaon Khurd,18.430186,73.847575,18.43005,73.847355,critical,synthetic_map_aligned
+CAM-0063,D-0063,Shivajinagar,18.533996,73.845967,18.534353,73.846151,high,synthetic_map_aligned
+CAM-0064,D-0064,Deccan Gymkhana,18.515129,73.840515,18.51485,73.840512,ok,synthetic_map_aligned
+CAM-0065,D-0065,Navi Peth,18.512511,73.844225,18.512836,73.844234,medium,synthetic_map_aligned
+CAM-0066,D-0066,Swargate,18.501788,73.853871,18.501835,73.853603,ok,synthetic_map_aligned
+CAM-0067,D-0067,Kasba Peth,18.525467,73.860597,18.525606,73.860837,medium,synthetic_map_aligned
+CAM-0068,D-0068,Bhawani Peth,18.509423,73.865294,18.509512,73.865029,high,synthetic_map_aligned
+CAM-0069,D-0069,Guruwar Peth,18.512598,73.85322,18.512733,73.852893,high,synthetic_map_aligned
+CAM-0070,D-0070,Nana Peth,18.515254,73.868264,18.515317,73.868121,medium,synthetic_map_aligned
+CAM-0071,D-0071,Kothrud,18.494691,73.818474,18.494525,73.818375,high,synthetic_map_aligned
+CAM-0072,D-0072,Karve Nagar,18.490132,73.818926,18.490171,73.818781,ok,synthetic_map_aligned
+CAM-0073,D-0073,Aundh,18.554608,73.804758,18.554496,73.804753,medium,synthetic_map_aligned
+CAM-0074,D-0074,Baner,18.55698,73.784587,18.556807,73.784448,ok,synthetic_map_aligned
+CAM-0075,D-0075,Sus,18.544911,73.781851,18.544764,73.78223,ok,synthetic_map_aligned
+CAM-0076,D-0076,Warje,18.497965,73.827481,18.497897,73.827712,ok,synthetic_map_aligned
+CAM-0077,D-0077,Dhankawadi,18.457506,73.859452,18.457538,73.859691,medium,synthetic_map_aligned
+CAM-0078,D-0078,Katraj,18.456943,73.853286,18.456987,73.85307,critical,synthetic_map_aligned
+CAM-0079,D-0079,Bibwewadi,18.489609,73.861043,18.489862,73.861283,high,synthetic_map_aligned
+CAM-0080,D-0080,Dhayari,18.440832,73.811597,18.440984,73.811495,medium,synthetic_map_aligned
+CAM-0081,D-0081,Nanded,18.458173,73.798603,18.457895,73.798432,medium,synthetic_map_aligned
+CAM-0082,D-0082,Shivane,18.46238,73.785762,18.46211,73.785939,high,synthetic_map_aligned
+CAM-0083,D-0083,Hadapsar,18.501248,73.933983,18.501578,73.933908,ok,synthetic_map_aligned
+CAM-0084,D-0084,Mundhwa,18.527893,73.954415,18.527958,73.954523,critical,synthetic_map_aligned
+CAM-0085,D-0085,Kharadi,18.552162,73.935615,18.552332,73.935864,low,synthetic_map_aligned
+CAM-0086,D-0086,Viman Nagar,18.568163,73.913316,18.568219,73.913262,ok,synthetic_map_aligned
+CAM-0087,D-0087,Dhanori,18.579034,73.88629,18.57895,73.886672,ok,synthetic_map_aligned
+CAM-0088,D-0088,Vishrantwadi,18.576226,73.877184,18.576517,73.877228,medium,synthetic_map_aligned
+CAM-0089,D-0089,Dighi,18.573461,73.908203,18.573569,73.907912,ok,synthetic_map_aligned
+CAM-0090,D-0090,Lohgaon,18.618085,73.922134,18.618183,73.922495,high,synthetic_map_aligned
+CAM-0091,D-0091,Undri,18.431949,73.914626,18.431906,73.914742,medium,synthetic_map_aligned
+CAM-0092,D-0092,Ambegaon Budruk,18.463037,73.840258,18.463223,73.840235,high,synthetic_map_aligned
+CAM-0093,D-0093,Ambegaon Khurd,18.429262,73.851752,18.428986,73.851839,medium,synthetic_map_aligned
+CAM-0094,D-0094,Shivajinagar,18.530736,73.84493,18.530584,73.845022,medium,synthetic_map_aligned
+CAM-0095,D-0095,Deccan Gymkhana,18.517187,73.83984,18.5173,73.839658,low,synthetic_map_aligned
+CAM-0096,D-0096,Navi Peth,18.512693,73.846689,18.512775,73.846895,ok,synthetic_map_aligned
+CAM-0097,D-0097,Swargate,18.502176,73.860095,18.502229,73.860231,low,synthetic_map_aligned
+CAM-0098,D-0098,Kasba Peth,18.52816,73.860914,18.528298,73.860981,ok,synthetic_map_aligned
+CAM-0099,D-0099,Bhawani Peth,18.51156,73.866145,18.511647,73.865961,medium,synthetic_map_aligned
+CAM-0100,D-0100,Guruwar Peth,18.514936,73.855254,18.515107,73.855121,ok,synthetic_map_aligned
+CAM-0101,D-0101,Nana Peth,18.513624,73.871621,18.513472,73.871989,medium,synthetic_map_aligned
+CAM-0102,D-0102,Kothrud,18.502686,73.819446,18.503078,73.819515,medium,synthetic_map_aligned
+CAM-0103,D-0103,Karve Nagar,18.490783,73.821172,18.490827,73.821233,ok,synthetic_map_aligned
+CAM-0104,D-0104,Aundh,18.55659,73.804335,18.556814,73.804302,ok,synthetic_map_aligned
+CAM-0105,D-0105,Baner,18.55497,73.788835,18.554742,73.788936,low,synthetic_map_aligned
+CAM-0106,D-0106,Sus,18.548888,73.781977,18.549059,73.782128,ok,synthetic_map_aligned
+CAM-0107,D-0107,Warje,18.50222,73.824187,18.502495,73.824104,low,synthetic_map_aligned
+CAM-0108,D-0108,Dhankawadi,18.455701,73.859419,18.455611,73.859695,low,synthetic_map_aligned
+CAM-0109,D-0109,Katraj,18.456499,73.858336,18.45688,73.858423,medium,synthetic_map_aligned
+CAM-0110,D-0110,Bibwewadi,18.484973,73.859389,18.484781,73.859385,critical,synthetic_map_aligned
+CAM-0111,D-0111,Dhayari,18.440783,73.812837,18.441124,73.813008,high,synthetic_map_aligned
+CAM-0112,D-0112,Nanded,18.461166,73.794561,18.461239,73.794416,low,synthetic_map_aligned
+CAM-0113,D-0113,Shivane,18.463465,73.780826,18.463288,73.780638,medium,synthetic_map_aligned
+CAM-0114,D-0114,Hadapsar,18.501142,73.932598,18.501349,73.932428,medium,synthetic_map_aligned
+CAM-0115,D-0115,Mundhwa,18.526244,73.950253,18.526318,73.950185,high,synthetic_map_aligned
+CAM-0116,D-0116,Kharadi,18.554033,73.934271,18.55421,73.934243,ok,synthetic_map_aligned
+CAM-0117,D-0117,Viman Nagar,18.566189,73.914552,18.565977,73.914509,ok,synthetic_map_aligned
+CAM-0118,D-0118,Dhanori,18.580258,73.879687,18.580227,73.879561,high,synthetic_map_aligned
+CAM-0119,D-0119,Vishrantwadi,18.576499,73.878772,18.576838,73.878799,low,synthetic_map_aligned
+CAM-0120,D-0120,Dighi,18.571393,73.911271,18.571086,73.911307,ok,synthetic_map_aligned
+CAM-0121,D-0121,Lohgaon,18.618827,73.92255,18.618745,73.922818,critical,synthetic_map_aligned
+CAM-0122,D-0122,Undri,18.436188,73.915153,18.436283,73.915166,high,synthetic_map_aligned
+CAM-0123,D-0123,Ambegaon Budruk,18.460532,73.840378,18.460484,73.840037,high,synthetic_map_aligned
+CAM-0124,D-0124,Ambegaon Khurd,18.428374,73.851743,18.42812,73.851613,ok,synthetic_map_aligned
+CAM-0125,D-0125,Shivajinagar,18.532818,73.84602,18.532859,73.846325,medium,synthetic_map_aligned
+CAM-0126,D-0126,Deccan Gymkhana,18.514449,73.840906,18.514078,73.840952,high,synthetic_map_aligned
+CAM-0127,D-0127,Navi Peth,18.511868,73.843295,18.511994,73.843202,ok,synthetic_map_aligned
+CAM-0128,D-0128,Swargate,18.504041,73.858028,18.504423,73.857987,ok,synthetic_map_aligned
+CAM-0129,D-0129,Kasba Peth,18.52441,73.85999,18.524263,73.860011,medium,synthetic_map_aligned
+CAM-0130,D-0130,Bhawani Peth,18.509079,73.87462,18.509,73.87481,high,synthetic_map_aligned
+CAM-0131,D-0131,Guruwar Peth,18.513257,73.856685,18.513519,73.856803,medium,synthetic_map_aligned
+CAM-0132,D-0132,Nana Peth,18.515516,73.865591,18.515621,73.865246,high,synthetic_map_aligned
+CAM-0133,D-0133,Kothrud,18.496008,73.819903,18.49591,73.819904,low,synthetic_map_aligned
+CAM-0134,D-0134,Karve Nagar,18.491005,73.816999,18.491007,73.816656,medium,synthetic_map_aligned
+CAM-0135,D-0135,Aundh,18.556436,73.809027,18.556489,73.809218,medium,synthetic_map_aligned
+CAM-0136,D-0136,Baner,18.560796,73.789856,18.5608,73.790052,ok,synthetic_map_aligned
+CAM-0137,D-0137,Sus,18.543574,73.780373,18.54345,73.780459,medium,synthetic_map_aligned
+CAM-0138,D-0138,Warje,18.496889,73.824487,18.496766,73.824493,ok,synthetic_map_aligned
+CAM-0139,D-0139,Dhankawadi,18.458876,73.857607,18.459052,73.857694,low,synthetic_map_aligned
+CAM-0140,D-0140,Katraj,18.455264,73.857783,18.455293,73.857883,ok,synthetic_map_aligned
+CAM-0141,D-0141,Bibwewadi,18.486208,73.855039,18.485858,73.85487,medium,synthetic_map_aligned
+CAM-0142,D-0142,Dhayari,18.438189,73.813659,18.438118,73.813834,medium,synthetic_map_aligned
+CAM-0143,D-0143,Nanded,18.461683,73.79809,18.461998,73.798011,medium,synthetic_map_aligned
+CAM-0144,D-0144,Shivane,18.467721,73.782621,18.467899,73.78245,ok,synthetic_map_aligned
+CAM-0145,D-0145,Hadapsar,18.499937,73.932855,18.499829,73.932684,ok,synthetic_map_aligned
+CAM-0146,D-0146,Mundhwa,18.524736,73.95273,18.525013,73.952994,critical,synthetic_map_aligned
+CAM-0147,D-0147,Kharadi,18.547966,73.937885,18.547833,73.937987,ok,synthetic_map_aligned
+CAM-0148,D-0148,Viman Nagar,18.571717,73.912219,18.571861,73.911879,medium,synthetic_map_aligned
+CAM-0149,D-0149,Dhanori,18.583265,73.882971,18.583427,73.883089,ok,synthetic_map_aligned
+CAM-0150,D-0150,Vishrantwadi,18.573198,73.87858,18.573334,73.878687,ok,synthetic_map_aligned
+CAM-0151,D-0151,Dighi,18.572949,73.911533,18.572941,73.911938,low,synthetic_map_aligned
+CAM-0152,D-0152,Lohgaon,18.620151,73.916018,18.620208,73.915749,ok,synthetic_map_aligned
+CAM-0153,D-0153,Undri,18.429186,73.915355,18.42886,73.91534,critical,synthetic_map_aligned
+CAM-0154,D-0154,Ambegaon Budruk,18.461178,73.839888,18.461246,73.839825,critical,synthetic_map_aligned
+CAM-0155,D-0155,Ambegaon Khurd,18.428206,73.853542,18.427927,73.853786,medium,synthetic_map_aligned
+CAM-0156,D-0156,Shivajinagar,18.528913,73.843091,18.52882,73.843003,ok,synthetic_map_aligned
+CAM-0157,D-0157,Deccan Gymkhana,18.516607,73.840933,18.516766,73.840892,ok,synthetic_map_aligned
+CAM-0158,D-0158,Navi Peth,18.507872,73.84511,18.507737,73.845237,medium,synthetic_map_aligned
+CAM-0159,D-0159,Swargate,18.499793,73.859202,18.499692,73.859242,high,synthetic_map_aligned
+CAM-0160,D-0160,Kasba Peth,18.526001,73.862523,18.526017,73.862801,medium,synthetic_map_aligned
+CAM-0161,D-0161,Bhawani Peth,18.510977,73.869395,18.51121,73.869241,critical,synthetic_map_aligned
+CAM-0162,D-0162,Guruwar Peth,18.51102,73.861134,18.511034,73.861241,high,synthetic_map_aligned
+CAM-0163,D-0163,Nana Peth,18.514037,73.870989,18.514079,73.871111,medium,synthetic_map_aligned
+CAM-0164,D-0164,Kothrud,18.499742,73.825553,18.499732,73.825772,ok,synthetic_map_aligned
+CAM-0165,D-0165,Karve Nagar,18.490573,73.81845,18.49081,73.818144,ok,synthetic_map_aligned
+CAM-0166,D-0166,Aundh,18.558533,73.806983,18.55891,73.807129,ok,synthetic_map_aligned
+CAM-0167,D-0167,Baner,18.561325,73.783207,18.561461,73.782844,low,synthetic_map_aligned
+CAM-0168,D-0168,Sus,18.54335,73.776401,18.543339,73.776323,ok,synthetic_map_aligned
+CAM-0169,D-0169,Warje,18.49604,73.820011,18.49589,73.819745,medium,synthetic_map_aligned
+CAM-0170,D-0170,Dhankawadi,18.453312,73.854627,18.453211,73.854491,high,synthetic_map_aligned
+CAM-0171,D-0171,Katraj,18.457506,73.856519,18.457567,73.856479,high,synthetic_map_aligned
+CAM-0172,D-0172,Bibwewadi,18.48663,73.853861,18.486529,73.853547,medium,synthetic_map_aligned
+CAM-0173,D-0173,Dhayari,18.441938,73.808463,18.442138,73.808191,high,synthetic_map_aligned
+CAM-0174,D-0174,Nanded,18.458271,73.800607,18.45814,73.800901,ok,synthetic_map_aligned
+CAM-0175,D-0175,Shivane,18.463036,73.785251,18.462738,73.785351,medium,synthetic_map_aligned
+CAM-0176,D-0176,Hadapsar,18.500728,73.935312,18.500877,73.935488,ok,synthetic_map_aligned
+CAM-0177,D-0177,Mundhwa,18.525395,73.956515,18.525464,73.956707,medium,synthetic_map_aligned
+CAM-0178,D-0178,Kharadi,18.549956,73.931286,18.549857,73.931188,medium,synthetic_map_aligned
+CAM-0179,D-0179,Viman Nagar,18.565269,73.914436,18.565063,73.91446,medium,synthetic_map_aligned
+CAM-0180,D-0180,Dhanori,18.580389,73.878731,18.580367,73.878603,low,synthetic_map_aligned
+CAM-0181,D-0181,Vishrantwadi,18.571672,73.880274,18.571503,73.880534,medium,synthetic_map_aligned
+CAM-0182,D-0182,Dighi,18.56948,73.908545,18.569372,73.908459,low,synthetic_map_aligned
+CAM-0183,D-0183,Lohgaon,18.615952,73.916245,18.615754,73.916119,medium,synthetic_map_aligned
+CAM-0184,D-0184,Undri,18.431907,73.915357,18.431683,73.915441,critical,synthetic_map_aligned
+CAM-0185,D-0185,Ambegaon Budruk,18.458174,73.83796,18.458117,73.837902,high,synthetic_map_aligned
+CAM-0186,D-0186,Ambegaon Khurd,18.430333,73.850367,18.43039,73.850195,medium,synthetic_map_aligned
+CAM-0187,D-0187,Shivajinagar,18.528698,73.845025,18.528485,73.845049,low,synthetic_map_aligned
+CAM-0188,D-0188,Deccan Gymkhana,18.516004,73.839321,18.515961,73.839259,low,synthetic_map_aligned
+CAM-0189,D-0189,Navi Peth,18.512377,73.840471,18.512518,73.840287,ok,synthetic_map_aligned
+CAM-0190,D-0190,Swargate,18.49962,73.861485,18.499584,73.861869,medium,synthetic_map_aligned
+CAM-0191,D-0191,Kasba Peth,18.525582,73.859311,18.52571,73.85918,medium,synthetic_map_aligned
+CAM-0192,D-0192,Bhawani Peth,18.509751,73.871112,18.510044,73.87124,critical,synthetic_map_aligned
+CAM-0193,D-0193,Guruwar Peth,18.50855,73.856904,18.50834,73.85683,medium,synthetic_map_aligned
+CAM-0194,D-0194,Nana Peth,18.514792,73.869939,18.51497,73.86994,high,synthetic_map_aligned
+CAM-0195,D-0195,Kothrud,18.496612,73.82437,18.496452,73.824669,medium,synthetic_map_aligned
+CAM-0196,D-0196,Karve Nagar,18.486435,73.818897,18.486036,73.8189,low,synthetic_map_aligned
+CAM-0197,D-0197,Aundh,18.558,73.807197,18.558227,73.807473,ok,synthetic_map_aligned
+CAM-0198,D-0198,Baner,18.561448,73.7896,18.561607,73.789794,medium,synthetic_map_aligned
+CAM-0199,D-0199,Sus,18.545157,73.775507,18.545119,73.775343,medium,synthetic_map_aligned
+CAM-0200,D-0200,Warje,18.496939,73.825072,18.496871,73.825126,ok,synthetic_map_aligned
+CAM-0201,D-0201,Dhankawadi,18.456334,73.853054,18.456336,73.852915,low,synthetic_map_aligned
+CAM-0202,D-0202,Katraj,18.452944,73.858832,18.45267,73.859014,critical,synthetic_map_aligned
+CAM-0203,D-0203,Bibwewadi,18.491092,73.862182,18.491122,73.862254,critical,synthetic_map_aligned
+CAM-0204,D-0204,Dhayari,18.435538,73.813498,18.435304,73.813657,high,synthetic_map_aligned
+CAM-0205,D-0205,Nanded,18.461385,73.79821,18.461493,73.798206,ok,synthetic_map_aligned
+CAM-0206,D-0206,Shivane,18.464142,73.784799,18.464212,73.784918,medium,synthetic_map_aligned
+CAM-0207,D-0207,Hadapsar,18.49773,73.935936,18.497567,73.936083,high,synthetic_map_aligned
+CAM-0208,D-0208,Mundhwa,18.525421,73.950734,18.525527,73.950625,medium,synthetic_map_aligned
+CAM-0209,D-0209,Kharadi,18.552457,73.937553,18.552423,73.937765,ok,synthetic_map_aligned
+CAM-0210,D-0210,Viman Nagar,18.567755,73.912987,18.567819,73.912582,ok,synthetic_map_aligned
+CAM-0211,D-0211,Dhanori,18.580168,73.883801,18.580112,73.884202,low,synthetic_map_aligned
+CAM-0212,D-0212,Vishrantwadi,18.576157,73.877856,18.576535,73.877951,ok,synthetic_map_aligned
+CAM-0213,D-0213,Dighi,18.573353,73.908703,18.573352,73.90859,medium,synthetic_map_aligned
+CAM-0214,D-0214,Lohgaon,18.622224,73.917497,18.622598,73.917643,high,synthetic_map_aligned
+CAM-0215,D-0215,Undri,18.433979,73.913358,18.433885,73.91301,critical,synthetic_map_aligned
+CAM-0216,D-0216,Ambegaon Budruk,18.461933,73.840825,18.462089,73.840763,medium,synthetic_map_aligned
+CAM-0217,D-0217,Ambegaon Khurd,18.428939,73.854506,18.428936,73.854664,critical,synthetic_map_aligned
+CAM-0218,D-0218,Shivajinagar,18.531936,73.847511,18.53203,73.84792,ok,synthetic_map_aligned
+CAM-0219,D-0219,Deccan Gymkhana,18.516757,73.839852,18.517005,73.839662,ok,synthetic_map_aligned
+CAM-0220,D-0220,Navi Peth,18.505118,73.845164,18.504755,73.845104,medium,synthetic_map_aligned
+CAM-0221,D-0221,Swargate,18.499509,73.862216,18.499493,73.862405,low,synthetic_map_aligned
+CAM-0222,D-0222,Kasba Peth,18.524131,73.8613,18.524092,73.861433,critical,synthetic_map_aligned
+CAM-0223,D-0223,Bhawani Peth,18.505788,73.868528,18.505541,73.868494,critical,synthetic_map_aligned
+CAM-0224,D-0224,Guruwar Peth,18.510091,73.85712,18.509758,73.857026,ok,synthetic_map_aligned
+CAM-0225,D-0225,Nana Peth,18.513556,73.864818,18.513571,73.864595,medium,synthetic_map_aligned
+CAM-0226,D-0226,Kothrud,18.499567,73.819041,18.499606,73.81881,ok,synthetic_map_aligned
+CAM-0227,D-0227,Karve Nagar,18.490654,73.819363,18.49092,73.819098,medium,synthetic_map_aligned
+CAM-0228,D-0228,Aundh,18.558283,73.804668,18.558417,73.804794,medium,synthetic_map_aligned
+CAM-0229,D-0229,Baner,18.561395,73.784037,18.561507,73.783722,low,synthetic_map_aligned
+CAM-0230,D-0230,Sus,18.545504,73.777271,18.545562,73.777178,high,synthetic_map_aligned
+CAM-0231,D-0231,Warje,18.498659,73.822246,18.498672,73.821855,medium,synthetic_map_aligned
+CAM-0232,D-0232,Dhankawadi,18.455855,73.856813,18.455704,73.856958,medium,synthetic_map_aligned
+CAM-0233,D-0233,Katraj,18.454547,73.855025,18.454617,73.854713,critical,synthetic_map_aligned
+CAM-0234,D-0234,Bibwewadi,18.489121,73.854097,18.489314,73.85378,medium,synthetic_map_aligned
+CAM-0235,D-0235,Dhayari,18.441326,73.809387,18.441537,73.809154,medium,synthetic_map_aligned
+CAM-0236,D-0236,Nanded,18.456896,73.802576,18.456773,73.802778,ok,synthetic_map_aligned
+CAM-0237,D-0237,Shivane,18.46151,73.784516,18.461203,73.784546,medium,synthetic_map_aligned
+CAM-0238,D-0238,Hadapsar,18.500344,73.92946,18.500335,73.929312,critical,synthetic_map_aligned
+CAM-0239,D-0239,Mundhwa,18.52234,73.956332,18.522145,73.956566,medium,synthetic_map_aligned
+CAM-0240,D-0240,Kharadi,18.552568,73.934493,18.552817,73.934463,low,synthetic_map_aligned
+CAM-0241,D-0241,Viman Nagar,18.568377,73.91214,18.568406,73.912036,medium,synthetic_map_aligned
+CAM-0242,D-0242,Dhanori,18.579284,73.882587,18.579105,73.882508,ok,synthetic_map_aligned
+CAM-0243,D-0243,Vishrantwadi,18.575059,73.882253,18.575288,73.882591,ok,synthetic_map_aligned
+CAM-0244,D-0244,Dighi,18.577149,73.910189,18.577305,73.910144,ok,synthetic_map_aligned
+CAM-0245,D-0245,Lohgaon,18.61887,73.92019,18.618968,73.920364,high,synthetic_map_aligned
+CAM-0246,D-0246,Undri,18.43297,73.91435,18.432688,73.914441,medium,synthetic_map_aligned
+CAM-0247,D-0247,Ambegaon Budruk,18.461718,73.843042,18.461685,73.843115,high,synthetic_map_aligned
+CAM-0248,D-0248,Ambegaon Khurd,18.432426,73.853268,18.432653,73.853291,medium,synthetic_map_aligned
+CAM-0249,D-0249,Shivajinagar,18.532222,73.844845,18.532445,73.84499,medium,synthetic_map_aligned
+CAM-0250,D-0250,Deccan Gymkhana,18.515222,73.839613,18.515199,73.839497,ok,synthetic_map_aligned
+CAM-0251,D-0251,Navi Peth,18.510372,73.845889,18.51053,73.846197,ok,synthetic_map_aligned
+CAM-0252,D-0252,Swargate,18.499822,73.857612,18.499615,73.857444,low,synthetic_map_aligned
+CAM-0253,D-0253,Kasba Peth,18.524056,73.857802,18.523906,73.857437,medium,synthetic_map_aligned
+CAM-0254,D-0254,Bhawani Peth,18.507982,73.870295,18.507747,73.870529,critical,synthetic_map_aligned
+CAM-0255,D-0255,Guruwar Peth,18.51123,73.859374,18.51115,73.859756,low,synthetic_map_aligned
+CAM-0256,D-0256,Nana Peth,18.514926,73.870224,18.515104,73.870296,ok,synthetic_map_aligned
+CAM-0257,D-0257,Kothrud,18.496219,73.81777,18.496166,73.817643,ok,synthetic_map_aligned
+CAM-0258,D-0258,Karve Nagar,18.493805,73.818357,18.493901,73.818224,medium,synthetic_map_aligned
+CAM-0259,D-0259,Aundh,18.555144,73.799883,18.555122,73.799771,low,synthetic_map_aligned
+CAM-0260,D-0260,Baner,18.559389,73.787163,18.559539,73.787266,medium,synthetic_map_aligned
+CAM-0261,D-0261,Sus,18.547627,73.780797,18.547735,73.780916,medium,synthetic_map_aligned
+CAM-0262,D-0262,Warje,18.498236,73.822922,18.498307,73.822554,medium,synthetic_map_aligned
+CAM-0263,D-0263,Dhankawadi,18.458501,73.86012,18.45864,73.860509,ok,synthetic_map_aligned
+CAM-0264,D-0264,Katraj,18.455906,73.856982,18.45597,73.856918,critical,synthetic_map_aligned
+CAM-0265,D-0265,Bibwewadi,18.4937,73.85915,18.493853,73.859345,ok,synthetic_map_aligned
+CAM-0266,D-0266,Dhayari,18.441595,73.813341,18.44187,73.813554,high,synthetic_map_aligned
+CAM-0267,D-0267,Nanded,18.457641,73.794569,18.457489,73.794207,low,synthetic_map_aligned
+CAM-0268,D-0268,Shivane,18.462766,73.784299,18.462544,73.784327,ok,synthetic_map_aligned
+CAM-0269,D-0269,Hadapsar,18.499844,73.930941,18.499843,73.930856,high,synthetic_map_aligned
+CAM-0270,D-0270,Mundhwa,18.522789,73.951069,18.522751,73.950795,critical,synthetic_map_aligned
+CAM-0271,D-0271,Kharadi,18.550538,73.932699,18.550501,73.932392,medium,synthetic_map_aligned
+CAM-0272,D-0272,Viman Nagar,18.566854,73.918029,18.566782,73.918196,ok,synthetic_map_aligned
+CAM-0273,D-0273,Dhanori,18.581018,73.877593,18.580975,73.877362,ok,synthetic_map_aligned
+CAM-0274,D-0274,Vishrantwadi,18.572859,73.876452,18.572877,73.876317,low,synthetic_map_aligned
+CAM-0275,D-0275,Dighi,18.574069,73.907221,18.574118,73.907113,medium,synthetic_map_aligned
+CAM-0276,D-0276,Lohgaon,18.620666,73.920849,18.620789,73.92097,high,synthetic_map_aligned
+CAM-0277,D-0277,Undri,18.435785,73.910267,18.435815,73.910122,critical,synthetic_map_aligned
+CAM-0278,D-0278,Ambegaon Budruk,18.465474,73.839941,18.465498,73.839852,medium,synthetic_map_aligned
+CAM-0279,D-0279,Ambegaon Khurd,18.426664,73.854715,18.426591,73.854831,ok,synthetic_map_aligned
+CAM-0280,D-0280,Shivajinagar,18.532867,73.844073,18.533249,73.84403,high,synthetic_map_aligned
+CAM-0281,D-0281,Deccan Gymkhana,18.515533,73.841602,18.515339,73.841699,medium,synthetic_map_aligned
+CAM-0282,D-0282,Navi Peth,18.509385,73.845456,18.509578,73.84555,ok,synthetic_map_aligned
+CAM-0283,D-0283,Swargate,18.503093,73.859591,18.503433,73.859579,medium,synthetic_map_aligned
+CAM-0284,D-0284,Kasba Peth,18.525835,73.857267,18.525853,73.857131,high,synthetic_map_aligned
+CAM-0285,D-0285,Bhawani Peth,18.510681,73.873047,18.510801,73.873212,high,synthetic_map_aligned
+CAM-0286,D-0286,Guruwar Peth,18.511969,73.85917,18.511945,73.85925,low,synthetic_map_aligned
+CAM-0287,D-0287,Nana Peth,18.5135,73.870627,18.513328,73.87078,critical,synthetic_map_aligned
+CAM-0288,D-0288,Kothrud,18.502145,73.823016,18.502336,73.823066,low,synthetic_map_aligned
+CAM-0289,D-0289,Karve Nagar,18.488958,73.821311,18.488726,73.821477,high,synthetic_map_aligned
+CAM-0290,D-0290,Aundh,18.554988,73.802958,18.554834,73.802683,low,synthetic_map_aligned
+CAM-0291,D-0291,Baner,18.56106,73.783354,18.56116,73.783217,medium,synthetic_map_aligned
+CAM-0292,D-0292,Sus,18.545449,73.78226,18.545403,73.782362,ok,synthetic_map_aligned
+CAM-0293,D-0293,Warje,18.496005,73.823269,18.495609,73.823187,low,synthetic_map_aligned
+CAM-0294,D-0294,Dhankawadi,18.458234,73.855188,18.45852,73.854933,low,synthetic_map_aligned
+CAM-0295,D-0295,Katraj,18.454385,73.857349,18.454181,73.857498,critical,synthetic_map_aligned
+CAM-0296,D-0296,Bibwewadi,18.491005,73.856875,18.491289,73.856668,high,synthetic_map_aligned
+CAM-0297,D-0297,Dhayari,18.441929,73.811542,18.442124,73.81142,high,synthetic_map_aligned
+CAM-0298,D-0298,Nanded,18.459316,73.798968,18.459545,73.798872,medium,synthetic_map_aligned
+CAM-0299,D-0299,Shivane,18.468153,73.782605,18.468276,73.782563,medium,synthetic_map_aligned
+CAM-0300,D-0300,Hadapsar,18.499493,73.932681,18.499184,73.932544,high,synthetic_map_aligned
+CAM-0301,D-0301,Mundhwa,18.527337,73.950079,18.527606,73.949997,medium,synthetic_map_aligned
+CAM-0302,D-0302,Kharadi,18.550727,73.933668,18.550649,73.933465,low,synthetic_map_aligned
+CAM-0303,D-0303,Viman Nagar,18.571551,73.911181,18.571863,73.910921,low,synthetic_map_aligned
+CAM-0304,D-0304,Dhanori,18.577544,73.879031,18.57728,73.878772,low,synthetic_map_aligned
+CAM-0305,D-0305,Vishrantwadi,18.575552,73.879687,18.5757,73.879694,medium,synthetic_map_aligned
+CAM-0306,D-0306,Dighi,18.569117,73.910533,18.568982,73.910492,ok,synthetic_map_aligned
+CAM-0307,D-0307,Lohgaon,18.616986,73.919755,18.616809,73.91986,medium,synthetic_map_aligned
+CAM-0308,D-0308,Undri,18.43175,73.912753,18.43164,73.912607,high,synthetic_map_aligned
+CAM-0309,D-0309,Ambegaon Budruk,18.45912,73.844009,18.458978,73.844354,high,synthetic_map_aligned
+CAM-0310,D-0310,Ambegaon Khurd,18.430632,73.852588,18.430867,73.852833,ok,synthetic_map_aligned
+CAM-0311,D-0311,Shivajinagar,18.530117,73.844504,18.529918,73.844419,low,synthetic_map_aligned
+CAM-0312,D-0312,Deccan Gymkhana,18.51723,73.840759,18.517352,73.840473,high,synthetic_map_aligned
+CAM-0313,D-0313,Navi Peth,18.505566,73.842197,18.50543,73.842006,ok,synthetic_map_aligned
+CAM-0314,D-0314,Swargate,18.497471,73.860384,18.49724,73.860517,medium,synthetic_map_aligned
+CAM-0315,D-0315,Kasba Peth,18.521629,73.860815,18.521388,73.86082,critical,synthetic_map_aligned
+CAM-0316,D-0316,Bhawani Peth,18.505358,73.867662,18.505139,73.867499,critical,synthetic_map_aligned
+CAM-0317,D-0317,Guruwar Peth,18.511113,73.85604,18.511128,73.855827,medium,synthetic_map_aligned
+CAM-0318,D-0318,Nana Peth,18.51185,73.871077,18.511636,73.871235,medium,synthetic_map_aligned
+CAM-0319,D-0319,Kothrud,18.496866,73.822506,18.496685,73.822767,ok,synthetic_map_aligned
+CAM-0320,D-0320,Karve Nagar,18.490687,73.819259,18.490784,73.819177,ok,synthetic_map_aligned
+CAM-0321,D-0321,Aundh,18.555798,73.805661,18.55574,73.8058,medium,synthetic_map_aligned
+CAM-0322,D-0322,Baner,18.558834,73.790867,18.558844,73.791091,ok,synthetic_map_aligned
+CAM-0323,D-0323,Sus,18.547975,73.78202,18.548252,73.782123,low,synthetic_map_aligned
+CAM-0324,D-0324,Warje,18.495098,73.8223,18.495034,73.822365,high,synthetic_map_aligned
+CAM-0325,D-0325,Dhankawadi,18.457098,73.854446,18.457154,73.854131,medium,synthetic_map_aligned
+CAM-0326,D-0326,Katraj,18.453317,73.857122,18.453084,73.857054,medium,synthetic_map_aligned
+CAM-0327,D-0327,Bibwewadi,18.491327,73.854244,18.491424,73.85415,ok,synthetic_map_aligned
+CAM-0328,D-0328,Dhayari,18.440875,73.81464,18.440918,73.814994,high,synthetic_map_aligned
+CAM-0329,D-0329,Nanded,18.458177,73.79434,18.458313,73.794111,ok,synthetic_map_aligned
+CAM-0330,D-0330,Shivane,18.459708,73.785903,18.459582,73.785998,ok,synthetic_map_aligned
+CAM-0331,D-0331,Hadapsar,18.500519,73.933369,18.500525,73.93302,high,synthetic_map_aligned
+CAM-0332,D-0332,Mundhwa,18.520394,73.95484,18.520148,73.954965,critical,synthetic_map_aligned
+CAM-0333,D-0333,Kharadi,18.551346,73.938432,18.551368,73.938635,high,synthetic_map_aligned
+CAM-0334,D-0334,Viman Nagar,18.566341,73.911528,18.566385,73.911385,ok,synthetic_map_aligned
+CAM-0335,D-0335,Dhanori,18.577748,73.881943,18.577416,73.881887,medium,synthetic_map_aligned
+CAM-0336,D-0336,Vishrantwadi,18.572922,73.879296,18.572981,73.879603,medium,synthetic_map_aligned
+CAM-0337,D-0337,Dighi,18.575807,73.912611,18.576101,73.912848,ok,synthetic_map_aligned
+CAM-0338,D-0338,Lohgaon,18.619421,73.918421,18.619488,73.918559,ok,synthetic_map_aligned
+CAM-0339,D-0339,Undri,18.430697,73.910677,18.430353,73.910484,medium,synthetic_map_aligned
+CAM-0340,D-0340,Ambegaon Budruk,18.463644,73.844554,18.463848,73.844912,high,synthetic_map_aligned
+CAM-0341,D-0341,Ambegaon Khurd,18.433017,73.855406,18.433115,73.855506,ok,synthetic_map_aligned
+CAM-0342,D-0342,Shivajinagar,18.531335,73.84357,18.531458,73.843376,ok,synthetic_map_aligned
+CAM-0343,D-0343,Deccan Gymkhana,18.515437,73.836593,18.515432,73.836429,ok,synthetic_map_aligned
+CAM-0344,D-0344,Navi Peth,18.512024,73.843989,18.512352,73.843979,medium,synthetic_map_aligned
+CAM-0345,D-0345,Swargate,18.50434,73.858928,18.504466,73.858929,ok,synthetic_map_aligned
+CAM-0346,D-0346,Kasba Peth,18.523893,73.858797,18.523645,73.858579,high,synthetic_map_aligned
+CAM-0347,D-0347,Bhawani Peth,18.507466,73.872541,18.507265,73.872699,medium,synthetic_map_aligned
+CAM-0348,D-0348,Guruwar Peth,18.513592,73.85868,18.513939,73.85885,medium,synthetic_map_aligned
+CAM-0349,D-0349,Nana Peth,18.511106,73.868563,18.510853,73.868547,critical,synthetic_map_aligned
+CAM-0350,D-0350,Kothrud,18.496696,73.824526,18.496551,73.824752,ok,synthetic_map_aligned
+CAM-0351,D-0351,Karve Nagar,18.491007,73.819297,18.491217,73.819022,medium,synthetic_map_aligned
+CAM-0352,D-0352,Aundh,18.552079,73.8037,18.551746,73.803808,ok,synthetic_map_aligned
+CAM-0353,D-0353,Baner,18.561533,73.782643,18.561618,73.782608,low,synthetic_map_aligned
+CAM-0354,D-0354,Sus,18.547969,73.777384,18.548076,73.777363,medium,synthetic_map_aligned
+CAM-0355,D-0355,Warje,18.495483,73.825099,18.495384,73.825109,ok,synthetic_map_aligned
+CAM-0356,D-0356,Dhankawadi,18.46132,73.85602,18.461717,73.856092,high,synthetic_map_aligned
+CAM-0357,D-0357,Katraj,18.453852,73.854366,18.453751,73.854234,high,synthetic_map_aligned
+CAM-0358,D-0358,Bibwewadi,18.488132,73.85405,18.487898,73.853795,high,synthetic_map_aligned
+CAM-0359,D-0359,Dhayari,18.439234,73.810359,18.439076,73.81008,high,synthetic_map_aligned
+CAM-0360,D-0360,Nanded,18.457013,73.798769,18.456815,73.798805,medium,synthetic_map_aligned
+CAM-0361,D-0361,Shivane,18.466488,73.780273,18.466534,73.77997,medium,synthetic_map_aligned
+CAM-0362,D-0362,Hadapsar,18.501323,73.935359,18.501422,73.935609,high,synthetic_map_aligned
+CAM-0363,D-0363,Mundhwa,18.520817,73.954736,18.52064,73.95508,ok,synthetic_map_aligned
+CAM-0364,D-0364,Kharadi,18.554089,73.931684,18.554274,73.93151,medium,synthetic_map_aligned
+CAM-0365,D-0365,Viman Nagar,18.566795,73.917434,18.566769,73.917623,medium,synthetic_map_aligned
+CAM-0366,D-0366,Dhanori,18.5776,73.881431,18.57739,73.88133,low,synthetic_map_aligned
+CAM-0367,D-0367,Vishrantwadi,18.569276,73.877642,18.569013,73.877563,ok,synthetic_map_aligned
+CAM-0368,D-0368,Dighi,18.573232,73.905681,18.573361,73.905308,medium,synthetic_map_aligned
+CAM-0369,D-0369,Lohgaon,18.616825,73.918137,18.616521,73.918277,high,synthetic_map_aligned
+CAM-0370,D-0370,Undri,18.436622,73.914879,18.436784,73.915008,medium,synthetic_map_aligned
+CAM-0371,D-0371,Ambegaon Budruk,18.460932,73.846668,18.460834,73.846877,medium,synthetic_map_aligned
+CAM-0372,D-0372,Ambegaon Khurd,18.42953,73.854557,18.429421,73.854916,high,synthetic_map_aligned
+CAM-0373,D-0373,Shivajinagar,18.531921,73.843269,18.531983,73.842933,low,synthetic_map_aligned
+CAM-0374,D-0374,Deccan Gymkhana,18.517011,73.841434,18.517096,73.841482,low,synthetic_map_aligned
+CAM-0375,D-0375,Navi Peth,18.506061,73.84418,18.505886,73.844147,low,synthetic_map_aligned
+CAM-0376,D-0376,Swargate,18.502538,73.857039,18.502754,73.856838,medium,synthetic_map_aligned
+CAM-0377,D-0377,Kasba Peth,18.526622,73.857974,18.526677,73.85791,high,synthetic_map_aligned
+CAM-0378,D-0378,Bhawani Peth,18.506601,73.868774,18.506399,73.868521,medium,synthetic_map_aligned
+CAM-0379,D-0379,Guruwar Peth,18.5093,73.85897,18.509176,73.859166,ok,synthetic_map_aligned
+CAM-0380,D-0380,Nana Peth,18.512206,73.873507,18.512194,73.873595,high,synthetic_map_aligned
+CAM-0381,D-0381,Kothrud,18.499163,73.817739,18.499271,73.817463,low,synthetic_map_aligned
+CAM-0382,D-0382,Karve Nagar,18.488547,73.81958,18.488225,73.819414,low,synthetic_map_aligned
+CAM-0383,D-0383,Aundh,18.556127,73.8038,18.556256,73.803754,high,synthetic_map_aligned
+CAM-0384,D-0384,Baner,18.558227,73.78601,18.557968,73.785737,ok,synthetic_map_aligned
+CAM-0385,D-0385,Sus,18.546007,73.781196,18.546002,73.781286,low,synthetic_map_aligned
+CAM-0386,D-0386,Warje,18.499788,73.823666,18.500124,73.823793,high,synthetic_map_aligned
+CAM-0387,D-0387,Dhankawadi,18.455525,73.858139,18.455423,73.858204,medium,synthetic_map_aligned
+CAM-0388,D-0388,Katraj,18.459093,73.859246,18.459289,73.85939,critical,synthetic_map_aligned
+CAM-0389,D-0389,Bibwewadi,18.486158,73.857597,18.485767,73.857525,high,synthetic_map_aligned
+CAM-0390,D-0390,Dhayari,18.438944,73.811361,18.438698,73.811157,medium,synthetic_map_aligned
+CAM-0391,D-0391,Nanded,18.457542,73.801068,18.45744,73.801187,low,synthetic_map_aligned
+CAM-0392,D-0392,Shivane,18.462814,73.78498,18.462728,73.785107,medium,synthetic_map_aligned
+CAM-0393,D-0393,Hadapsar,18.497632,73.934631,18.497393,73.934623,medium,synthetic_map_aligned
+CAM-0394,D-0394,Mundhwa,18.527996,73.953726,18.528195,73.954034,ok,synthetic_map_aligned
+CAM-0395,D-0395,Kharadi,18.555255,73.932508,18.555626,73.932539,high,synthetic_map_aligned
+CAM-0396,D-0396,Viman Nagar,18.568102,73.91534,18.568234,73.915543,high,synthetic_map_aligned
+CAM-0397,D-0397,Dhanori,18.584804,73.883362,18.585124,73.883212,ok,synthetic_map_aligned
+CAM-0398,D-0398,Vishrantwadi,18.569911,73.876289,18.569745,73.876191,medium,synthetic_map_aligned
+CAM-0399,D-0399,Dighi,18.571211,73.908446,18.571013,73.908077,low,synthetic_map_aligned
+CAM-0400,D-0400,Lohgaon,18.619324,73.917497,18.619574,73.917555,ok,synthetic_map_aligned
+CAM-0401,D-0401,Undri,18.431817,73.914444,18.431454,73.91451,ok,synthetic_map_aligned
+CAM-0402,D-0402,Ambegaon Budruk,18.4592,73.839464,18.459103,73.83941,critical,synthetic_map_aligned
+CAM-0403,D-0403,Ambegaon Khurd,18.427236,73.849507,18.427121,73.849481,medium,synthetic_map_aligned
+CAM-0404,D-0404,Shivajinagar,18.530354,73.843372,18.530305,73.843303,low,synthetic_map_aligned
+CAM-0405,D-0405,Deccan Gymkhana,18.516705,73.842094,18.516896,73.842281,medium,synthetic_map_aligned
+CAM-0406,D-0406,Navi Peth,18.507241,73.844087,18.5071,73.844081,high,synthetic_map_aligned
+CAM-0407,D-0407,Swargate,18.501855,73.854837,18.501773,73.854549,high,synthetic_map_aligned
+CAM-0408,D-0408,Kasba Peth,18.522911,73.860082,18.522815,73.860088,ok,synthetic_map_aligned
+CAM-0409,D-0409,Bhawani Peth,18.510528,73.872716,18.510623,73.872815,critical,synthetic_map_aligned
+CAM-0410,D-0410,Guruwar Peth,18.514381,73.855089,18.514491,73.85503,ok,synthetic_map_aligned
+CAM-0411,D-0411,Nana Peth,18.512756,73.86548,18.51267,73.865396,high,synthetic_map_aligned
+CAM-0412,D-0412,Kothrud,18.500609,73.821424,18.500802,73.821358,medium,synthetic_map_aligned
+CAM-0413,D-0413,Karve Nagar,18.487237,73.817214,18.486913,73.816993,low,synthetic_map_aligned
+CAM-0414,D-0414,Aundh,18.551351,73.804509,18.551251,73.804565,medium,synthetic_map_aligned
+CAM-0415,D-0415,Baner,18.555277,73.784631,18.554923,73.784467,ok,synthetic_map_aligned
+CAM-0416,D-0416,Sus,18.546448,73.779689,18.546551,73.7797,medium,synthetic_map_aligned
+CAM-0417,D-0417,Warje,18.498031,73.825742,18.49801,73.825829,high,synthetic_map_aligned
+CAM-0418,D-0418,Dhankawadi,18.456084,73.857079,18.455963,73.85731,low,synthetic_map_aligned
+CAM-0419,D-0419,Katraj,18.458114,73.854602,18.458285,73.854553,medium,synthetic_map_aligned
+CAM-0420,D-0420,Bibwewadi,18.487958,73.853657,18.487923,73.853511,high,synthetic_map_aligned
+CAM-0421,D-0421,Dhayari,18.439799,73.813135,18.439924,73.813366,medium,synthetic_map_aligned
+CAM-0422,D-0422,Nanded,18.458173,73.799218,18.457902,73.799473,ok,synthetic_map_aligned
+CAM-0423,D-0423,Shivane,18.462412,73.789127,18.462387,73.789323,medium,synthetic_map_aligned
+CAM-0424,D-0424,Hadapsar,18.498029,73.930587,18.497963,73.930517,critical,synthetic_map_aligned
+CAM-0425,D-0425,Mundhwa,18.520563,73.949688,18.52049,73.949309,medium,synthetic_map_aligned
+CAM-0426,D-0426,Kharadi,18.552689,73.933475,18.552976,73.933189,ok,synthetic_map_aligned
+CAM-0427,D-0427,Viman Nagar,18.571475,73.91454,18.571646,73.914502,high,synthetic_map_aligned
+CAM-0428,D-0428,Dhanori,18.579766,73.882509,18.579572,73.882625,high,synthetic_map_aligned
+CAM-0429,D-0429,Vishrantwadi,18.573392,73.881052,18.573375,73.881467,low,synthetic_map_aligned
+CAM-0430,D-0430,Dighi,18.575986,73.907656,18.576117,73.90741,ok,synthetic_map_aligned
+CAM-0431,D-0431,Lohgaon,18.619973,73.914397,18.620069,73.914199,ok,synthetic_map_aligned
+CAM-0432,D-0432,Undri,18.434574,73.915552,18.434687,73.915717,high,synthetic_map_aligned
+CAM-0433,D-0433,Ambegaon Budruk,18.461547,73.842093,18.461552,73.842206,critical,synthetic_map_aligned
+CAM-0434,D-0434,Ambegaon Khurd,18.430588,73.854438,18.430747,73.85482,ok,synthetic_map_aligned
+CAM-0435,D-0435,Shivajinagar,18.532799,73.846446,18.533012,73.846738,low,synthetic_map_aligned
+CAM-0436,D-0436,Deccan Gymkhana,18.516507,73.836075,18.51652,73.835789,low,synthetic_map_aligned
+CAM-0437,D-0437,Navi Peth,18.508393,73.844804,18.508331,73.844942,medium,synthetic_map_aligned
+CAM-0438,D-0438,Swargate,18.500323,73.85915,18.500282,73.859311,ok,synthetic_map_aligned
+CAM-0439,D-0439,Kasba Peth,18.52235,73.859486,18.522268,73.859433,critical,synthetic_map_aligned
+CAM-0440,D-0440,Bhawani Peth,18.512884,73.870303,18.513004,73.870336,ok,synthetic_map_aligned
+CAM-0441,D-0441,Guruwar Peth,18.509548,73.861527,18.509507,73.861669,medium,synthetic_map_aligned
+CAM-0442,D-0442,Nana Peth,18.514021,73.868926,18.513981,73.868773,ok,synthetic_map_aligned
+CAM-0443,D-0443,Kothrud,18.500299,73.82199,18.500511,73.822299,medium,synthetic_map_aligned
+CAM-0444,D-0444,Karve Nagar,18.487869,73.820502,18.487584,73.820512,high,synthetic_map_aligned
+CAM-0445,D-0445,Aundh,18.555761,73.803882,18.555782,73.803533,low,synthetic_map_aligned
+CAM-0446,D-0446,Baner,18.56147,73.788181,18.561707,73.788171,ok,synthetic_map_aligned
+CAM-0447,D-0447,Sus,18.543583,73.779004,18.543335,73.778953,medium,synthetic_map_aligned
+CAM-0448,D-0448,Warje,18.493608,73.824062,18.493341,73.82396,medium,synthetic_map_aligned
+CAM-0449,D-0449,Dhankawadi,18.456674,73.858192,18.45672,73.858398,ok,synthetic_map_aligned
+CAM-0450,D-0450,Katraj,18.454707,73.852101,18.454707,73.851973,high,synthetic_map_aligned
+CAM-0451,D-0451,Bibwewadi,18.489587,73.858393,18.489601,73.858569,medium,synthetic_map_aligned
+CAM-0452,D-0452,Dhayari,18.439955,73.816417,18.439957,73.81659,ok,synthetic_map_aligned
+CAM-0453,D-0453,Nanded,18.457542,73.800857,18.457331,73.800988,ok,synthetic_map_aligned
+CAM-0454,D-0454,Shivane,18.46591,73.783298,18.466158,73.783136,medium,synthetic_map_aligned
+CAM-0455,D-0455,Hadapsar,18.499127,73.935914,18.499055,73.936212,medium,synthetic_map_aligned
+CAM-0456,D-0456,Mundhwa,18.52498,73.952514,18.525277,73.952311,high,synthetic_map_aligned
+CAM-0457,D-0457,Kharadi,18.549253,73.938324,18.549206,73.93845,ok,synthetic_map_aligned
+CAM-0458,D-0458,Viman Nagar,18.568883,73.914392,18.568966,73.914378,low,synthetic_map_aligned
+CAM-0459,D-0459,Dhanori,18.58202,73.878695,18.582189,73.878365,ok,synthetic_map_aligned
+CAM-0460,D-0460,Vishrantwadi,18.57673,73.880416,18.576822,73.88042,medium,synthetic_map_aligned
+CAM-0461,D-0461,Dighi,18.57463,73.906573,18.574904,73.90646,medium,synthetic_map_aligned
+CAM-0462,D-0462,Lohgaon,18.618174,73.917563,18.617978,73.917718,high,synthetic_map_aligned
+CAM-0463,D-0463,Undri,18.434302,73.918443,18.434386,73.918773,medium,synthetic_map_aligned
+CAM-0464,D-0464,Ambegaon Budruk,18.460652,73.84345,18.460655,73.843681,critical,synthetic_map_aligned
+CAM-0465,D-0465,Ambegaon Khurd,18.431288,73.856239,18.431188,73.856518,high,synthetic_map_aligned
+CAM-0466,D-0466,Shivajinagar,18.529655,73.84597,18.529545,73.846039,low,synthetic_map_aligned
+CAM-0467,D-0467,Deccan Gymkhana,18.515562,73.839563,18.515584,73.839281,low,synthetic_map_aligned
+CAM-0468,D-0468,Navi Peth,18.508637,73.844639,18.508432,73.844959,low,synthetic_map_aligned
+CAM-0469,D-0469,Swargate,18.499123,73.856655,18.498804,73.856408,medium,synthetic_map_aligned
+CAM-0470,D-0470,Kasba Peth,18.525939,73.858259,18.526158,73.857926,high,synthetic_map_aligned
+CAM-0471,D-0471,Bhawani Peth,18.507246,73.865842,18.507261,73.865659,high,synthetic_map_aligned
+CAM-0472,D-0472,Guruwar Peth,18.510068,73.855172,18.510025,73.855065,medium,synthetic_map_aligned
+CAM-0473,D-0473,Nana Peth,18.516254,73.86753,18.516343,73.867329,medium,synthetic_map_aligned
+CAM-0474,D-0474,Kothrud,18.495011,73.824466,18.494611,73.82443,low,synthetic_map_aligned
+CAM-0475,D-0475,Karve Nagar,18.488479,73.819619,18.488402,73.819548,low,synthetic_map_aligned
+CAM-0476,D-0476,Aundh,18.55958,73.802988,18.559938,73.802895,medium,synthetic_map_aligned
+CAM-0477,D-0477,Baner,18.560011,73.783831,18.560199,73.783624,low,synthetic_map_aligned
+CAM-0478,D-0478,Sus,18.544977,73.780874,18.544967,73.781197,ok,synthetic_map_aligned
+CAM-0479,D-0479,Warje,18.49757,73.824537,18.497339,73.824859,medium,synthetic_map_aligned
+CAM-0480,D-0480,Dhankawadi,18.45329,73.853919,18.453162,73.853808,ok,synthetic_map_aligned
+CAM-0481,D-0481,Katraj,18.454927,73.853972,18.454967,73.853754,high,synthetic_map_aligned
+CAM-0482,D-0482,Bibwewadi,18.486935,73.860735,18.486821,73.861043,medium,synthetic_map_aligned
+CAM-0483,D-0483,Dhayari,18.441568,73.814106,18.441859,73.814087,ok,synthetic_map_aligned
+CAM-0484,D-0484,Nanded,18.46068,73.795807,18.460666,73.795683,low,synthetic_map_aligned
+CAM-0485,D-0485,Shivane,18.465811,73.787501,18.465844,73.787662,low,synthetic_map_aligned
+CAM-0486,D-0486,Hadapsar,18.500442,73.932525,18.500458,73.932429,high,synthetic_map_aligned
+CAM-0487,D-0487,Mundhwa,18.521294,73.951536,18.521045,73.951285,medium,synthetic_map_aligned
+CAM-0488,D-0488,Kharadi,18.55031,73.938606,18.550236,73.938757,ok,synthetic_map_aligned
+CAM-0489,D-0489,Viman Nagar,18.568354,73.917442,18.568537,73.917524,ok,synthetic_map_aligned
+CAM-0490,D-0490,Dhanori,18.580398,73.885741,18.580504,73.885909,medium,synthetic_map_aligned
+CAM-0491,D-0491,Vishrantwadi,18.572038,73.877701,18.571692,73.877637,medium,synthetic_map_aligned
+CAM-0492,D-0492,Dighi,18.573853,73.906564,18.573933,73.906448,low,synthetic_map_aligned
+CAM-0493,D-0493,Lohgaon,18.616995,73.917003,18.616727,73.916897,critical,synthetic_map_aligned
+CAM-0494,D-0494,Undri,18.438138,73.915366,18.438463,73.915309,high,synthetic_map_aligned
+CAM-0495,D-0495,Ambegaon Budruk,18.461709,73.838207,18.461706,73.83796,high,synthetic_map_aligned
+CAM-0496,D-0496,Ambegaon Khurd,18.427125,73.853348,18.426938,73.853545,ok,synthetic_map_aligned
+CAM-0497,D-0497,Shivajinagar,18.529299,73.848486,18.529188,73.848745,ok,synthetic_map_aligned
+CAM-0498,D-0498,Deccan Gymkhana,18.514704,73.842737,18.514479,73.84295,low,synthetic_map_aligned
+CAM-0499,D-0499,Navi Peth,18.507063,73.84079,18.507027,73.840506,medium,synthetic_map_aligned
+CAM-0500,D-0500,Swargate,18.501501,73.858629,18.501719,73.858816,high,synthetic_map_aligned
+CAM-0501,D-0501,Kasba Peth,18.524215,73.860606,18.52411,73.861,high,synthetic_map_aligned
+CAM-0502,D-0502,Bhawani Peth,18.508296,73.873229,18.508275,73.873468,medium,synthetic_map_aligned
+CAM-0503,D-0503,Guruwar Peth,18.511087,73.858191,18.510952,73.858344,ok,synthetic_map_aligned
+CAM-0504,D-0504,Nana Peth,18.516304,73.86893,18.516545,73.868697,medium,synthetic_map_aligned
+CAM-0505,D-0505,Kothrud,18.499996,73.821564,18.500106,73.8216,low,synthetic_map_aligned
+CAM-0506,D-0506,Karve Nagar,18.490483,73.821149,18.490582,73.821301,medium,synthetic_map_aligned
+CAM-0507,D-0507,Aundh,18.555511,73.803585,18.555483,73.803509,medium,synthetic_map_aligned
+CAM-0508,D-0508,Baner,18.55462,73.787787,18.554448,73.787867,medium,synthetic_map_aligned
+CAM-0509,D-0509,Sus,18.54583,73.780767,18.545883,73.780904,ok,synthetic_map_aligned
+CAM-0510,D-0510,Warje,18.495008,73.820643,18.494958,73.820576,ok,synthetic_map_aligned
+CAM-0511,D-0511,Dhankawadi,18.457702,73.852768,18.457834,73.852556,high,synthetic_map_aligned
+CAM-0512,D-0512,Katraj,18.453197,73.852827,18.453255,73.852416,high,synthetic_map_aligned
+CAM-0513,D-0513,Bibwewadi,18.486819,73.855413,18.486648,73.855362,high,synthetic_map_aligned
+CAM-0514,D-0514,Dhayari,18.441038,73.810929,18.441346,73.810714,critical,synthetic_map_aligned
+CAM-0515,D-0515,Nanded,18.462165,73.800014,18.46237,73.800354,medium,synthetic_map_aligned
+CAM-0516,D-0516,Shivane,18.462861,73.781375,18.462745,73.781147,low,synthetic_map_aligned
+CAM-0517,D-0517,Hadapsar,18.499646,73.935062,18.499422,73.935229,high,synthetic_map_aligned
+CAM-0518,D-0518,Mundhwa,18.52318,73.950339,18.523203,73.950194,high,synthetic_map_aligned
+CAM-0519,D-0519,Kharadi,18.548041,73.935616,18.547895,73.935666,ok,synthetic_map_aligned
+CAM-0520,D-0520,Viman Nagar,18.567839,73.911451,18.56792,73.911233,medium,synthetic_map_aligned
+CAM-0521,D-0521,Dhanori,18.581778,73.879045,18.581841,73.878741,high,synthetic_map_aligned
+CAM-0522,D-0522,Vishrantwadi,18.569005,73.879196,18.56864,73.879168,high,synthetic_map_aligned
+CAM-0523,D-0523,Dighi,18.570901,73.907834,18.570822,73.907588,low,synthetic_map_aligned
+CAM-0524,D-0524,Lohgaon,18.617561,73.913431,18.61752,73.913222,high,synthetic_map_aligned
+CAM-0525,D-0525,Undri,18.430985,73.917965,18.430779,73.918292,critical,synthetic_map_aligned
+CAM-0526,D-0526,Ambegaon Budruk,18.459675,73.844807,18.459646,73.844878,ok,synthetic_map_aligned
+CAM-0527,D-0527,Ambegaon Khurd,18.428839,73.851353,18.428723,73.851298,medium,synthetic_map_aligned
+CAM-0528,D-0528,Shivajinagar,18.526494,73.84472,18.526197,73.844761,ok,synthetic_map_aligned
+CAM-0529,D-0529,Deccan Gymkhana,18.512945,73.837035,18.512888,73.83692,ok,synthetic_map_aligned
+CAM-0530,D-0530,Navi Peth,18.510766,73.843085,18.511116,73.843111,ok,synthetic_map_aligned
+CAM-0531,D-0531,Swargate,18.50251,73.859828,18.502695,73.859985,ok,synthetic_map_aligned
+CAM-0532,D-0532,Kasba Peth,18.529985,73.859855,18.530119,73.859783,high,synthetic_map_aligned
+CAM-0533,D-0533,Bhawani Peth,18.506867,73.866997,18.506722,73.866878,high,synthetic_map_aligned
+CAM-0534,D-0534,Guruwar Peth,18.514637,73.859517,18.514843,73.859642,medium,synthetic_map_aligned
+CAM-0535,D-0535,Nana Peth,18.516742,73.870458,18.517071,73.870568,medium,synthetic_map_aligned
+CAM-0536,D-0536,Kothrud,18.497538,73.822998,18.497516,73.823321,low,synthetic_map_aligned
+CAM-0537,D-0537,Karve Nagar,18.48985,73.821165,18.489738,73.821375,low,synthetic_map_aligned
+CAM-0538,D-0538,Aundh,18.554194,73.801371,18.554166,73.801209,ok,synthetic_map_aligned
+CAM-0539,D-0539,Baner,18.561893,73.789068,18.561985,73.789141,ok,synthetic_map_aligned
+CAM-0540,D-0540,Sus,18.544155,73.776392,18.544285,73.776145,high,synthetic_map_aligned
+CAM-0541,D-0541,Warje,18.494158,73.823902,18.493838,73.82393,medium,synthetic_map_aligned
+CAM-0542,D-0542,Dhankawadi,18.455077,73.851883,18.455066,73.851802,low,synthetic_map_aligned
+CAM-0543,D-0543,Katraj,18.456956,73.857806,18.457198,73.857739,high,synthetic_map_aligned
+CAM-0544,D-0544,Bibwewadi,18.489556,73.860286,18.48958,73.860367,high,synthetic_map_aligned
+CAM-0545,D-0545,Dhayari,18.443506,73.810431,18.44377,73.810248,critical,synthetic_map_aligned
+CAM-0546,D-0546,Nanded,18.454547,73.800434,18.4542,73.800483,high,synthetic_map_aligned
+CAM-0547,D-0547,Shivane,18.466013,73.787699,18.466166,73.787815,ok,synthetic_map_aligned
+CAM-0548,D-0548,Hadapsar,18.502349,73.932237,18.502621,73.932005,ok,synthetic_map_aligned
+CAM-0549,D-0549,Mundhwa,18.520416,73.951248,18.52033,73.951233,medium,synthetic_map_aligned
+CAM-0550,D-0550,Kharadi,18.54971,73.933174,18.54966,73.932865,high,synthetic_map_aligned
+CAM-0551,D-0551,Viman Nagar,18.569327,73.913332,18.569413,73.91326,low,synthetic_map_aligned
+CAM-0552,D-0552,Dhanori,18.578063,73.880376,18.577868,73.880187,low,synthetic_map_aligned
+CAM-0553,D-0553,Vishrantwadi,18.573372,73.877666,18.573472,73.877605,low,synthetic_map_aligned
+CAM-0554,D-0554,Dighi,18.570422,73.909347,18.570143,73.909243,low,synthetic_map_aligned
+CAM-0555,D-0555,Lohgaon,18.615166,73.919603,18.61509,73.919763,critical,synthetic_map_aligned
+CAM-0556,D-0556,Undri,18.437697,73.914412,18.437982,73.914333,critical,synthetic_map_aligned
+CAM-0557,D-0557,Ambegaon Budruk,18.459808,73.839678,18.459737,73.839654,medium,synthetic_map_aligned
+CAM-0558,D-0558,Ambegaon Khurd,18.431028,73.85334,18.431017,73.853604,high,synthetic_map_aligned
+CAM-0559,D-0559,Shivajinagar,18.530604,73.844325,18.530357,73.844066,low,synthetic_map_aligned
+CAM-0560,D-0560,Deccan Gymkhana,18.51543,73.83878,18.515289,73.838613,high,synthetic_map_aligned
+CAM-0561,D-0561,Navi Peth,18.506572,73.840673,18.506465,73.840573,medium,synthetic_map_aligned
+CAM-0562,D-0562,Swargate,18.498662,73.855032,18.498549,73.854947,high,synthetic_map_aligned
+CAM-0563,D-0563,Kasba Peth,18.522154,73.857931,18.522072,73.857881,high,synthetic_map_aligned
+CAM-0564,D-0564,Bhawani Peth,18.50873,73.872573,18.50865,73.872753,ok,synthetic_map_aligned
+CAM-0565,D-0565,Guruwar Peth,18.50957,73.858362,18.5095,73.858402,medium,synthetic_map_aligned
+CAM-0566,D-0566,Nana Peth,18.515782,73.871161,18.515889,73.871318,critical,synthetic_map_aligned
+CAM-0567,D-0567,Kothrud,18.500327,73.819191,18.500466,73.818896,high,synthetic_map_aligned
+CAM-0568,D-0568,Karve Nagar,18.487272,73.817216,18.487075,73.817053,medium,synthetic_map_aligned
+CAM-0569,D-0569,Aundh,18.554369,73.801366,18.554213,73.80117,ok,synthetic_map_aligned
+CAM-0570,D-0570,Baner,18.558639,73.782498,18.558576,73.782409,ok,synthetic_map_aligned
+CAM-0571,D-0571,Sus,18.548533,73.779421,18.548635,73.77937,medium,synthetic_map_aligned
+CAM-0572,D-0572,Warje,18.498907,73.827333,18.49893,73.827427,medium,synthetic_map_aligned
+CAM-0573,D-0573,Dhankawadi,18.459351,73.857253,18.45944,73.857281,ok,synthetic_map_aligned
+CAM-0574,D-0574,Katraj,18.4573,73.857844,18.457395,73.857887,high,synthetic_map_aligned
+CAM-0575,D-0575,Bibwewadi,18.491219,73.858051,18.491406,73.858202,medium,synthetic_map_aligned
+CAM-0576,D-0576,Dhayari,18.435985,73.809388,18.435623,73.809215,medium,synthetic_map_aligned
+CAM-0577,D-0577,Nanded,18.456175,73.799007,18.456021,73.79899,low,synthetic_map_aligned
+CAM-0578,D-0578,Shivane,18.461522,73.78193,18.461451,73.781844,high,synthetic_map_aligned
+CAM-0579,D-0579,Hadapsar,18.502063,73.932658,18.502115,73.932553,high,synthetic_map_aligned
+CAM-0580,D-0580,Mundhwa,18.526001,73.954569,18.526172,73.954646,high,synthetic_map_aligned
+CAM-0581,D-0581,Kharadi,18.55116,73.934244,18.55101,73.934055,low,synthetic_map_aligned
+CAM-0582,D-0582,Viman Nagar,18.568641,73.913855,18.568795,73.913745,medium,synthetic_map_aligned
+CAM-0583,D-0583,Dhanori,18.57661,73.884376,18.576282,73.884326,ok,synthetic_map_aligned
+CAM-0584,D-0584,Vishrantwadi,18.575294,73.876345,18.575359,73.876275,ok,synthetic_map_aligned
+CAM-0585,D-0585,Dighi,18.572448,73.909013,18.572574,73.908638,medium,synthetic_map_aligned
+CAM-0586,D-0586,Lohgaon,18.616518,73.92209,18.616498,73.922205,medium,synthetic_map_aligned
+CAM-0587,D-0587,Undri,18.435879,73.918547,18.435839,73.918874,critical,synthetic_map_aligned
+CAM-0588,D-0588,Ambegaon Budruk,18.458184,73.845275,18.458121,73.84533,medium,synthetic_map_aligned
+CAM-0589,D-0589,Ambegaon Khurd,18.434237,73.851479,18.434553,73.851553,critical,synthetic_map_aligned
+CAM-0590,D-0590,Shivajinagar,18.531314,73.846058,18.531341,73.846479,medium,synthetic_map_aligned
+CAM-0591,D-0591,Deccan Gymkhana,18.51647,73.837509,18.516428,73.837106,ok,synthetic_map_aligned
+CAM-0592,D-0592,Navi Peth,18.511523,73.84372,18.511697,73.843597,high,synthetic_map_aligned
+CAM-0593,D-0593,Swargate,18.497088,73.860137,18.496973,73.860431,ok,synthetic_map_aligned
+CAM-0594,D-0594,Kasba Peth,18.528356,73.857442,18.528694,73.857464,medium,synthetic_map_aligned
+CAM-0595,D-0595,Bhawani Peth,18.50858,73.871655,18.508578,73.871759,high,synthetic_map_aligned
+CAM-0596,D-0596,Guruwar Peth,18.511458,73.855884,18.511526,73.85566,low,synthetic_map_aligned
+CAM-0597,D-0597,Nana Peth,18.511871,73.87107,18.511795,73.871053,high,synthetic_map_aligned
+CAM-0598,D-0598,Kothrud,18.497702,73.818479,18.497515,73.81818,ok,synthetic_map_aligned
+CAM-0599,D-0599,Karve Nagar,18.490419,73.822902,18.490679,73.823221,low,synthetic_map_aligned
+CAM-0600,D-0600,Aundh,18.556266,73.805383,18.556459,73.805682,medium,synthetic_map_aligned
+CAM-0601,D-0601,Baner,18.556476,73.788918,18.556395,73.789019,ok,synthetic_map_aligned
+CAM-0602,D-0602,Sus,18.547137,73.775354,18.547239,73.775078,medium,synthetic_map_aligned
+CAM-0603,D-0603,Warje,18.497758,73.819762,18.49771,73.819517,ok,synthetic_map_aligned
+CAM-0604,D-0604,Dhankawadi,18.4612,73.858424,18.46124,73.858499,medium,synthetic_map_aligned
+CAM-0605,D-0605,Katraj,18.45764,73.8578,18.457798,73.857885,medium,synthetic_map_aligned
+CAM-0606,D-0606,Bibwewadi,18.490398,73.857863,18.490603,73.857962,medium,synthetic_map_aligned
+CAM-0607,D-0607,Dhayari,18.44242,73.816538,18.442483,73.816775,medium,synthetic_map_aligned
+CAM-0608,D-0608,Nanded,18.459255,73.798691,18.459447,73.798651,ok,synthetic_map_aligned
+CAM-0609,D-0609,Shivane,18.462601,73.782321,18.462382,73.781998,medium,synthetic_map_aligned
+CAM-0610,D-0610,Hadapsar,18.499243,73.929661,18.499083,73.929301,medium,synthetic_map_aligned
+CAM-0611,D-0611,Mundhwa,18.52617,73.954974,18.526244,73.955282,high,synthetic_map_aligned
+CAM-0612,D-0612,Kharadi,18.550019,73.936888,18.549813,73.937073,medium,synthetic_map_aligned
+CAM-0613,D-0613,Viman Nagar,18.56876,73.915363,18.568843,73.915578,ok,synthetic_map_aligned
+CAM-0614,D-0614,Dhanori,18.578333,73.885992,18.578171,73.886122,high,synthetic_map_aligned
+CAM-0615,D-0615,Vishrantwadi,18.573074,73.877561,18.573178,73.877411,high,synthetic_map_aligned
+CAM-0616,D-0616,Dighi,18.573705,73.905487,18.573769,73.905319,low,synthetic_map_aligned
+CAM-0617,D-0617,Lohgaon,18.620016,73.917013,18.620224,73.916982,medium,synthetic_map_aligned
+CAM-0618,D-0618,Undri,18.438595,73.915719,18.438687,73.915751,critical,synthetic_map_aligned
+CAM-0619,D-0619,Ambegaon Budruk,18.46091,73.840867,18.460775,73.840723,critical,synthetic_map_aligned
+CAM-0620,D-0620,Ambegaon Khurd,18.431047,73.849558,18.431246,73.849489,critical,synthetic_map_aligned
+CAM-0621,D-0621,Shivajinagar,18.531094,73.847728,18.531005,73.847919,low,synthetic_map_aligned
+CAM-0622,D-0622,Deccan Gymkhana,18.515004,73.8417,18.514721,73.841903,medium,synthetic_map_aligned
+CAM-0623,D-0623,Navi Peth,18.510339,73.84398,18.510505,73.843928,low,synthetic_map_aligned
+CAM-0624,D-0624,Swargate,18.498949,73.858263,18.498789,73.858203,ok,synthetic_map_aligned
+CAM-0625,D-0625,Kasba Peth,18.523545,73.864264,18.523333,73.864375,ok,synthetic_map_aligned
+CAM-0626,D-0626,Bhawani Peth,18.509225,73.868501,18.50929,73.868253,medium,synthetic_map_aligned
+CAM-0627,D-0627,Guruwar Peth,18.512217,73.854269,18.512418,73.853949,low,synthetic_map_aligned
+CAM-0628,D-0628,Nana Peth,18.514757,73.865527,18.514721,73.865291,high,synthetic_map_aligned
+CAM-0629,D-0629,Kothrud,18.50085,73.819912,18.501032,73.819857,medium,synthetic_map_aligned
+CAM-0630,D-0630,Karve Nagar,18.488796,73.817367,18.488584,73.81724,ok,synthetic_map_aligned
+CAM-0631,D-0631,Aundh,18.55781,73.80543,18.557911,73.805513,medium,synthetic_map_aligned
+CAM-0632,D-0632,Baner,18.560328,73.784592,18.560435,73.784302,ok,synthetic_map_aligned
+CAM-0633,D-0633,Sus,18.544513,73.781437,18.544503,73.781546,medium,synthetic_map_aligned
+CAM-0634,D-0634,Warje,18.50066,73.819967,18.500879,73.819722,low,synthetic_map_aligned
+CAM-0635,D-0635,Dhankawadi,18.458558,73.85463,18.458695,73.854417,low,synthetic_map_aligned
+CAM-0636,D-0636,Katraj,18.45617,73.85686,18.456553,73.856769,ok,synthetic_map_aligned
+CAM-0637,D-0637,Bibwewadi,18.48905,73.858588,18.488991,73.858919,ok,synthetic_map_aligned
+CAM-0638,D-0638,Dhayari,18.436069,73.811943,18.435872,73.811841,ok,synthetic_map_aligned
+CAM-0639,D-0639,Nanded,18.459835,73.801886,18.459885,73.802022,ok,synthetic_map_aligned
+CAM-0640,D-0640,Shivane,18.465472,73.782319,18.465499,73.782064,medium,synthetic_map_aligned
+CAM-0641,D-0641,Hadapsar,18.503138,73.935084,18.50322,73.935083,medium,synthetic_map_aligned
+CAM-0642,D-0642,Mundhwa,18.526393,73.949392,18.526748,73.94928,critical,synthetic_map_aligned
+CAM-0643,D-0643,Kharadi,18.552114,73.935546,18.552196,73.935623,low,synthetic_map_aligned
+CAM-0644,D-0644,Viman Nagar,18.563792,73.91578,18.563559,73.915907,ok,synthetic_map_aligned
+CAM-0645,D-0645,Dhanori,18.582521,73.882176,18.58276,73.882142,ok,synthetic_map_aligned
+CAM-0646,D-0646,Vishrantwadi,18.570395,73.878497,18.570175,73.878556,low,synthetic_map_aligned
+CAM-0647,D-0647,Dighi,18.572372,73.909609,18.572444,73.909308,low,synthetic_map_aligned
+CAM-0648,D-0648,Lohgaon,18.618726,73.919034,18.618702,73.919115,high,synthetic_map_aligned
+CAM-0649,D-0649,Undri,18.433943,73.916024,18.433952,73.91618,medium,synthetic_map_aligned
+CAM-0650,D-0650,Ambegaon Budruk,18.458297,73.845165,18.458299,73.845275,high,synthetic_map_aligned
+CAM-0651,D-0651,Ambegaon Khurd,18.431186,73.852391,18.43134,73.852471,critical,synthetic_map_aligned
+CAM-0652,D-0652,Shivajinagar,18.53183,73.84001,18.531884,73.839699,ok,synthetic_map_aligned
+CAM-0653,D-0653,Deccan Gymkhana,18.516163,73.840558,18.516228,73.840217,ok,synthetic_map_aligned
+CAM-0654,D-0654,Navi Peth,18.508364,73.843841,18.508266,73.8438,low,synthetic_map_aligned
+CAM-0655,D-0655,Swargate,18.498048,73.859002,18.497883,73.858966,low,synthetic_map_aligned
+CAM-0656,D-0656,Kasba Peth,18.524296,73.8595,18.524161,73.859296,high,synthetic_map_aligned
+CAM-0657,D-0657,Bhawani Peth,18.510203,73.871388,18.510574,73.871542,ok,synthetic_map_aligned
+CAM-0658,D-0658,Guruwar Peth,18.512002,73.857793,18.512273,73.857961,low,synthetic_map_aligned
+CAM-0659,D-0659,Nana Peth,18.515646,73.87102,18.51586,73.871355,critical,synthetic_map_aligned
+CAM-0660,D-0660,Kothrud,18.498309,73.820642,18.498155,73.820604,medium,synthetic_map_aligned
+CAM-0661,D-0661,Karve Nagar,18.491746,73.821692,18.491873,73.821972,ok,synthetic_map_aligned
+CAM-0662,D-0662,Aundh,18.553052,73.805158,18.552715,73.80518,medium,synthetic_map_aligned
+CAM-0663,D-0663,Baner,18.560776,73.784809,18.560899,73.784681,ok,synthetic_map_aligned
+CAM-0664,D-0664,Sus,18.541188,73.776578,18.541054,73.776435,high,synthetic_map_aligned
+CAM-0665,D-0665,Warje,18.497505,73.828351,18.49761,73.828645,ok,synthetic_map_aligned
+CAM-0666,D-0666,Dhankawadi,18.456853,73.86026,18.456767,73.860442,ok,synthetic_map_aligned
+CAM-0667,D-0667,Katraj,18.457322,73.86053,18.457368,73.860693,medium,synthetic_map_aligned
+CAM-0668,D-0668,Bibwewadi,18.486205,73.858234,18.485954,73.858261,high,synthetic_map_aligned
+CAM-0669,D-0669,Dhayari,18.441174,73.812225,18.44125,73.812207,high,synthetic_map_aligned
+CAM-0670,D-0670,Nanded,18.459345,73.798877,18.459643,73.798776,low,synthetic_map_aligned
+CAM-0671,D-0671,Shivane,18.463283,73.782356,18.463163,73.782115,medium,synthetic_map_aligned
+CAM-0672,D-0672,Hadapsar,18.499343,73.937135,18.499245,73.937425,critical,synthetic_map_aligned
+CAM-0673,D-0673,Mundhwa,18.520082,73.950683,18.519936,73.950594,high,synthetic_map_aligned
+CAM-0674,D-0674,Kharadi,18.553931,73.935202,18.554099,73.935199,high,synthetic_map_aligned
+CAM-0675,D-0675,Viman Nagar,18.566328,73.914659,18.566201,73.914615,ok,synthetic_map_aligned
+CAM-0676,D-0676,Dhanori,18.579508,73.884565,18.579388,73.884603,low,synthetic_map_aligned
+CAM-0677,D-0677,Vishrantwadi,18.576865,73.878585,18.576948,73.878616,medium,synthetic_map_aligned
+CAM-0678,D-0678,Dighi,18.572634,73.909496,18.572556,73.909219,low,synthetic_map_aligned
+CAM-0679,D-0679,Lohgaon,18.617697,73.916616,18.617505,73.916515,high,synthetic_map_aligned
+CAM-0680,D-0680,Undri,18.43212,73.913345,18.431946,73.91299,critical,synthetic_map_aligned
+CAM-0681,D-0681,Ambegaon Budruk,18.456792,73.843755,18.456529,73.84388,critical,synthetic_map_aligned
+CAM-0682,D-0682,Ambegaon Khurd,18.432209,73.84818,18.432421,73.847821,critical,synthetic_map_aligned
+CAM-0683,D-0683,Shivajinagar,18.527615,73.845621,18.527518,73.845668,ok,synthetic_map_aligned
+CAM-0684,D-0684,Deccan Gymkhana,18.514785,73.836687,18.514787,73.836447,ok,synthetic_map_aligned
+CAM-0685,D-0685,Navi Peth,18.509618,73.847662,18.509636,73.847778,high,synthetic_map_aligned
+CAM-0686,D-0686,Swargate,18.500683,73.860464,18.500858,73.86084,medium,synthetic_map_aligned
+CAM-0687,D-0687,Kasba Peth,18.520297,73.860491,18.520015,73.860401,critical,synthetic_map_aligned
+CAM-0688,D-0688,Bhawani Peth,18.509236,73.869346,18.50934,73.869107,high,synthetic_map_aligned
+CAM-0689,D-0689,Guruwar Peth,18.513216,73.859191,18.513324,73.859256,medium,synthetic_map_aligned
+CAM-0690,D-0690,Nana Peth,18.516292,73.86936,18.516431,73.869385,high,synthetic_map_aligned
+CAM-0691,D-0691,Kothrud,18.500907,73.821015,18.501199,73.820873,low,synthetic_map_aligned
+CAM-0692,D-0692,Karve Nagar,18.488906,73.820627,18.488707,73.820685,medium,synthetic_map_aligned
+CAM-0693,D-0693,Aundh,18.553622,73.80633,18.553529,73.806391,medium,synthetic_map_aligned
+CAM-0694,D-0694,Baner,18.55875,73.785768,18.558739,73.785627,low,synthetic_map_aligned
+CAM-0695,D-0695,Sus,18.546693,73.774411,18.546839,73.774185,low,synthetic_map_aligned
+CAM-0696,D-0696,Warje,18.500059,73.82651,18.500213,73.826752,ok,synthetic_map_aligned
+CAM-0697,D-0697,Dhankawadi,18.458328,73.855377,18.458687,73.855261,medium,synthetic_map_aligned
+CAM-0698,D-0698,Katraj,18.454626,73.859737,18.454523,73.860007,high,synthetic_map_aligned
+CAM-0699,D-0699,Bibwewadi,18.490967,73.860327,18.49126,73.860525,medium,synthetic_map_aligned
+CAM-0700,D-0700,Dhayari,18.438889,73.812435,18.438805,73.812318,medium,synthetic_map_aligned
+CAM-0701,D-0701,Nanded,18.459101,73.797416,18.459169,73.79708,high,synthetic_map_aligned
+CAM-0702,D-0702,Shivane,18.463661,73.787259,18.463756,73.787518,medium,synthetic_map_aligned
+CAM-0703,D-0703,Hadapsar,18.497498,73.933047,18.497306,73.932941,ok,synthetic_map_aligned
+CAM-0704,D-0704,Mundhwa,18.523654,73.953403,18.523708,73.953479,high,synthetic_map_aligned
+CAM-0705,D-0705,Kharadi,18.547404,73.933715,18.547091,73.933676,low,synthetic_map_aligned
+CAM-0706,D-0706,Viman Nagar,18.566398,73.909517,18.566363,73.909407,ok,synthetic_map_aligned
+CAM-0707,D-0707,Dhanori,18.580625,73.882011,18.580777,73.881783,low,synthetic_map_aligned
+CAM-0708,D-0708,Vishrantwadi,18.57039,73.877291,18.570253,73.87718,ok,synthetic_map_aligned
+CAM-0709,D-0709,Dighi,18.569502,73.913558,18.569333,73.913661,ok,synthetic_map_aligned
+CAM-0710,D-0710,Lohgaon,18.616066,73.916387,18.615851,73.916353,medium,synthetic_map_aligned
+CAM-0711,D-0711,Undri,18.43381,73.911709,18.433872,73.911298,high,synthetic_map_aligned
+CAM-0712,D-0712,Ambegaon Budruk,18.464603,73.84376,18.464986,73.843809,medium,synthetic_map_aligned
+CAM-0713,D-0713,Ambegaon Khurd,18.428616,73.854924,18.42857,73.855179,medium,synthetic_map_aligned
+CAM-0714,D-0714,Shivajinagar,18.532936,73.843431,18.533249,73.843353,ok,synthetic_map_aligned
+CAM-0715,D-0715,Deccan Gymkhana,18.518676,73.843086,18.518972,73.843218,ok,synthetic_map_aligned
+CAM-0716,D-0716,Navi Peth,18.511192,73.844019,18.511518,73.843943,ok,synthetic_map_aligned
+CAM-0717,D-0717,Swargate,18.496893,73.858753,18.496658,73.858875,high,synthetic_map_aligned
+CAM-0718,D-0718,Kasba Peth,18.52658,73.861303,18.526669,73.861484,ok,synthetic_map_aligned
+CAM-0719,D-0719,Bhawani Peth,18.511233,73.868589,18.511388,73.868473,high,synthetic_map_aligned
+CAM-0720,D-0720,Guruwar Peth,18.512082,73.856236,18.512222,73.855922,medium,synthetic_map_aligned
+CAM-0721,D-0721,Nana Peth,18.515236,73.869013,18.51532,73.868985,critical,synthetic_map_aligned
+CAM-0722,D-0722,Kothrud,18.496215,73.825297,18.496001,73.825617,low,synthetic_map_aligned
+CAM-0723,D-0723,Karve Nagar,18.485494,73.820068,18.485411,73.820039,low,synthetic_map_aligned
+CAM-0724,D-0724,Aundh,18.554376,73.802048,18.554134,73.801885,ok,synthetic_map_aligned
+CAM-0725,D-0725,Baner,18.558049,73.78266,18.558006,73.782598,ok,synthetic_map_aligned
+CAM-0726,D-0726,Sus,18.547942,73.775986,18.548164,73.775898,low,synthetic_map_aligned
+CAM-0727,D-0727,Warje,18.499941,73.826136,18.499962,73.826266,medium,synthetic_map_aligned
+CAM-0728,D-0728,Dhankawadi,18.456818,73.856861,18.456808,73.85721,low,synthetic_map_aligned
+CAM-0729,D-0729,Katraj,18.452461,73.857258,18.452099,73.857213,critical,synthetic_map_aligned
+CAM-0730,D-0730,Bibwewadi,18.485745,73.857386,18.485555,73.85726,medium,synthetic_map_aligned
+CAM-0731,D-0731,Dhayari,18.437307,73.815065,18.437216,73.815275,critical,synthetic_map_aligned
+CAM-0732,D-0732,Nanded,18.458025,73.801918,18.458049,73.802089,ok,synthetic_map_aligned
+CAM-0733,D-0733,Shivane,18.460949,73.783967,18.460714,73.784235,low,synthetic_map_aligned
+CAM-0734,D-0734,Hadapsar,18.49661,73.932467,18.496329,73.932427,high,synthetic_map_aligned
+CAM-0735,D-0735,Mundhwa,18.52091,73.950611,18.520542,73.950474,critical,synthetic_map_aligned
+CAM-0736,D-0736,Kharadi,18.551742,73.935584,18.552008,73.935845,medium,synthetic_map_aligned
+CAM-0737,D-0737,Viman Nagar,18.568127,73.915032,18.568282,73.915289,medium,synthetic_map_aligned
+CAM-0738,D-0738,Dhanori,18.580621,73.883346,18.580608,73.883487,medium,synthetic_map_aligned
+CAM-0739,D-0739,Vishrantwadi,18.573325,73.878322,18.573548,73.878351,low,synthetic_map_aligned
+CAM-0740,D-0740,Dighi,18.574824,73.911739,18.57494,73.911838,ok,synthetic_map_aligned
+CAM-0741,D-0741,Lohgaon,18.617704,73.916019,18.617562,73.915949,high,synthetic_map_aligned
+CAM-0742,D-0742,Undri,18.433093,73.913561,18.432807,73.913517,medium,synthetic_map_aligned
+CAM-0743,D-0743,Ambegaon Budruk,18.465378,73.840728,18.465639,73.840917,critical,synthetic_map_aligned
+CAM-0744,D-0744,Ambegaon Khurd,18.430234,73.848543,18.430183,73.848297,high,synthetic_map_aligned
+CAM-0745,D-0745,Shivajinagar,18.529528,73.84413,18.529364,73.844067,low,synthetic_map_aligned
+CAM-0746,D-0746,Deccan Gymkhana,18.513301,73.839311,18.513011,73.839214,medium,synthetic_map_aligned
+CAM-0747,D-0747,Navi Peth,18.508556,73.840112,18.50859,73.839849,high,synthetic_map_aligned
+CAM-0748,D-0748,Swargate,18.500067,73.856781,18.499881,73.856695,low,synthetic_map_aligned
+CAM-0749,D-0749,Kasba Peth,18.526217,73.855165,18.526245,73.855025,ok,synthetic_map_aligned
+CAM-0750,D-0750,Bhawani Peth,18.510697,73.871075,18.510832,73.871067,medium,synthetic_map_aligned
+CAM-0751,D-0751,Guruwar Peth,18.508391,73.857937,18.508254,73.857993,medium,synthetic_map_aligned
+CAM-0752,D-0752,Nana Peth,18.516407,73.866006,18.516437,73.865887,critical,synthetic_map_aligned
+CAM-0753,D-0753,Kothrud,18.498848,73.822797,18.498873,73.822922,medium,synthetic_map_aligned
+CAM-0754,D-0754,Karve Nagar,18.490482,73.823548,18.490463,73.823625,ok,synthetic_map_aligned
+CAM-0755,D-0755,Aundh,18.554353,73.804299,18.554005,73.804437,ok,synthetic_map_aligned
+CAM-0756,D-0756,Baner,18.557886,73.789323,18.557875,73.789508,medium,synthetic_map_aligned
+CAM-0757,D-0757,Sus,18.546355,73.776846,18.546511,73.776462,medium,synthetic_map_aligned
+CAM-0758,D-0758,Warje,18.500393,73.826065,18.500528,73.82634,medium,synthetic_map_aligned
+CAM-0759,D-0759,Dhankawadi,18.455867,73.856751,18.455709,73.856712,high,synthetic_map_aligned
+CAM-0760,D-0760,Katraj,18.451445,73.853715,18.451133,73.853547,medium,synthetic_map_aligned
+CAM-0761,D-0761,Bibwewadi,18.489453,73.858492,18.489587,73.858865,critical,synthetic_map_aligned
+CAM-0762,D-0762,Dhayari,18.440188,73.814029,18.440272,73.814059,high,synthetic_map_aligned
+CAM-0763,D-0763,Nanded,18.460668,73.802924,18.460686,73.803018,low,synthetic_map_aligned
+CAM-0764,D-0764,Shivane,18.463168,73.785348,18.46314,73.785514,low,synthetic_map_aligned
+CAM-0765,D-0765,Hadapsar,18.498169,73.931639,18.49785,73.931433,ok,synthetic_map_aligned
+CAM-0766,D-0766,Mundhwa,18.523897,73.953801,18.523955,73.954,medium,synthetic_map_aligned
+CAM-0767,D-0767,Kharadi,18.55425,73.93853,18.554303,73.938601,low,synthetic_map_aligned
+CAM-0768,D-0768,Viman Nagar,18.568179,73.918456,18.568289,73.918833,medium,synthetic_map_aligned
+CAM-0769,D-0769,Dhanori,18.58253,73.88423,18.582603,73.884566,high,synthetic_map_aligned
+CAM-0770,D-0770,Vishrantwadi,18.571545,73.879992,18.571363,73.880279,high,synthetic_map_aligned
+CAM-0771,D-0771,Dighi,18.571118,73.914489,18.571078,73.91456,ok,synthetic_map_aligned
+CAM-0772,D-0772,Lohgaon,18.62026,73.920705,18.620332,73.920828,critical,synthetic_map_aligned
+CAM-0773,D-0773,Undri,18.434068,73.915962,18.434154,73.916165,critical,synthetic_map_aligned
+CAM-0774,D-0774,Ambegaon Budruk,18.465082,73.84306,18.465171,73.8431,medium,synthetic_map_aligned
+CAM-0775,D-0775,Ambegaon Khurd,18.430204,73.850068,18.430284,73.849836,medium,synthetic_map_aligned
+CAM-0776,D-0776,Shivajinagar,18.527955,73.847973,18.527894,73.848034,medium,synthetic_map_aligned
+CAM-0777,D-0777,Deccan Gymkhana,18.516443,73.844109,18.51634,73.844445,ok,synthetic_map_aligned
+CAM-0778,D-0778,Navi Peth,18.5094,73.84208,18.509485,73.841971,medium,synthetic_map_aligned
+CAM-0779,D-0779,Swargate,18.498276,73.858712,18.498117,73.858727,ok,synthetic_map_aligned
+CAM-0780,D-0780,Kasba Peth,18.525785,73.86055,18.526117,73.860469,critical,synthetic_map_aligned
+CAM-0781,D-0781,Bhawani Peth,18.509175,73.872587,18.50926,73.872695,high,synthetic_map_aligned
+CAM-0782,D-0782,Guruwar Peth,18.509425,73.855058,18.509343,73.854864,low,synthetic_map_aligned
+CAM-0783,D-0783,Nana Peth,18.511848,73.870589,18.51164,73.870766,ok,synthetic_map_aligned
+CAM-0784,D-0784,Kothrud,18.496969,73.821397,18.49688,73.821483,ok,synthetic_map_aligned
+CAM-0785,D-0785,Karve Nagar,18.492325,73.81956,18.492445,73.81955,ok,synthetic_map_aligned
+CAM-0786,D-0786,Aundh,18.553496,73.808004,18.55333,73.808101,medium,synthetic_map_aligned
+CAM-0787,D-0787,Baner,18.561937,73.789963,18.561951,73.790087,medium,synthetic_map_aligned
+CAM-0788,D-0788,Sus,18.545129,73.778608,18.545204,73.778456,ok,synthetic_map_aligned
+CAM-0789,D-0789,Warje,18.499706,73.821191,18.499799,73.821003,low,synthetic_map_aligned
+CAM-0790,D-0790,Dhankawadi,18.456197,73.855403,18.456128,73.855252,medium,synthetic_map_aligned
+CAM-0791,D-0791,Katraj,18.454017,73.852651,18.453957,73.852486,medium,synthetic_map_aligned
+CAM-0792,D-0792,Bibwewadi,18.491296,73.857279,18.491448,73.857255,high,synthetic_map_aligned
+CAM-0793,D-0793,Dhayari,18.441876,73.815162,18.441968,73.815346,critical,synthetic_map_aligned
+CAM-0794,D-0794,Nanded,18.459351,73.800653,18.459373,73.800786,low,synthetic_map_aligned
+CAM-0795,D-0795,Shivane,18.4643,73.782429,18.464295,73.782202,medium,synthetic_map_aligned
+CAM-0796,D-0796,Hadapsar,18.50071,73.931656,18.500869,73.931333,high,synthetic_map_aligned
+CAM-0797,D-0797,Mundhwa,18.526113,73.951981,18.526185,73.951999,ok,synthetic_map_aligned
+CAM-0798,D-0798,Kharadi,18.551899,73.935167,18.552221,73.935368,ok,synthetic_map_aligned
+CAM-0799,D-0799,Viman Nagar,18.567162,73.913307,18.567172,73.913132,low,synthetic_map_aligned
+CAM-0800,D-0800,Dhanori,18.577837,73.883252,18.577762,73.88329,ok,synthetic_map_aligned
+CAM-0801,D-0801,Vishrantwadi,18.573282,73.878273,18.573656,73.878334,medium,synthetic_map_aligned
+CAM-0802,D-0802,Dighi,18.572161,73.912802,18.572068,73.91311,high,synthetic_map_aligned
+CAM-0803,D-0803,Lohgaon,18.620727,73.916361,18.621046,73.916151,medium,synthetic_map_aligned
+CAM-0804,D-0804,Undri,18.431153,73.910827,18.430977,73.910588,medium,synthetic_map_aligned
+CAM-0805,D-0805,Ambegaon Budruk,18.461196,73.837603,18.461057,73.83724,medium,synthetic_map_aligned
+CAM-0806,D-0806,Ambegaon Khurd,18.430444,73.851873,18.43065,73.851953,ok,synthetic_map_aligned
+CAM-0807,D-0807,Shivajinagar,18.531018,73.846452,18.530994,73.846793,low,synthetic_map_aligned
+CAM-0808,D-0808,Deccan Gymkhana,18.516502,73.842816,18.516502,73.842956,ok,synthetic_map_aligned
+CAM-0809,D-0809,Navi Peth,18.509665,73.846948,18.509601,73.847338,low,synthetic_map_aligned
+CAM-0810,D-0810,Swargate,18.503422,73.857377,18.503549,73.857356,medium,synthetic_map_aligned
+CAM-0811,D-0811,Kasba Peth,18.527471,73.857435,18.527588,73.857335,critical,synthetic_map_aligned
+CAM-0812,D-0812,Bhawani Peth,18.507586,73.868341,18.507427,73.868211,medium,synthetic_map_aligned
+CAM-0813,D-0813,Guruwar Peth,18.514549,73.858132,18.514817,73.858154,medium,synthetic_map_aligned
+CAM-0814,D-0814,Nana Peth,18.514859,73.868786,18.514976,73.868703,ok,synthetic_map_aligned
+CAM-0815,D-0815,Kothrud,18.499076,73.823338,18.499254,73.823578,ok,synthetic_map_aligned
+CAM-0816,D-0816,Karve Nagar,18.494299,73.821456,18.494391,73.821454,ok,synthetic_map_aligned
+CAM-0817,D-0817,Aundh,18.555199,73.806011,18.554939,73.806073,ok,synthetic_map_aligned
+CAM-0818,D-0818,Baner,18.557617,73.783826,18.557426,73.783753,ok,synthetic_map_aligned
+CAM-0819,D-0819,Sus,18.54455,73.782421,18.544489,73.782606,medium,synthetic_map_aligned
+CAM-0820,D-0820,Warje,18.496523,73.826622,18.496262,73.826931,ok,synthetic_map_aligned
+CAM-0821,D-0821,Dhankawadi,18.458808,73.859548,18.458845,73.859652,low,synthetic_map_aligned
+CAM-0822,D-0822,Katraj,18.458611,73.858115,18.458814,73.858214,high,synthetic_map_aligned
+CAM-0823,D-0823,Bibwewadi,18.48944,73.858948,18.489482,73.859142,medium,synthetic_map_aligned
+CAM-0824,D-0824,Dhayari,18.4431,73.812138,18.443348,73.812112,high,synthetic_map_aligned
+CAM-0825,D-0825,Nanded,18.459251,73.800649,18.45929,73.800836,ok,synthetic_map_aligned
+CAM-0826,D-0826,Shivane,18.462686,73.782019,18.462671,73.781783,high,synthetic_map_aligned
+CAM-0827,D-0827,Hadapsar,18.497414,73.932803,18.49706,73.932618,critical,synthetic_map_aligned
+CAM-0828,D-0828,Mundhwa,18.520402,73.952649,18.520268,73.952612,high,synthetic_map_aligned
+CAM-0829,D-0829,Kharadi,18.552772,73.935755,18.55303,73.935997,low,synthetic_map_aligned
+CAM-0830,D-0830,Viman Nagar,18.567329,73.9149,18.567077,73.915161,ok,synthetic_map_aligned
+CAM-0831,D-0831,Dhanori,18.57807,73.886061,18.578009,73.886157,medium,synthetic_map_aligned
+CAM-0832,D-0832,Vishrantwadi,18.57351,73.877093,18.573661,73.876922,medium,synthetic_map_aligned
+CAM-0833,D-0833,Dighi,18.576809,73.909602,18.576966,73.90955,high,synthetic_map_aligned
+CAM-0834,D-0834,Lohgaon,18.617681,73.917826,18.617608,73.917821,ok,synthetic_map_aligned
+CAM-0835,D-0835,Undri,18.430889,73.913796,18.430679,73.913466,medium,synthetic_map_aligned
+CAM-0836,D-0836,Ambegaon Budruk,18.463078,73.839934,18.463217,73.839599,critical,synthetic_map_aligned
+CAM-0837,D-0837,Ambegaon Khurd,18.431094,73.848944,18.431095,73.848809,high,synthetic_map_aligned
+CAM-0838,D-0838,Shivajinagar,18.532961,73.845246,18.533117,73.845367,medium,synthetic_map_aligned
+CAM-0839,D-0839,Deccan Gymkhana,18.514778,73.841148,18.514532,73.841086,medium,synthetic_map_aligned
+CAM-0840,D-0840,Navi Peth,18.509105,73.841753,18.509082,73.841341,medium,synthetic_map_aligned
+CAM-0841,D-0841,Swargate,18.504753,73.85933,18.504869,73.859376,ok,synthetic_map_aligned
+CAM-0842,D-0842,Kasba Peth,18.524822,73.861277,18.524787,73.861535,critical,synthetic_map_aligned
+CAM-0843,D-0843,Bhawani Peth,18.511369,73.868198,18.511415,73.868137,high,synthetic_map_aligned
+CAM-0844,D-0844,Guruwar Peth,18.510629,73.857333,18.510547,73.857295,low,synthetic_map_aligned
+CAM-0845,D-0845,Nana Peth,18.515916,73.870872,18.516214,73.87109,high,synthetic_map_aligned
+CAM-0846,D-0846,Kothrud,18.502182,73.819769,18.502469,73.819647,ok,synthetic_map_aligned
+CAM-0847,D-0847,Karve Nagar,18.49269,73.819753,18.492908,73.819611,low,synthetic_map_aligned
+CAM-0848,D-0848,Aundh,18.55495,73.805352,18.554883,73.805437,medium,synthetic_map_aligned
+CAM-0849,D-0849,Baner,18.559142,73.790363,18.55917,73.790638,ok,synthetic_map_aligned
+CAM-0850,D-0850,Sus,18.543566,73.778065,18.543434,73.778004,high,synthetic_map_aligned
+CAM-0851,D-0851,Warje,18.49525,73.822414,18.495169,73.822176,low,synthetic_map_aligned
+CAM-0852,D-0852,Dhankawadi,18.456821,73.86037,18.456736,73.860768,ok,synthetic_map_aligned
+CAM-0853,D-0853,Katraj,18.454427,73.856997,18.45416,73.857244,high,synthetic_map_aligned
+CAM-0854,D-0854,Bibwewadi,18.490347,73.861937,18.490424,73.862101,ok,synthetic_map_aligned
+CAM-0855,D-0855,Dhayari,18.441075,73.810123,18.441344,73.809988,ok,synthetic_map_aligned
+CAM-0856,D-0856,Nanded,18.456944,73.800381,18.456754,73.800749,low,synthetic_map_aligned
+CAM-0857,D-0857,Shivane,18.461731,73.780851,18.461506,73.780613,high,synthetic_map_aligned
+CAM-0858,D-0858,Hadapsar,18.502641,73.930134,18.502833,73.929903,ok,synthetic_map_aligned
+CAM-0859,D-0859,Mundhwa,18.522476,73.950435,18.522458,73.950284,high,synthetic_map_aligned
+CAM-0860,D-0860,Kharadi,18.554656,73.93186,18.554738,73.931789,high,synthetic_map_aligned
+CAM-0861,D-0861,Viman Nagar,18.568931,73.911985,18.568923,73.911908,medium,synthetic_map_aligned
+CAM-0862,D-0862,Dhanori,18.584213,73.881324,18.584367,73.881308,medium,synthetic_map_aligned
+CAM-0863,D-0863,Vishrantwadi,18.574267,73.880433,18.574332,73.880553,medium,synthetic_map_aligned
+CAM-0864,D-0864,Dighi,18.574332,73.909642,18.574608,73.909585,medium,synthetic_map_aligned
+CAM-0865,D-0865,Lohgaon,18.618379,73.918533,18.618237,73.918911,critical,synthetic_map_aligned
+CAM-0866,D-0866,Undri,18.431601,73.915243,18.431359,73.91541,medium,synthetic_map_aligned
+CAM-0867,D-0867,Ambegaon Budruk,18.45886,73.844284,18.458749,73.844663,high,synthetic_map_aligned
+CAM-0868,D-0868,Ambegaon Khurd,18.429006,73.854016,18.428962,73.854241,high,synthetic_map_aligned
+CAM-0869,D-0869,Shivajinagar,18.529851,73.845893,18.529699,73.845941,low,synthetic_map_aligned
+CAM-0870,D-0870,Deccan Gymkhana,18.516313,73.841872,18.516434,73.842031,medium,synthetic_map_aligned
+CAM-0871,D-0871,Navi Peth,18.510512,73.843283,18.510552,73.843215,medium,synthetic_map_aligned
+CAM-0872,D-0872,Swargate,18.504877,73.858006,18.505023,73.85797,ok,synthetic_map_aligned
+CAM-0873,D-0873,Kasba Peth,18.526285,73.862968,18.526355,73.863093,high,synthetic_map_aligned
+CAM-0874,D-0874,Bhawani Peth,18.506483,73.869995,18.506363,73.869974,medium,synthetic_map_aligned
+CAM-0875,D-0875,Guruwar Peth,18.509809,73.858947,18.509759,73.859042,ok,synthetic_map_aligned
+CAM-0876,D-0876,Nana Peth,18.511919,73.870718,18.511624,73.870732,high,synthetic_map_aligned
+CAM-0877,D-0877,Kothrud,18.501011,73.825262,18.500915,73.825636,low,synthetic_map_aligned
+CAM-0878,D-0878,Karve Nagar,18.49046,73.816665,18.49047,73.816584,low,synthetic_map_aligned
+CAM-0879,D-0879,Aundh,18.555582,73.80682,18.555569,73.80707,high,synthetic_map_aligned
+CAM-0880,D-0880,Baner,18.558964,73.78762,18.558966,73.787974,medium,synthetic_map_aligned
+CAM-0881,D-0881,Sus,18.546462,73.778006,18.546509,73.777938,ok,synthetic_map_aligned
+CAM-0882,D-0882,Warje,18.499291,73.828596,18.49937,73.828785,medium,synthetic_map_aligned
+CAM-0883,D-0883,Dhankawadi,18.455805,73.851214,18.455766,73.850876,ok,synthetic_map_aligned
+CAM-0884,D-0884,Katraj,18.457347,73.85336,18.457466,73.853159,ok,synthetic_map_aligned
+CAM-0885,D-0885,Bibwewadi,18.488202,73.859996,18.488239,73.860213,medium,synthetic_map_aligned
+CAM-0886,D-0886,Dhayari,18.438994,73.811299,18.438795,73.810967,high,synthetic_map_aligned
+CAM-0887,D-0887,Nanded,18.458666,73.803583,18.458585,73.803947,high,synthetic_map_aligned
+CAM-0888,D-0888,Shivane,18.462193,73.781168,18.46217,73.78088,medium,synthetic_map_aligned
+CAM-0889,D-0889,Hadapsar,18.501337,73.934083,18.501633,73.934203,medium,synthetic_map_aligned
+CAM-0890,D-0890,Mundhwa,18.523543,73.953463,18.523589,73.953762,medium,synthetic_map_aligned
+CAM-0891,D-0891,Kharadi,18.551846,73.935336,18.551927,73.9354,ok,synthetic_map_aligned
+CAM-0892,D-0892,Viman Nagar,18.566121,73.910945,18.566009,73.910548,medium,synthetic_map_aligned
+CAM-0893,D-0893,Dhanori,18.5796,73.882661,18.579212,73.882563,medium,synthetic_map_aligned
+CAM-0894,D-0894,Vishrantwadi,18.570858,73.882057,18.57073,73.88216,ok,synthetic_map_aligned
+CAM-0895,D-0895,Dighi,18.573486,73.911271,18.573553,73.911342,ok,synthetic_map_aligned
+CAM-0896,D-0896,Lohgaon,18.621932,73.920541,18.621983,73.920597,medium,synthetic_map_aligned
+CAM-0897,D-0897,Undri,18.434905,73.914154,18.435233,73.913966,ok,synthetic_map_aligned
+CAM-0898,D-0898,Ambegaon Budruk,18.46204,73.845951,18.462023,73.846201,high,synthetic_map_aligned
+CAM-0899,D-0899,Ambegaon Khurd,18.430405,73.847676,18.430292,73.847332,critical,synthetic_map_aligned
+CAM-0900,D-0900,Shivajinagar,18.532817,73.844759,18.532909,73.844789,low,synthetic_map_aligned
+CAM-0901,D-0901,Deccan Gymkhana,18.517605,73.84148,18.517919,73.841551,medium,synthetic_map_aligned
+CAM-0902,D-0902,Navi Peth,18.509909,73.843292,18.510178,73.84312,medium,synthetic_map_aligned
+CAM-0903,D-0903,Swargate,18.499907,73.856986,18.499821,73.856646,medium,synthetic_map_aligned
+CAM-0904,D-0904,Kasba Peth,18.528439,73.857864,18.528829,73.857893,medium,synthetic_map_aligned
+CAM-0905,D-0905,Bhawani Peth,18.507889,73.871406,18.507814,73.871535,high,synthetic_map_aligned
+CAM-0906,D-0906,Guruwar Peth,18.51135,73.860918,18.511461,73.861185,medium,synthetic_map_aligned
+CAM-0907,D-0907,Nana Peth,18.515651,73.869435,18.515809,73.869426,high,synthetic_map_aligned
+CAM-0908,D-0908,Kothrud,18.497977,73.823836,18.497904,73.823896,low,synthetic_map_aligned
+CAM-0909,D-0909,Karve Nagar,18.488893,73.824232,18.488813,73.824517,ok,synthetic_map_aligned
+CAM-0910,D-0910,Aundh,18.552474,73.801541,18.552443,73.801314,ok,synthetic_map_aligned
+CAM-0911,D-0911,Baner,18.561017,73.788287,18.561362,73.788458,low,synthetic_map_aligned
+CAM-0912,D-0912,Sus,18.541726,73.783021,18.541676,73.783271,medium,synthetic_map_aligned
+CAM-0913,D-0913,Warje,18.496974,73.825756,18.496743,73.826044,medium,synthetic_map_aligned
+CAM-0914,D-0914,Dhankawadi,18.455893,73.853747,18.455815,73.853579,medium,synthetic_map_aligned
+CAM-0915,D-0915,Katraj,18.455869,73.853888,18.45591,73.853666,high,synthetic_map_aligned
+CAM-0916,D-0916,Bibwewadi,18.490234,73.852908,18.490179,73.85262,high,synthetic_map_aligned
+CAM-0917,D-0917,Dhayari,18.441021,73.808689,18.441051,73.80852,medium,synthetic_map_aligned
+CAM-0918,D-0918,Nanded,18.460124,73.800684,18.460296,73.800873,ok,synthetic_map_aligned
+CAM-0919,D-0919,Shivane,18.464362,73.787014,18.464452,73.787295,ok,synthetic_map_aligned
+CAM-0920,D-0920,Hadapsar,18.502923,73.93095,18.503,73.930839,high,synthetic_map_aligned
+CAM-0921,D-0921,Mundhwa,18.52293,73.950412,18.522839,73.950232,medium,synthetic_map_aligned
+CAM-0922,D-0922,Kharadi,18.553532,73.93656,18.553618,73.936714,low,synthetic_map_aligned
+CAM-0923,D-0923,Viman Nagar,18.564024,73.912388,18.563773,73.912209,low,synthetic_map_aligned
+CAM-0924,D-0924,Dhanori,18.577183,73.88053,18.576924,73.880411,medium,synthetic_map_aligned
+CAM-0925,D-0925,Vishrantwadi,18.573469,73.880524,18.57355,73.880822,low,synthetic_map_aligned
+CAM-0926,D-0926,Dighi,18.573403,73.909767,18.573596,73.909644,medium,synthetic_map_aligned
+CAM-0927,D-0927,Lohgaon,18.621851,73.914089,18.621922,73.913993,medium,synthetic_map_aligned
+CAM-0928,D-0928,Undri,18.432717,73.917426,18.432601,73.917607,medium,synthetic_map_aligned
+CAM-0929,D-0929,Ambegaon Budruk,18.460441,73.841995,18.460363,73.842057,ok,synthetic_map_aligned
+CAM-0930,D-0930,Ambegaon Khurd,18.433446,73.850963,18.433606,73.851023,ok,synthetic_map_aligned
+CAM-0931,D-0931,Shivajinagar,18.53008,73.845157,18.52993,73.845227,medium,synthetic_map_aligned
+CAM-0932,D-0932,Deccan Gymkhana,18.516004,73.842299,18.516062,73.84256,medium,synthetic_map_aligned
+CAM-0933,D-0933,Navi Peth,18.509241,73.844742,18.509097,73.845024,medium,synthetic_map_aligned
+CAM-0934,D-0934,Swargate,18.501212,73.859878,18.501232,73.860087,medium,synthetic_map_aligned
+CAM-0935,D-0935,Kasba Peth,18.526947,73.863051,18.52711,73.863278,ok,synthetic_map_aligned
+CAM-0936,D-0936,Bhawani Peth,18.50992,73.870321,18.510269,73.870385,high,synthetic_map_aligned
+CAM-0937,D-0937,Guruwar Peth,18.512783,73.857831,18.512864,73.857809,medium,synthetic_map_aligned
+CAM-0938,D-0938,Nana Peth,18.51851,73.868773,18.518821,73.868549,critical,synthetic_map_aligned
+CAM-0939,D-0939,Kothrud,18.499143,73.821948,18.499193,73.822072,medium,synthetic_map_aligned
+CAM-0940,D-0940,Karve Nagar,18.486562,73.820802,18.486338,73.820885,low,synthetic_map_aligned
+CAM-0941,D-0941,Aundh,18.554699,73.807332,18.554695,73.807417,ok,synthetic_map_aligned
+CAM-0942,D-0942,Baner,18.56194,73.786516,18.562177,73.786657,ok,synthetic_map_aligned
+CAM-0943,D-0943,Sus,18.543569,73.783879,18.543632,73.784278,low,synthetic_map_aligned
+CAM-0944,D-0944,Warje,18.500942,73.823965,18.50118,73.823899,medium,synthetic_map_aligned
+CAM-0945,D-0945,Dhankawadi,18.456414,73.855393,18.456194,73.855265,medium,synthetic_map_aligned
+CAM-0946,D-0946,Katraj,18.451097,73.856591,18.45086,73.856557,ok,synthetic_map_aligned
+CAM-0947,D-0947,Bibwewadi,18.486629,73.855882,18.486475,73.855701,critical,synthetic_map_aligned
+CAM-0948,D-0948,Dhayari,18.440018,73.811672,18.440194,73.811556,medium,synthetic_map_aligned
+CAM-0949,D-0949,Nanded,18.458338,73.799634,18.458261,73.799776,medium,synthetic_map_aligned
+CAM-0950,D-0950,Shivane,18.465921,73.783867,18.466184,73.783778,medium,synthetic_map_aligned
+CAM-0951,D-0951,Hadapsar,18.49945,73.932857,18.499245,73.932657,medium,synthetic_map_aligned
+CAM-0952,D-0952,Mundhwa,18.522339,73.956737,18.522467,73.957135,medium,synthetic_map_aligned
+CAM-0953,D-0953,Kharadi,18.550584,73.933252,18.550538,73.933151,ok,synthetic_map_aligned
+CAM-0954,D-0954,Viman Nagar,18.56802,73.91802,18.567976,73.918256,ok,synthetic_map_aligned
+CAM-0955,D-0955,Dhanori,18.582681,73.880097,18.582822,73.879899,low,synthetic_map_aligned
+CAM-0956,D-0956,Vishrantwadi,18.573636,73.876498,18.573671,73.876262,medium,synthetic_map_aligned
+CAM-0957,D-0957,Dighi,18.573687,73.91347,18.573787,73.913633,medium,synthetic_map_aligned
+CAM-0958,D-0958,Lohgaon,18.619334,73.919222,18.619391,73.919429,medium,synthetic_map_aligned
+CAM-0959,D-0959,Undri,18.433678,73.912594,18.433645,73.912428,medium,synthetic_map_aligned
+CAM-0960,D-0960,Ambegaon Budruk,18.464588,73.840035,18.46489,73.839948,medium,synthetic_map_aligned
+CAM-0961,D-0961,Ambegaon Khurd,18.427861,73.852835,18.427646,73.852944,high,synthetic_map_aligned
+CAM-0962,D-0962,Shivajinagar,18.533041,73.842745,18.533168,73.842433,ok,synthetic_map_aligned
+CAM-0963,D-0963,Deccan Gymkhana,18.517195,73.837201,18.517338,73.836807,low,synthetic_map_aligned
+CAM-0964,D-0964,Navi Peth,18.507728,73.843162,18.507349,73.843195,high,synthetic_map_aligned
+CAM-0965,D-0965,Swargate,18.501721,73.856238,18.501863,73.855993,medium,synthetic_map_aligned
+CAM-0966,D-0966,Kasba Peth,18.52879,73.860411,18.528891,73.860384,high,synthetic_map_aligned
+CAM-0967,D-0967,Bhawani Peth,18.508824,73.870916,18.508908,73.870976,medium,synthetic_map_aligned
+CAM-0968,D-0968,Guruwar Peth,18.514549,73.855557,18.514815,73.855398,ok,synthetic_map_aligned
+CAM-0969,D-0969,Nana Peth,18.510861,73.870135,18.510672,73.870205,critical,synthetic_map_aligned
+CAM-0970,D-0970,Kothrud,18.500908,73.817461,18.501207,73.817186,medium,synthetic_map_aligned
+CAM-0971,D-0971,Karve Nagar,18.488567,73.822582,18.488354,73.822887,medium,synthetic_map_aligned
+CAM-0972,D-0972,Aundh,18.558689,73.807917,18.55878,73.808089,high,synthetic_map_aligned
+CAM-0973,D-0973,Baner,18.560696,73.791033,18.560822,73.791329,high,synthetic_map_aligned
+CAM-0974,D-0974,Sus,18.547235,73.781426,18.547575,73.781608,low,synthetic_map_aligned
+CAM-0975,D-0975,Warje,18.498103,73.820611,18.497947,73.820226,medium,synthetic_map_aligned
+CAM-0976,D-0976,Dhankawadi,18.455402,73.853906,18.455319,73.85375,medium,synthetic_map_aligned
+CAM-0977,D-0977,Katraj,18.453907,73.858829,18.453866,73.85893,high,synthetic_map_aligned
+CAM-0978,D-0978,Bibwewadi,18.487629,73.858132,18.487542,73.858097,critical,synthetic_map_aligned
+CAM-0979,D-0979,Dhayari,18.44279,73.811516,18.442927,73.811448,high,synthetic_map_aligned
+CAM-0980,D-0980,Nanded,18.459303,73.800351,18.459449,73.800572,ok,synthetic_map_aligned
+CAM-0981,D-0981,Shivane,18.460917,73.787129,18.460839,73.787224,ok,synthetic_map_aligned
+CAM-0982,D-0982,Hadapsar,18.496352,73.933659,18.496182,73.933724,medium,synthetic_map_aligned
+CAM-0983,D-0983,Mundhwa,18.523117,73.957634,18.523087,73.957739,medium,synthetic_map_aligned
+CAM-0984,D-0984,Kharadi,18.554803,73.934217,18.554929,73.934222,low,synthetic_map_aligned
+CAM-0985,D-0985,Viman Nagar,18.566685,73.913591,18.566589,73.913504,ok,synthetic_map_aligned
+CAM-0986,D-0986,Dhanori,18.577648,73.886712,18.577268,73.88681,low,synthetic_map_aligned
+CAM-0987,D-0987,Vishrantwadi,18.571481,73.880231,18.571145,73.880435,ok,synthetic_map_aligned
+CAM-0988,D-0988,Dighi,18.571548,73.90769,18.571557,73.907325,ok,synthetic_map_aligned
+CAM-0989,D-0989,Lohgaon,18.618324,73.916874,18.618237,73.916809,critical,synthetic_map_aligned
+CAM-0990,D-0990,Undri,18.432464,73.913873,18.43219,73.913725,critical,synthetic_map_aligned
+CAM-0991,D-0991,Ambegaon Budruk,18.458738,73.840013,18.458506,73.839923,ok,synthetic_map_aligned
+CAM-0992,D-0992,Ambegaon Khurd,18.431771,73.84714,18.431774,73.846944,medium,synthetic_map_aligned
+CAM-0993,D-0993,Shivajinagar,18.531216,73.845743,18.531162,73.84593,high,synthetic_map_aligned
+CAM-0994,D-0994,Deccan Gymkhana,18.51628,73.842769,18.516193,73.843112,low,synthetic_map_aligned
+CAM-0995,D-0995,Navi Peth,18.505955,73.847714,18.50579,73.847759,medium,synthetic_map_aligned
+CAM-0996,D-0996,Swargate,18.499784,73.859693,18.499517,73.859694,medium,synthetic_map_aligned
+CAM-0997,D-0997,Kasba Peth,18.521702,73.860963,18.521486,73.861014,high,synthetic_map_aligned
+CAM-0998,D-0998,Bhawani Peth,18.507555,73.868768,18.507377,73.868394,high,synthetic_map_aligned
+CAM-0999,D-0999,Guruwar Peth,18.513031,73.858734,18.513357,73.858833,ok,synthetic_map_aligned
+CAM-1000,D-1000,Nana Peth,18.513141,73.870829,18.512923,73.870994,high,synthetic_map_aligned
