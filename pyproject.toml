@@ -1,0 +1,32 @@
+[project]
+name = "civiceye"
+version = "0.1.0"
+description = "AI Civic Issue Detection from Video for Indian Municipalities"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "google-genai>=1.0.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "opencv-python-headless>=4.8.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "sqlalchemy>=2.0.0",
+    "streamlit>=1.32.0",
+    "pillow>=10.0.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.31.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
