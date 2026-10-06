@@ -4,15 +4,53 @@ import folium
 from folium import plugins
 from typing import List, Dict, Any, Optional
 
+# Centroid and default zoom configuration for Pune Municipal Zones
+ZONE_CENTROIDS = {
+    "All Zones": {"lat": 18.5204, "lng": 73.8567, "zoom": 12},
+    "Central":   {"lat": 18.5195, "lng": 73.8553, "zoom": 14},
+    "West":      {"lat": 18.5140, "lng": 73.7980, "zoom": 13},
+    "East":      {"lat": 18.5350, "lng": 73.9250, "zoom": 13},
+    "North":     {"lat": 18.5800, "lng": 73.8450, "zoom": 13},
+    "South":     {"lat": 18.4650, "lng": 73.8550, "zoom": 13},
+}
+
+# Geographic bounding boxes for Pune Municipal Zones
+ZONE_BOUNDS = {
+    "Central": [[18.498, 73.832], [18.540, 73.888]],
+    "West":    [[18.485, 73.765], [18.558, 73.825]],
+    "East":    [[18.505, 73.885], [18.568, 73.965]],
+    "North":   [[18.545, 73.815], [18.618, 73.880]],
+    "South":   [[18.435, 73.820], [18.495, 73.890]],
+}
+
 def create_floodguard_map(
     locations: List[Dict[str, Any]],
-    center_lat: float = 18.5240,
-    center_lng: float = 73.8550,
-    zoom_start: int = 12,
+    center_lat: Optional[float] = None,
+    center_lng: Optional[float] = None,
+    zoom_start: Optional[int] = None,
     layer_type: str = "Map",
-    selected_location_id: Optional[str] = None
+    selected_location_id: Optional[str] = None,
+    zone: str = "All Zones",
+    show_cctv: bool = False,
+    cctv_cameras: Optional[List[Dict[str, Any]]] = None,
+    fit_bounds: bool = True
 ) -> folium.Map:
-    """Create Folium GIS map with custom markers, river path, and controls."""
+    """Create Folium GIS map with custom markers, river path, zone boundary, and controls."""
+
+    # Resolve center and zoom based on selected municipal zone
+    zone_cfg = ZONE_CENTROIDS.get(zone, ZONE_CENTROIDS["All Zones"])
+    target_lat = center_lat if center_lat is not None else zone_cfg["lat"]
+    target_lng = center_lng if center_lng is not None else zone_cfg["lng"]
+    target_zoom = zoom_start if zoom_start is not None else zone_cfg["zoom"]
+
+    # If zone is specific and locations are provided, center around their centroid
+    if zone != "All Zones" and locations:
+        lats = [loc["lat"] for loc in locations if "lat" in loc]
+        lngs = [loc["lng"] for loc in locations if "lng" in loc]
+        if lats and lngs:
+            target_lat = sum(lats) / len(lats)
+            target_lng = sum(lngs) / len(lngs)
+            target_zoom = zone_cfg.get("zoom", 13)
 
     # Select base tiles
     if layer_type == "Satellite":
@@ -24,13 +62,37 @@ def create_floodguard_map(
         attr = "OpenStreetMap"
 
     m = folium.Map(
-        location=[center_lat, center_lng],
-        zoom_start=zoom_start,
+        location=[target_lat, target_lng],
+        zoom_start=target_zoom,
         tiles=tiles,
         attr=attr,
         zoom_control=True,
         control_scale=True
     )
+
+    # Highlight Zone Boundary rectangle if a specific zone is selected
+    if zone in ZONE_BOUNDS:
+        b = ZONE_BOUNDS[zone]
+        folium.Rectangle(
+            bounds=b,
+            color="#0284C7",
+            weight=2,
+            fill=True,
+            fill_color="#0284C7",
+            fill_opacity=0.07,
+            dash_array="6, 6",
+            tooltip=f"🏛️ Municipal Boundary: {zone} Zone"
+        ).add_to(m)
+
+    # Automatically fit bounds to enclose all locations in the selected zone
+    if fit_bounds and zone != "All Zones" and locations:
+        lats = [loc["lat"] for loc in locations if "lat" in loc]
+        lngs = [loc["lng"] for loc in locations if "lng" in loc]
+        if lats and lngs:
+            m.fit_bounds([
+                [min(lats) - 0.008, min(lngs) - 0.008],
+                [max(lats) + 0.008, max(lngs) + 0.008]
+            ])
 
     # Add Mula-Mutha River polyline path through Pune
     mula_mutha_river = [
@@ -118,6 +180,41 @@ def create_floodguard_map(
             tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} (Score: {comp_score} | 🌧️ {p_mm}mm | 🚗 {t_pct}% Jam)",
             popup=folium.Popup(popup_html, max_width=270)
         ).add_to(m)
+
+    # Optional CCTV Camera Layer Overlay
+    if show_cctv and cctv_cameras:
+        for cam in cctv_cameras:
+            if zone != "All Zones" and cam.get("zone") != zone:
+                continue
+            c_lat = cam.get("lat")
+            c_lng = cam.get("lng")
+            if c_lat and c_lng:
+                cam_html = f"""
+                <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:180px; padding:4px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                        <span style="font-size:14px;">📹</span>
+                        <b style="color:#0F172A; font-size:12px;">{cam['name']}</b>
+                    </div>
+                    <div style="font-size:11px; color:#64748B; margin-bottom:4px;">
+                        ID: <b>{cam['id']}</b> &bull; Zone: {cam.get('zone', '-')}
+                    </div>
+                    <div style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; font-size:10px; font-weight:700; padding:2px 6px; border-radius:6px; display:inline-block; margin-bottom:4px;">
+                        ● {cam['status']} ({cam.get('stream_fps', 30)} FPS)
+                    </div>
+                    <div style="font-size:11px; color:#475569;">AI Diagnosis: <b>{cam.get('ai_status', 'Nominal')}</b></div>
+                </div>
+                """
+                folium.CircleMarker(
+                    location=[c_lat, c_lng],
+                    radius=7,
+                    color="#2563EB",
+                    weight=2,
+                    fill=True,
+                    fill_color="#3B82F6",
+                    fill_opacity=0.9,
+                    tooltip=f"📹 {cam['name']} (CCTV LIVE)",
+                    popup=folium.Popup(cam_html, max_width=230)
+                ).add_to(m)
 
     return m
 
