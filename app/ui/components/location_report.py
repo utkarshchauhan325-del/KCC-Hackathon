@@ -117,14 +117,14 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 
 <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Water Level Capacity</div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Conduit Saturation</div>
 <div style="font-size:22px; font-weight:800; color:{border_color};">{loc['water_level_pct']}%</div>
 <div style="font-size:11px; color:#475569;">Standing Depth: <b>{diag['depth_cm']} cm</b></div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">3-Hour Rainfall Rate</div>
-<div style="font-size:22px; font-weight:800; color:#0F172A;">{loc['rainfall_3h']} <span style="font-size:13px; font-weight:600;">mm</span></div>
-<div style="font-size:11px; color:#475569;">Trend (24h): <b>{loc['trend_24h'].upper()}</b></div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">WeatherAPI Rain Chance</div>
+<div style="font-size:22px; font-weight:800; color:#2563EB;">{loc.get('rain_chance_pct', loc['rainfall_3h'])}%</div>
+<div style="font-size:11px; color:#475569;">Projected Precip: <b>{loc.get('precip_load_mm', 1.5)} mm</b></div>
 </div>
 <div>
 <div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Debris / Silt Choke Index</div>
@@ -132,9 +132,9 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 <div style="font-size:11px; color:#475569;">Intake Chamber Choke</div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Current Flood Status</div>
-<div style="font-size:20px; font-weight:800; color:{border_color};">{loc['status']}</div>
-<div style="font-size:11px; color:#475569;">Recede ETA: <b>{diag['recede_eta']}</b></div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Flood Likelihood & Priority</div>
+<div style="font-size:22px; font-weight:800; color:{border_color};">{loc.get('flood_probability_pct', loc['risk_score'])}% <span style="font-size:12px; font-weight:700; color:#7C3AED;">(Rank #{loc.get('priority_rank', '-')})</span></div>
+<div style="font-size:11px; color:#475569;">Status: <b>{loc['status']}</b></div>
 </div>
 </div>
 </div>

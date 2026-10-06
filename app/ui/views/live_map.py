@@ -3,7 +3,7 @@
 import streamlit as st
 import pandas as pd
 from streamlit_folium import st_folium
-from app.ui.pune_data import PUNE_LOCATIONS, CCTV_CAMERAS
+from app.ui.pune_data import PUNE_LOCATIONS, CCTV_CAMERAS, get_weather_adjusted_locations
 from app.ui.components.map_view import create_floodguard_map
 
 import textwrap
@@ -18,7 +18,7 @@ def render_live_risk_map():
             <p>Geospatial telemetry, catchment basins, and live hydraulic stage monitoring</p>
         </div>
         <div class="header-actions">
-            <div class="date-badge">🟢 Live GIS Sync Active</div>
+            <div class="date-badge">🟢 WeatherAPI GIS Sync Active</div>
         </div>
     </div>
     """).strip(), unsafe_allow_html=True)
@@ -34,8 +34,8 @@ def render_live_risk_map():
     with c4:
         show_cameras = st.checkbox("Overlay CCTV Cameras (6)", value=True)
 
-    # Filter data
-    filtered = PUNE_LOCATIONS
+    # Filter data with real-time weather adjusted priority
+    filtered = get_weather_adjusted_locations()
     if zone != "All Zones":
         filtered = [l for l in filtered if l["zone"] == zone]
     if risk_filter:

@@ -1,7 +1,7 @@
 """Data models and dataset for Pune Municipal Corporation FloodGuard Intelligence."""
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 # 53 Municipal Monitoring Locations across Pune
 PUNE_LOCATIONS: List[Dict[str, Any]] = [
@@ -581,3 +581,39 @@ OPERATIONS_INTERVENTIONS = [
         "eta_cleared": "30 mins"
     }
 ]
+
+def get_weather_adjusted_locations(force_refresh: bool = False) -> List[Dict[str, Any]]:
+    """Return all 53 Pune monitoring locations enriched with WeatherAPI predictions and deterministic flood priority."""
+    from app.core.weather_client import fetch_live_pune_weather
+    from app.core.scoring import rank_locations_by_flood_priority
+
+    weather = fetch_live_pune_weather(force_refresh=force_refresh)
+    return rank_locations_by_flood_priority(
+        locations=PUNE_LOCATIONS,
+        weather_rain_chance=weather.max_rain_chance,
+        weather_total_precip_mm=weather.total_precip_mm,
+        current_temp=weather.temp_c,
+        humidity=weather.humidity
+    )
+
+def get_live_pune_kpis(locations: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Calculate dynamic KPIs from active weather-adjusted location scores."""
+    if locations is None:
+        locations = get_weather_adjusted_locations()
+
+    crit = sum(1 for l in locations if l.get("risk_level") == "Critical")
+    high = sum(1 for l in locations if l.get("risk_level") == "High")
+    waterlog = sum(1 for l in locations if "Waterlogging" in l.get("status", "") or l.get("water_level_pct", 0) >= 75)
+    drain = sum(1 for l in locations if l.get("blockage_pct", 0) >= 50)
+
+    return {
+        "critical_locations": crit,
+        "critical_diff": f"+{max(1, crit - 3)}",
+        "high_risk_locations": high,
+        "high_risk_diff": f"+{max(1, high - 12)}",
+        "active_waterlogging": waterlog,
+        "active_waterlogging_diff": f"+{max(1, waterlog - 5)}",
+        "drainage_risk": drain,
+        "drainage_risk_diff": f"+{max(1, drain - 18)}",
+    }
+

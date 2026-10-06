@@ -68,16 +68,17 @@ def create_floodguard_map(
         is_sel = (selected_location_id == loc["id"])
 
         popup_html = f"""
-        <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:180px; padding:4px;">
+        <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:210px; padding:4px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <b style="color:#0F172A; font-size:13px;">{loc['name']}</b>
+                <b style="color:#0F172A; font-size:13px;">#{loc.get('priority_rank', '-')} {loc['name']}</b>
                 <span style="background:{col}22; color:{col}; font-weight:700; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid {col}55;">{r_level.upper()}</span>
             </div>
             <div style="font-size:11px; color:#64748B; margin-bottom:6px;">Zone: {loc['zone']} | {loc['ward']}</div>
             <table style="width:100%; font-size:11px; border-top:1px solid #E2E8F0; padding-top:4px;">
-                <tr><td style="color:#64748B;">Water Level:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['water_level_pct']}%</td></tr>
-                <tr><td style="color:#64748B;">3h Rainfall:</td><td style="text-align:right; font-weight:600;">{loc['rainfall_3h']} mm</td></tr>
+                <tr><td style="color:#64748B;">Flood Likelihood:</td><td style="text-align:right; font-weight:800; color:{col};">{loc.get('flood_probability_pct', loc['risk_score'])}%</td></tr>
+                <tr><td style="color:#64748B;">Rain Probability:</td><td style="text-align:right; font-weight:700; color:#2563EB;">{loc.get('rain_chance_pct', loc['rainfall_3h'])}%</td></tr>
                 <tr><td style="color:#64748B;">Drain Blockage:</td><td style="text-align:right; font-weight:600;">{loc['blockage_pct']}%</td></tr>
+                <tr><td style="color:#64748B;">Conduit Saturation:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['water_level_pct']}%</td></tr>
                 <tr><td style="color:#64748B;">Status:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['status']}</td></tr>
             </table>
         </div>
@@ -104,8 +105,8 @@ def create_floodguard_map(
             fill=True,
             fill_color=col,
             fill_opacity=0.95,
-            tooltip=f"{loc['name']} ({r_level} - {loc['water_level_pct']}%)",
-            popup=folium.Popup(popup_html, max_width=250)
+            tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} (Flood Prob: {loc.get('flood_probability_pct', loc['risk_score'])}% | Rain: {loc.get('rain_chance_pct', '-')}%)",
+            popup=folium.Popup(popup_html, max_width=260)
         ).add_to(m)
 
     return m

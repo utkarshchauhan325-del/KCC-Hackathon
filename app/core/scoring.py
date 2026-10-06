@@ -3,7 +3,7 @@
 Computes a 0-100 score and risk band from categorical VLM observations.
 """
 
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, List
 from app.config import settings
 from app.core.schemas import SewerAssessment
 
@@ -104,3 +104,143 @@ def compute_sewer_score(assessment: SewerAssessment) -> Tuple[float, str, Dict[s
     }
 
     return final_score, band, breakdown
+
+
+# --- Meteorological & Hydrological Flood Priority Scoring Engine ---
+
+ZONE_OROGRAPHIC_FACTORS: Dict[str, float] = {
+    "West": 1.12,     # Western Ghats hill-ward runoff and orographic rain
+    "South": 1.08,    # Katraj ghat catchment funnel
+    "East": 1.05,     # Mula-Mutha low river plain
+    "Central": 1.04,  # High impervious surface coefficient
+    "North": 1.00,    # Normal baseline
+}
+
+CONDUIT_SURCHARGE_MULTIPLIERS: Dict[str, float] = {
+    "Box Culvert 1200mm": 1.06,
+    "Stormwater Drain 900mm": 1.08,
+    "Twin RCC Pipe 1000mm": 1.02,
+    "RCC Pipe 600mm": 1.15,
+    "Open Trapezoidal Nullah": 0.94,
+    "Underpass Box Conduit": 1.22,
+}
+
+def compute_location_weather_risk(
+    loc: Dict[str, Any],
+    weather_rain_chance: int,
+    weather_total_precip_mm: float,
+    current_temp: float = 24.0,
+    humidity: int = 75
+) -> Dict[str, Any]:
+    """Calculate deterministic flood probability and weather-adjusted risk score for a location.
+    
+    Formula:
+      1. Zone rain chance = min(99, max(5, round(weather_rain_chance * zone_factor)))
+      2. Zone precip load = round(weather_total_precip_mm * zone_factor, 1)
+      3. Rain Hazard Stress = (0.6 * rain_chance) + (0.4 * min(100, precip_load * 12))
+      4. Hydraulic Saturation = water_level_pct
+      5. Drainage Obstruction = blockage_pct
+      6. Raw Risk = (0.30 * rain_stress) + (0.35 * water_level) + (0.35 * blockage)
+      7. Final Score = clamp(round(raw_risk * conduit_multiplier), 0, 100)
+      8. Flood Probability % = clamp(round(0.40 * rain_chance + 0.35 * water_level + 0.25 * blockage), 5, 99)
+    """
+    zone = loc.get("zone", "Central")
+    drain_type = loc.get("drain_type", "Stormwater Drain 900mm")
+    water_pct = float(loc.get("water_level_pct", 50))
+    blockage_pct = float(loc.get("blockage_pct", 50))
+
+    # Zone orographic adjustment
+    zone_factor = ZONE_OROGRAPHIC_FACTORS.get(zone, 1.0)
+    conduit_mult = CONDUIT_SURCHARGE_MULTIPLIERS.get(drain_type, 1.04)
+
+    # Localized rain likelihood
+    local_rain_chance = min(99, max(5, int(round(weather_rain_chance * zone_factor))))
+    local_precip_load = round(weather_total_precip_mm * zone_factor, 1)
+
+    # Meteorological Rain Stress (0 - 100)
+    rain_stress = (0.60 * local_rain_chance) + (0.40 * min(100.0, local_precip_load * 12.0))
+
+    # Deterministic risk calculation
+    raw_risk = (0.30 * rain_stress) + (0.35 * water_pct) + (0.35 * blockage_pct)
+    adjusted_risk = raw_risk * conduit_mult
+    final_score = int(min(100, max(0, round(adjusted_risk))))
+
+    # Deterministic Flood Probability %
+    flood_prob = int(min(99, max(5, round(
+        (0.40 * local_rain_chance) + (0.35 * water_pct) + (0.25 * blockage_pct)
+    ))))
+
+    # Determine risk band
+    is_stressed_conduit = (water_pct >= 85 and blockage_pct >= 70)
+    if final_score >= 65 or flood_prob >= 58 or is_stressed_conduit:
+        band = "Critical"
+        status = "Waterlogging Imminent" if water_pct >= 80 else "Severe Inflow Surcharge"
+    elif final_score >= 50 or flood_prob >= 45:
+        band = "High"
+        status = "Rising Rapidly"
+    elif final_score >= 35:
+        band = "Medium"
+        status = "Monitored Flow"
+    else:
+        band = "Low"
+        status = "Optimal Discharge"
+
+    return {
+        "risk_score": final_score,
+        "risk_level": band,
+        "status": status,
+        "flood_probability_pct": flood_prob,
+        "local_rain_chance": local_rain_chance,
+        "local_precip_load_mm": local_precip_load,
+        "rain_stress_score": round(rain_stress, 1),
+    }
+
+def rank_locations_by_flood_priority(
+    locations: List[Dict[str, Any]],
+    weather_rain_chance: int,
+    weather_total_precip_mm: float,
+    current_temp: float = 24.0,
+    humidity: int = 75
+) -> List[Dict[str, Any]]:
+    """Enrich and rank all municipal monitoring locations by flood probability and risk.
+    
+    Returns list of locations sorted with highest flood threat first (#1 at index 0).
+    """
+    enriched: List[Dict[str, Any]] = []
+
+    for loc in locations:
+        loc_copy = dict(loc)
+        metrics = compute_location_weather_risk(
+            loc=loc_copy,
+            weather_rain_chance=weather_rain_chance,
+            weather_total_precip_mm=weather_total_precip_mm,
+            current_temp=current_temp,
+            humidity=humidity
+        )
+        loc_copy["risk_score"] = metrics["risk_score"]
+        loc_copy["risk_level"] = metrics["risk_level"]
+        loc_copy["status"] = metrics["status"]
+        loc_copy["flood_probability_pct"] = metrics["flood_probability_pct"]
+        loc_copy["rain_chance_pct"] = metrics["local_rain_chance"]
+        loc_copy["precip_load_mm"] = metrics["local_precip_load_mm"]
+        loc_copy["rain_stress"] = metrics["rain_stress_score"]
+        loc_copy["last_updated"] = "Live Weather Sync"
+        enriched.append(loc_copy)
+
+    # Sort deterministically: highest flood probability, then highest risk score
+    enriched.sort(key=lambda x: (x["flood_probability_pct"], x["risk_score"], x["rain_chance_pct"]), reverse=True)
+
+    # Assign priority ranks & directives
+    for idx, item in enumerate(enriched, 1):
+        item["priority_rank"] = idx
+        if idx <= 5:
+            item["priority_directive"] = "🚨 Priority 1: Emergency Dewatering & Silt Jetting"
+        elif idx <= 15:
+            item["priority_directive"] = "⚠️ Priority 2: Inlet Inspection & Surcharge Alert"
+        elif idx <= 30:
+            item["priority_directive"] = "🟡 Priority 3: Monitored Catchment Flow"
+        else:
+            item["priority_directive"] = "🟢 Priority 4: Routine Passive Surveillance"
+
+    return enriched
+

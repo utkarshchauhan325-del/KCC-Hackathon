@@ -1,12 +1,12 @@
-"""Overview Dashboard View - Matches FloodGuard Municipal Intelligence Screenshot."""
-
 import streamlit as st
 import pandas as pd
 from streamlit_folium import st_folium
 from app.ui.pune_data import (
     PUNE_LOCATIONS, KPIS, RECENT_ALERTS,
-    RAINFALL_FORECAST, WATER_LEVEL_TREND
+    RAINFALL_FORECAST, WATER_LEVEL_TREND,
+    get_weather_adjusted_locations, get_live_pune_kpis
 )
+from app.core.weather_client import fetch_live_pune_weather
 from app.ui.components.charts import (
     render_risk_distribution_donut,
     render_rainfall_forecast_bars,
@@ -17,7 +17,14 @@ from app.ui.components.map_view import create_floodguard_map
 from app.ui.components.location_report import render_location_full_report_box
 
 def render_overview_dashboard():
-    """Render the exact FloodGuard dashboard overview."""
+    """Render the exact FloodGuard dashboard overview with live WeatherAPI intelligence."""
+
+    # Fetch live weather and calculate deterministic flood priority
+    force_refresh = st.session_state.pop("force_weather_refresh", False)
+    weather = fetch_live_pune_weather(force_refresh=force_refresh)
+    locations = get_weather_adjusted_locations(force_refresh=force_refresh)
+    kpis = get_live_pune_kpis(locations)
+    top1 = locations[0]
 
     # Top Header
     st.markdown(textwrap.dedent("""
@@ -36,12 +43,43 @@ def render_overview_dashboard():
                 <span class="bell-count">1</span>
             </div>
             <div class="avatar-badge">R</div>
-            <div class="date-badge">📅 Sep 24, 2026 | 10:24 AM</div>
+            <div class="date-badge">📅 Oct 06, 2026 | Live Monitoring</div>
         </div>
     </div>
     """), unsafe_allow_html=True)
 
-    # 4 Top KPI Cards with Sparklines
+    # WeatherAPI Live Command & Early Flood Warning Bar
+    col_w_info, col_w_btn = st.columns([4.2, 1], gap="small")
+    with col_w_info:
+        st.markdown(textwrap.dedent(f"""
+        <div style="background:linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border:1px solid #334155; border-radius:12px; padding:12px 18px; margin-bottom:14px; box-shadow:0 4px 14px rgba(0,0,0,0.12); font-family:'Plus Jakarta Sans',sans-serif;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="background:{'#10B98120' if weather.is_live else '#F59E0B20'}; color:{'#34D399' if weather.is_live else '#FBBF24'}; border:1px solid {'#10B98160' if weather.is_live else '#F59E0B60'}; font-size:11px; font-weight:800; padding:4px 10px; border-radius:14px; letter-spacing:0.04em; text-transform:uppercase;">
+                        ● {'WeatherAPI Live Sync' if weather.is_live else 'Weather Baseline'}
+                    </span>
+                    <span style="color:#F8FAFC; font-size:13px; font-weight:600;">
+                        🌡️ <b>{weather.temp_c}°C</b> ({weather.condition_text}) &nbsp;|&nbsp; 
+                        💧 Humidity: <b>{weather.humidity}%</b> &nbsp;|&nbsp; 
+                        🌧️ Max Rain Chance: <b style="color:#60A5FA;">{weather.max_rain_chance}%</b> &nbsp;|&nbsp; 
+                        🌊 24h Projected Precip: <b>{weather.total_precip_mm} mm</b>
+                    </span>
+                </div>
+                <div style="background:#EF444422; border:1px solid #EF444477; padding:4px 12px; border-radius:8px; font-size:12px;">
+                    <span style="color:#F87171; font-weight:800;">🚨 #1 FLOOD PRIORITY:</span>
+                    <span style="color:#FFFFFF; font-weight:700;">{top1['name']} ({top1['ward']})</span>
+                    <span style="color:#FCA5A5; font-weight:600;">— {top1['flood_probability_pct']}% Flood Probability</span>
+                </div>
+            </div>
+        </div>
+        """).strip(), unsafe_allow_html=True)
+    with col_w_btn:
+        st.write("")
+        if st.button("🔄 Sync WeatherAPI", use_container_width=True, help="Fetch real-time radar & hourly rain predictions"):
+            st.session_state["force_weather_refresh"] = True
+            st.rerun()
+
+    # 4 Top KPI Cards with Sparklines (Dynamically Computed from Weather Intelligence)
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -53,8 +91,8 @@ def render_overview_dashboard():
                     <span class="kpi-title">Critical locations</span>
                 </div>
                 <div class="kpi-num-row">
-                    <span class="kpi-value">{KPIS['critical_locations']:02d}</span>
-                    <span class="kpi-diff red">↑ {KPIS['critical_diff'][1:]}</span>
+                    <span class="kpi-value">{kpis['critical_locations']:02d}</span>
+                    <span class="kpi-diff red">↑ {kpis['critical_diff'][1:]}</span>
                 </div>
             </div>
             <svg class="kpi-sparkline" viewBox="0 0 80 30" fill="none">
@@ -73,8 +111,8 @@ def render_overview_dashboard():
                     <span class="kpi-title">High risk locations</span>
                 </div>
                 <div class="kpi-num-row">
-                    <span class="kpi-value">{KPIS['high_risk_locations']:02d}</span>
-                    <span class="kpi-diff orange">↑ {KPIS['high_risk_diff'][1:]}</span>
+                    <span class="kpi-value">{kpis['high_risk_locations']:02d}</span>
+                    <span class="kpi-diff orange">↑ {kpis['high_risk_diff'][1:]}</span>
                 </div>
             </div>
             <svg class="kpi-sparkline" viewBox="0 0 80 30" fill="none">
@@ -93,8 +131,8 @@ def render_overview_dashboard():
                     <span class="kpi-title">Active waterlogging</span>
                 </div>
                 <div class="kpi-num-row">
-                    <span class="kpi-value">{KPIS['active_waterlogging']:02d}</span>
-                    <span class="kpi-diff blue">↑ {KPIS['active_waterlogging_diff'][1:]}</span>
+                    <span class="kpi-value">{kpis['active_waterlogging']:02d}</span>
+                    <span class="kpi-diff blue">↑ {kpis['active_waterlogging_diff'][1:]}</span>
                 </div>
             </div>
             <svg class="kpi-sparkline" viewBox="0 0 80 30" fill="none">
@@ -113,8 +151,8 @@ def render_overview_dashboard():
                     <span class="kpi-title">Drainage risk</span>
                 </div>
                 <div class="kpi-num-row">
-                    <span class="kpi-value">{KPIS['drainage_risk']:02d}</span>
-                    <span class="kpi-diff amber">↑ {KPIS['drainage_risk_diff'][1:]}</span>
+                    <span class="kpi-value">{kpis['drainage_risk']:02d}</span>
+                    <span class="kpi-diff amber">↑ {kpis['drainage_risk_diff'][1:]}</span>
                 </div>
             </div>
             <svg class="kpi-sparkline" viewBox="0 0 80 30" fill="none">
@@ -138,12 +176,12 @@ def render_overview_dashboard():
             layer_mode = st.radio("Layer", ["Map", "Satellite"], horizontal=True, label_visibility="collapsed")
 
         # Ensure default selected hotspot
-        if "selected_location_id" not in st.session_state:
-            st.session_state["selected_location_id"] = "LOC-01"
+        if "selected_location_id" not in st.session_state or not st.session_state["selected_location_id"]:
+            st.session_state["selected_location_id"] = locations[0]["id"]
 
         # Create and render map with selected hotspot highlighted
         m = create_floodguard_map(
-            locations=PUNE_LOCATIONS,
+            locations=locations,
             center_lat=18.5240,
             center_lng=73.8550,
             zoom_start=12,
@@ -164,7 +202,7 @@ def render_overview_dashboard():
             if clicked_pt and isinstance(clicked_pt, dict) and "lat" in clicked_pt and "lng" in clicked_pt:
                 c_lat = clicked_pt["lat"]
                 c_lng = clicked_pt["lng"]
-                closest = min(PUNE_LOCATIONS, key=lambda l: (l["lat"] - c_lat)**2 + (l["lng"] - c_lng)**2)
+                closest = min(locations, key=lambda l: (l["lat"] - c_lat)**2 + (l["lng"] - c_lng)**2)
                 dist_sq = (closest["lat"] - c_lat)**2 + (closest["lng"] - c_lng)**2
                 if dist_sq < 0.005:
                     if st.session_state.get("selected_location_id") != closest["id"]:
@@ -187,12 +225,12 @@ def render_overview_dashboard():
         st.markdown(legend_html, unsafe_allow_html=True)
 
         # Quick location picker dropdown right under the map legend
-        loc_options = {l["id"]: f"📍 {l['name']} ({l['risk_level'].upper()} - {l['water_level_pct']}%)" for l in PUNE_LOCATIONS[:16]}
-        curr_sel = st.session_state.get("selected_location_id") or "LOC-01"
+        loc_options = {l["id"]: f"#{l.get('priority_rank', idx)} 📍 {l['name']} ({l['risk_level'].upper()} | Flood Prob: {l.get('flood_probability_pct', l['risk_score'])}% | Rain: {l.get('rain_chance_pct', '-')}% )" for idx, l in enumerate(locations[:20], 1)}
+        curr_sel = st.session_state.get("selected_location_id") or locations[0]["id"]
         if curr_sel not in loc_options:
-            c_loc = next((l for l in PUNE_LOCATIONS if l["id"] == curr_sel), None)
+            c_loc = next((l for l in locations if l["id"] == curr_sel), None)
             if c_loc:
-                loc_options[curr_sel] = f"📍 {c_loc['name']} ({c_loc['risk_level'].upper()})"
+                loc_options[curr_sel] = f"#{c_loc.get('priority_rank', '-')} 📍 {c_loc['name']} ({c_loc['risk_level'].upper()})"
 
         chosen_id = st.selectbox(
             "🎯 Click any dot on map OR select hotspot to inspect report:",
@@ -210,8 +248,8 @@ def render_overview_dashboard():
         with t_head1:
             st.markdown("""
             <div style="margin-bottom:6px;">
-                <h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">Flood Risk by Location</h3>
-                <p style="margin:2px 0 0 0; font-size:12px; color:#64748B;">Risk level, rainfall and water level across key municipal locations</p>
+                <h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">Flood Risk Priority by Location</h3>
+                <p style="margin:2px 0 0 0; font-size:12px; color:#64748B;">Ranked by WeatherAPI rain probability and conduit choke capacity</p>
             </div>
             """, unsafe_allow_html=True)
         with t_head2:
@@ -222,9 +260,9 @@ def render_overview_dashboard():
             )
 
         # Filter locations
-        filtered_locs = PUNE_LOCATIONS
+        filtered_locs = locations
         if zone_filter != "All Zones":
-            filtered_locs = [l for l in PUNE_LOCATIONS if l["zone"] == zone_filter]
+            filtered_locs = [l for l in locations if l["zone"] == zone_filter]
 
         # Top key locations to display prominently
         display_locs = filtered_locs[:8]
@@ -239,14 +277,20 @@ def render_overview_dashboard():
             trend_icon = "↗" if loc["trend_24h"] == "up" else ("↘" if loc["trend_24h"] == "down" else "→")
             trend_color = "#DC2626" if loc["trend_24h"] == "up" else ("#16A34A" if loc["trend_24h"] == "down" else "#64748B")
 
-            status_class = f"st-{loc['status'].lower()}"
+            status_class = f"st-{loc['status'].lower().replace(' ', '-')}"
+            flood_prob = loc.get("flood_probability_pct", loc["risk_score"])
+            prob_color = "#DC2626" if flood_prob >= 65 else ("#EA580C" if flood_prob >= 45 else "#16A34A")
 
             table_rows_html += f"""
             <tr>
-                <td style="font-weight:600; color:#1E293B;">{loc['name']}</td>
+                <td style="font-weight:600; color:#1E293B;">
+                    <span style="display:inline-block; width:22px; font-weight:800; color:#7C3AED; font-size:11px;">#{loc.get('priority_rank', '-')}</span>
+                    {loc['name']}
+                </td>
                 <td><span class="pill-badge {pill_class}">{r_level}</span></td>
-                <td style="font-weight:600; color:#334155;">{loc['rainfall_3h']}</td>
-                <td style="min-width:130px;">
+                <td style="font-weight:700; color:#2563EB;">{loc.get('rain_chance_pct', loc['rainfall_3h'])}%</td>
+                <td style="font-weight:800; color:{prob_color};">{flood_prob}%</td>
+                <td style="min-width:110px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
                         <div class="progress-track">
@@ -256,7 +300,6 @@ def render_overview_dashboard():
                 </td>
                 <td style="font-weight:800; color:{trend_color}; font-size:14px; text-align:center;">{trend_icon}</td>
                 <td><span class="{status_class}">{loc['status']}</span></td>
-                <td style="color:#94A3B8; text-align:right; font-weight:bold; cursor:pointer;">⋮</td>
             </tr>"""
 
         full_table_html = f"""
@@ -308,7 +351,7 @@ def render_overview_dashboard():
                     background: #F1F5F9;
                     border-radius: 6px;
                     height: 8px;
-                    width: 80px;
+                    width: 70px;
                     overflow: hidden;
                     display: inline-block;
                 }}
@@ -317,10 +360,11 @@ def render_overview_dashboard():
                 .fill-high {{ background: #F97316; }}
                 .fill-medium {{ background: #FBBF24; }}
                 .fill-low {{ background: #10B981; }}
-                .st-waterlogging {{ color: #DC2626; font-weight: 700; }}
-                .st-rising {{ color: #EA580C; font-weight: 700; }}
-                .st-normal {{ color: #16A34A; font-weight: 600; }}
-                .st-stable {{ color: #64748B; font-weight: 500; }}
+                .st-waterlogging-imminent {{ color: #DC2626; font-weight: 700; }}
+                .st-severe-inflow-surcharge {{ color: #DC2626; font-weight: 700; }}
+                .st-rising-rapidly {{ color: #EA580C; font-weight: 700; }}
+                .st-monitored-flow {{ color: #D97706; font-weight: 600; }}
+                .st-optimal-discharge {{ color: #16A34A; font-weight: 600; }}
             </style>
         </head>
         <body>
@@ -328,13 +372,13 @@ def render_overview_dashboard():
                 <table>
                     <thead>
                         <tr>
-                            <th>Location</th>
-                            <th>Risk Level</th>
-                            <th>Rainfall<br><span style="font-weight:400; font-size:10px;">(mm/3h)</span></th>
-                            <th>Water Level<br><span style="font-weight:400; font-size:10px;">(% capacity)</span></th>
-                            <th style="text-align:center;">Trend<br><span style="font-weight:400; font-size:10px;">(24h)</span></th>
+                            <th>Rank & Location</th>
+                            <th>Severity</th>
+                            <th>Rain Chance</th>
+                            <th>Flood Likelihood</th>
+                            <th>Conduit Saturation</th>
+                            <th style="text-align:center;">Trend</th>
                             <th>Status</th>
-                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -351,9 +395,10 @@ def render_overview_dashboard():
     # Full-Length Detailed Site Problem & Diagnostic Report Box
     active_hotspot_id = st.session_state.get("selected_location_id")
     if active_hotspot_id:
-        active_loc = next((l for l in PUNE_LOCATIONS if l["id"] == active_hotspot_id), None)
+        active_loc = next((l for l in locations if l["id"] == active_hotspot_id), None)
         if active_loc:
             render_location_full_report_box(active_loc)
+
 
     st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:24px 0;'>", unsafe_allow_html=True)
 
