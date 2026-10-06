@@ -66,7 +66,7 @@ def test_conduit_surcharge_effect():
     assert high_res["risk_level"] == "Critical"
 
 def test_rank_locations_by_flood_priority():
-    """Verify all 53 municipal locations are ordered deterministically by flood likelihood."""
+    """Verify all 53 municipal locations receive distinct precipitation and are ordered by precipitation."""
     ranked = rank_locations_by_flood_priority(
         locations=PUNE_LOCATIONS,
         weather_rain_chance=45,
@@ -76,19 +76,21 @@ def test_rank_locations_by_flood_priority():
     )
 
     assert len(ranked) == len(PUNE_LOCATIONS)
-    # Check 1-based sequential rank
+    
+    # 1. Verify every single place has a DIFFERENT amount of precipitation in mm
+    precip_values = [item["precip_mm"] for item in ranked]
+    assert len(set(precip_values)) == len(PUNE_LOCATIONS)
+
+    # 2. Verify rankings are strictly ordered on the basis of precipitation (highest mm first)
+    for i in range(len(ranked) - 1):
+        assert ranked[i]["precip_mm"] >= ranked[i + 1]["precip_mm"]
+
+    # 3. Check 1-based sequential rank and priority directives
     for idx, item in enumerate(ranked, 1):
         assert item["priority_rank"] == idx
         assert "priority_directive" in item
         assert "flood_probability_pct" in item
-        assert "rain_chance_pct" in item
-
-    # Verify descending ordering of flood probability / risk score
-    for i in range(len(ranked) - 1):
-        assert (ranked[i]["flood_probability_pct"], ranked[i]["risk_score"]) >= (
-            ranked[i + 1]["flood_probability_pct"],
-            ranked[i + 1]["risk_score"]
-        )
+        assert str(item["precip_mm"]) in item["priority_directive"]
 
 def test_live_pune_kpis_calculation():
     """Verify dynamic KPIs compute correct sums from active locations."""

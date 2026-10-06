@@ -66,8 +66,8 @@ def render_overview_dashboard():
                     </span>
                 </div>
                 <div style="background:#EF444422; border:1px solid #EF444477; padding:4px 12px; border-radius:8px; font-size:12px;">
-                    <span style="color:#F87171; font-weight:800;">🚨 #1 FLOOD PRIORITY:</span>
-                    <span style="color:#FFFFFF; font-weight:700;">{top1['name']} ({top1['ward']})</span>
+                    <span style="color:#F87171; font-weight:800;">🚨 #1 PRECIPITATION PRIORITY:</span>
+                    <span style="color:#FFFFFF; font-weight:700;">{top1['name']} ({top1.get('precip_mm', 24.5)} mm)</span>
                     <span style="color:#FCA5A5; font-weight:600;">— {top1['flood_probability_pct']}% Flood Probability</span>
                 </div>
             </div>
@@ -225,12 +225,12 @@ def render_overview_dashboard():
         st.markdown(legend_html, unsafe_allow_html=True)
 
         # Quick location picker dropdown right under the map legend
-        loc_options = {l["id"]: f"#{l.get('priority_rank', idx)} 📍 {l['name']} ({l['risk_level'].upper()} | Flood Prob: {l.get('flood_probability_pct', l['risk_score'])}% | Rain: {l.get('rain_chance_pct', '-')}% )" for idx, l in enumerate(locations[:20], 1)}
+        loc_options = {l["id"]: f"#{l.get('priority_rank', idx)} 📍 {l['name']} ({l.get('precip_mm', l['rainfall_3h'])} mm | {l['risk_level'].upper()} | Flood: {l.get('flood_probability_pct', l['risk_score'])}%)" for idx, l in enumerate(locations[:20], 1)}
         curr_sel = st.session_state.get("selected_location_id") or locations[0]["id"]
         if curr_sel not in loc_options:
             c_loc = next((l for l in locations if l["id"] == curr_sel), None)
             if c_loc:
-                loc_options[curr_sel] = f"#{c_loc.get('priority_rank', '-')} 📍 {c_loc['name']} ({c_loc['risk_level'].upper()})"
+                loc_options[curr_sel] = f"#{c_loc.get('priority_rank', '-')} 📍 {c_loc['name']} ({c_loc.get('precip_mm', c_loc['rainfall_3h'])} mm | {c_loc['risk_level'].upper()})"
 
         chosen_id = st.selectbox(
             "🎯 Click any dot on map OR select hotspot to inspect report:",
@@ -248,8 +248,8 @@ def render_overview_dashboard():
         with t_head1:
             st.markdown("""
             <div style="margin-bottom:6px;">
-                <h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">Flood Risk Priority by Location</h3>
-                <p style="margin:2px 0 0 0; font-size:12px; color:#64748B;">Ranked by WeatherAPI rain probability and conduit choke capacity</p>
+                <h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">Precipitation & Flood Priority Ranking</h3>
+                <p style="margin:2px 0 0 0; font-size:12px; color:#64748B;">Ranked by real-time precipitation (mm) and conduit flood surcharge</p>
             </div>
             """, unsafe_allow_html=True)
         with t_head2:
@@ -277,9 +277,10 @@ def render_overview_dashboard():
             trend_icon = "↗" if loc["trend_24h"] == "up" else ("↘" if loc["trend_24h"] == "down" else "→")
             trend_color = "#DC2626" if loc["trend_24h"] == "up" else ("#16A34A" if loc["trend_24h"] == "down" else "#64748B")
 
-            status_class = f"st-{loc['status'].lower().replace(' ', '-')}"
+            status_class = f"st-{loc['status'].lower().replace(' ', '-').replace('/', '-')}"
             flood_prob = loc.get("flood_probability_pct", loc["risk_score"])
             prob_color = "#DC2626" if flood_prob >= 65 else ("#EA580C" if flood_prob >= 45 else "#16A34A")
+            p_val = loc.get("precip_mm", loc["rainfall_3h"])
 
             table_rows_html += f"""
             <tr>
@@ -288,9 +289,13 @@ def render_overview_dashboard():
                     {loc['name']}
                 </td>
                 <td><span class="pill-badge {pill_class}">{r_level}</span></td>
-                <td style="font-weight:700; color:#2563EB;">{loc.get('rain_chance_pct', loc['rainfall_3h'])}%</td>
+                <td>
+                    <span style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:12px; padding:2px 8px; border-radius:10px; display:inline-block;">
+                        🌧️ {p_val} mm
+                    </span>
+                </td>
                 <td style="font-weight:800; color:{prob_color};">{flood_prob}%</td>
-                <td style="min-width:110px;">
+                <td style="min-width:100px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
                         <div class="progress-track">
@@ -351,7 +356,7 @@ def render_overview_dashboard():
                     background: #F1F5F9;
                     border-radius: 6px;
                     height: 8px;
-                    width: 70px;
+                    width: 65px;
                     overflow: hidden;
                     display: inline-block;
                 }}
@@ -360,10 +365,11 @@ def render_overview_dashboard():
                 .fill-high {{ background: #F97316; }}
                 .fill-medium {{ background: #FBBF24; }}
                 .fill-low {{ background: #10B981; }}
+                .st-severe-downpour-inundation {{ color: #DC2626; font-weight: 700; }}
                 .st-waterlogging-imminent {{ color: #DC2626; font-weight: 700; }}
-                .st-severe-inflow-surcharge {{ color: #DC2626; font-weight: 700; }}
+                .st-heavy-inflow-surcharge {{ color: #EA580C; font-weight: 700; }}
                 .st-rising-rapidly {{ color: #EA580C; font-weight: 700; }}
-                .st-monitored-flow {{ color: #D97706; font-weight: 600; }}
+                .st-moderate-runoff-flow {{ color: #D97706; font-weight: 600; }}
                 .st-optimal-discharge {{ color: #16A34A; font-weight: 600; }}
             </style>
         </head>
@@ -374,8 +380,8 @@ def render_overview_dashboard():
                         <tr>
                             <th>Rank & Location</th>
                             <th>Severity</th>
-                            <th>Rain Chance</th>
-                            <th>Flood Likelihood</th>
+                            <th>Live Precip</th>
+                            <th>Flood Prob</th>
                             <th>Conduit Saturation</th>
                             <th style="text-align:center;">Trend</th>
                             <th>Status</th>

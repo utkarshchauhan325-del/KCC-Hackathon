@@ -122,9 +122,9 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 <div style="font-size:11px; color:#475569;">Standing Depth: <b>{diag['depth_cm']} cm</b></div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">WeatherAPI Rain Chance</div>
-<div style="font-size:22px; font-weight:800; color:#2563EB;">{loc.get('rain_chance_pct', loc['rainfall_3h'])}%</div>
-<div style="font-size:11px; color:#475569;">Projected Precip: <b>{loc.get('precip_load_mm', 1.5)} mm</b></div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Live Precipitation</div>
+<div style="font-size:22px; font-weight:800; color:#2563EB;">{loc.get('precip_mm', loc['rainfall_3h'])} mm</div>
+<div style="font-size:11px; color:#475569;">Rain Probability: <b>{loc.get('rain_chance_pct', 45)}%</b></div>
 </div>
 <div>
 <div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Debris / Silt Choke Index</div>

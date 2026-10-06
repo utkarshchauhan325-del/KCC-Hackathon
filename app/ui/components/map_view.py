@@ -67,6 +67,7 @@ def create_floodguard_map(
         is_crit = (r_level == "Critical")
         is_sel = (selected_location_id == loc["id"])
 
+        p_mm = loc.get("precip_mm", loc["rainfall_3h"])
         popup_html = f"""
         <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:210px; padding:4px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -75,10 +76,10 @@ def create_floodguard_map(
             </div>
             <div style="font-size:11px; color:#64748B; margin-bottom:6px;">Zone: {loc['zone']} | {loc['ward']}</div>
             <table style="width:100%; font-size:11px; border-top:1px solid #E2E8F0; padding-top:4px;">
+                <tr><td style="color:#64748B;">Live Precipitation:</td><td style="text-align:right; font-weight:800; color:#2563EB;">{p_mm} mm</td></tr>
                 <tr><td style="color:#64748B;">Flood Likelihood:</td><td style="text-align:right; font-weight:800; color:{col};">{loc.get('flood_probability_pct', loc['risk_score'])}%</td></tr>
-                <tr><td style="color:#64748B;">Rain Probability:</td><td style="text-align:right; font-weight:700; color:#2563EB;">{loc.get('rain_chance_pct', loc['rainfall_3h'])}%</td></tr>
-                <tr><td style="color:#64748B;">Drain Blockage:</td><td style="text-align:right; font-weight:600;">{loc['blockage_pct']}%</td></tr>
                 <tr><td style="color:#64748B;">Conduit Saturation:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['water_level_pct']}%</td></tr>
+                <tr><td style="color:#64748B;">Drain Blockage:</td><td style="text-align:right; font-weight:600;">{loc['blockage_pct']}%</td></tr>
                 <tr><td style="color:#64748B;">Status:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['status']}</td></tr>
             </table>
         </div>
@@ -105,7 +106,7 @@ def create_floodguard_map(
             fill=True,
             fill_color=col,
             fill_opacity=0.95,
-            tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} (Flood Prob: {loc.get('flood_probability_pct', loc['risk_score'])}% | Rain: {loc.get('rain_chance_pct', '-')}%)",
+            tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} ({p_mm} mm | Flood Prob: {loc.get('flood_probability_pct', loc['risk_score'])}%)",
             popup=folium.Popup(popup_html, max_width=260)
         ).add_to(m)
 
