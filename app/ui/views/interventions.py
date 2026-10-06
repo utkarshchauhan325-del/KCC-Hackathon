@@ -61,6 +61,96 @@ def render_interventions():
     total_water = sum(op.get("water_discharged_m3", 0) for op in operations)
     en_route_count = sum(1 for op in operations if "En Route" in op.get("status", ""))
 
+    # Inject targeted light-theme styling to ensure all selectboxes, expanders, and demobilize buttons are crisp white
+    st.markdown("""
+    <style>
+        /* Force white backgrounds and clean borders on all selectboxes */
+        div[data-baseweb="select"],
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="select"] input {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+            border-color: #CBD5E1 !important;
+        }
+        div[data-baseweb="select"] span,
+        div[data-baseweb="select"] div {
+            color: #0F172A !important;
+        }
+        div[data-baseweb="select"] svg {
+            fill: #475569 !important;
+        }
+        div[data-baseweb="select"] > div:hover {
+            border-color: #94A3B8 !important;
+        }
+        div[data-baseweb="select"] > div:focus-within {
+            border-color: #0284C7 !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+        }
+
+        /* Dropdown popover list items */
+        div[data-baseweb="popover"],
+        div[data-baseweb="popover"] > div,
+        ul[role="listbox"],
+        li[role="option"] {
+            background-color: #FFFFFF !important;
+            color: #0F172A !important;
+        }
+        li[role="option"]:hover,
+        li[role="option"][aria-selected="true"] {
+            background-color: #F1F5F9 !important;
+            color: #0284C7 !important;
+            font-weight: 600 !important;
+        }
+
+        /* Secondary buttons (Demobilize) - Crisp white with subtle border and red hover */
+        div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
+            background-color: #FFFFFF !important;
+            color: #475569 !important;
+            border: 1.5px solid #CBD5E1 !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+            transition: all 0.15s ease !important;
+        }
+        div[data-testid="stButton"] > button:not([kind="primary"]):not([data-testid="baseButton-primary"]):hover {
+            background-color: #FEF2F2 !important;
+            color: #DC2626 !important;
+            border-color: #FECACA !important;
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.12) !important;
+        }
+
+        /* Expander container and header */
+        div[data-testid="stExpander"] {
+            background-color: #FFFFFF !important;
+            border: 1.5px solid #E2E8F0 !important;
+            border-radius: 12px !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        }
+        div[data-testid="stExpander"] details {
+            background-color: #FFFFFF !important;
+            border-radius: 12px !important;
+        }
+        div[data-testid="stExpander"] summary {
+            background-color: #F8FAFC !important;
+            color: #0F172A !important;
+            font-weight: 700 !important;
+            font-size: 14px !important;
+            border-bottom: 1px solid #E2E8F0 !important;
+        }
+        div[data-testid="stExpander"] summary:hover {
+            background-color: #F1F5F9 !important;
+            color: #0284C7 !important;
+        }
+        div[data-testid="stExpander"] summary svg {
+            fill: #475569 !important;
+        }
+        div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
+            background-color: #FFFFFF !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
     st.markdown(textwrap.dedent(f"""
     <div class="flood-header">
         <div class="flood-title-block">

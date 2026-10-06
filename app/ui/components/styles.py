@@ -382,6 +382,180 @@ def get_floodguard_css() -> str:
         gap: 4px;
     }
 
+    /* ============================================================= */
+    /* PREMIUM WIDGET THEMING (WHITE CARDS, NO BLACK BOXES)         */
+    /* ============================================================= */
+
+    /* Widget Labels */
+    label[data-testid="stWidgetLabel"] p,
+    label[data-testid="stWidgetLabel"] span,
+    div[data-testid="stWidgetLabel"] {
+        color: #334155 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+    }
+
+    /* Dropdown / Selectbox Containers */
+    div[data-testid="stSelectbox"] > div {
+        background-color: #FFFFFF !important;
+        border-radius: 8px !important;
+    }
+
+    div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
+        border-radius: 8px !important;
+    }
+
+    div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        color: #0F172A !important;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    }
+
+    div[data-baseweb="select"] > div:hover {
+        border-color: #94A3B8 !important;
+    }
+
+    div[data-baseweb="select"] > div:focus-within {
+        border-color: #0284C7 !important;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    }
+
+    /* Selectbox selected value text & icon */
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div[aria-selected="true"],
+    div[data-baseweb="select"] * {
+        color: #0F172A !important;
+    }
+
+    div[data-baseweb="select"] svg {
+        fill: #475569 !important;
+    }
+
+    /* Selectbox Dropdown Menu / Popover */
+    div[data-baseweb="popover"],
+    div[data-baseweb="popover"] > div {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08) !important;
+    }
+
+    ul[role="listbox"] {
+        background-color: #FFFFFF !important;
+        padding: 4px !important;
+    }
+
+    li[role="option"] {
+        background-color: #FFFFFF !important;
+        color: #1E293B !important;
+        font-weight: 500 !important;
+        font-size: 13px !important;
+        border-radius: 6px !important;
+        padding: 8px 12px !important;
+        transition: background-color 0.12s ease !important;
+    }
+
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {
+        background-color: #F1F5F9 !important;
+        color: #0284C7 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Text Inputs */
+    div[data-testid="stTextInput"] input {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1.5px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+    }
+
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #0284C7 !important;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+    }
+
+    /* Buttons (Secondary / Demobilize Buttons) */
+    div[data-testid="stButton"] > button {
+        background-color: #FFFFFF !important;
+        color: #334155 !important;
+        border: 1.5px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        padding: 6px 14px !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.15s ease !important;
+    }
+
+    div[data-testid="stButton"] > button:hover {
+        background-color: #F8FAFC !important;
+        border-color: #DC2626 !important;
+        color: #DC2626 !important;
+        box-shadow: 0 2px 6px rgba(220, 38, 38, 0.1) !important;
+    }
+
+    /* Primary Buttons (Confirm Deployment Order) */
+    div[data-testid="stButton"] > button[kind="primary"],
+    div[data-testid="stButton"] > button[data-testid="baseButton-primary"] {
+        background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%) !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        font-weight: 700 !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.28) !important;
+    }
+
+    div[data-testid="stButton"] > button[kind="primary"]:hover,
+    div[data-testid="stButton"] > button[data-testid="baseButton-primary"]:hover {
+        background: linear-gradient(135deg, #0369A1 0%, #075985 100%) !important;
+        color: #FFFFFF !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35) !important;
+    }
+
+    /* Expanders (+ Dispatch Additional Machinery) */
+    div[data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+        overflow: hidden;
+    }
+
+    div[data-testid="stExpander"] details {
+        background-color: #FFFFFF !important;
+        border-radius: 12px !important;
+    }
+
+    div[data-testid="stExpander"] summary {
+        background-color: #F8FAFC !important;
+        color: #0F172A !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        padding: 12px 18px !important;
+        border-bottom: 1px solid #E2E8F0 !important;
+        transition: background-color 0.15s ease !important;
+    }
+
+    div[data-testid="stExpander"] summary:hover {
+        background-color: #F1F5F9 !important;
+        color: #0284C7 !important;
+    }
+
+    div[data-testid="stExpander"] summary svg {
+        fill: #475569 !important;
+    }
+
+    div[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {
+        background-color: #FFFFFF !important;
+        padding: 18px 20px !important;
+    }
+
     /* Hide standard Streamlit header clutter */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
