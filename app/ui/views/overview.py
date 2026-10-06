@@ -50,47 +50,6 @@ def render_overview_dashboard():
     </div>
     """), unsafe_allow_html=True)
 
-    # WeatherAPI & TomTom Live Command & Multi-Attribute Warning Bar
-    col_w_info, col_w_btn = st.columns([4.2, 1], gap="small")
-    with col_w_info:
-        st.markdown(textwrap.dedent(f"""
-        <div style="background:linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border:1px solid #334155; border-radius:12px; padding:12px 18px; margin-bottom:14px; box-shadow:0 4px 14px rgba(0,0,0,0.12); font-family:'Plus Jakarta Sans',sans-serif;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <span style="background:{'#10B98120' if weather.is_live else '#F59E0B20'}; color:{'#34D399' if weather.is_live else '#FBBF24'}; border:1px solid {'#10B98160' if weather.is_live else '#F59E0B60'}; font-size:11px; font-weight:800; padding:4px 10px; border-radius:14px; letter-spacing:0.04em; text-transform:uppercase;">
-                        ● {'WeatherAPI Live' if weather.is_live else 'Weather Baseline'}
-                    </span>
-                    <span style="background:#3B82F620; color:#60A5FA; border:1px solid #3B82F660; font-size:11px; font-weight:800; padding:4px 10px; border-radius:14px; letter-spacing:0.04em; text-transform:uppercase;">
-                        ● TomTom Traffic Flow
-                    </span>
-                    <span style="color:#F8FAFC; font-size:13px; font-weight:600;">
-                        🌡️ <b>{weather.temp_c}°C</b> &nbsp;|&nbsp; 
-                        💧 Hum: <b>{weather.humidity}%</b> &nbsp;|&nbsp; 
-                        🌧️ Rain: <b style="color:#60A5FA;">{weather.max_rain_chance}%</b> &nbsp;|&nbsp; 
-                        🌊 24h: <b>{weather.total_precip_mm} mm</b>
-                    </span>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <div style="background:#EF444422; border:1px solid #EF444477; padding:4px 10px; border-radius:8px; font-size:12px;">
-                        <span style="color:#F87171; font-weight:800;">🚨 #1 ALL-ATTRIBUTE RISK:</span>
-                        <span style="color:#FFFFFF; font-weight:700;">{top1['name']} ({top1.get('composite_score', top1['risk_score'])}/100)</span>
-                    </div>
-                    <div style="background:#F59E0B22; border:1px solid #F59E0B77; padding:4px 10px; border-radius:8px; font-size:12px;">
-                        <span style="color:#FBBF24; font-weight:800;">🚗 #1 MOST BUSIEST CORRIDOR:</span>
-                        <span style="color:#FFFFFF; font-weight:700;">{busiest['name']}</span>
-                        <span style="color:#FDE68A; font-weight:700;">({busiest.get('traffic_congestion_pct', 75)}% Jam | {busiest.get('traffic_speed_kmh', 15.0)} km/h)</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-        """).strip(), unsafe_allow_html=True)
-    with col_w_btn:
-        st.write("")
-        if st.button("🔄 Sync Weather & Traffic", use_container_width=True, help="Fetch real-time radar & TomTom traffic flow data"):
-            st.session_state["force_weather_refresh"] = True
-            st.rerun()
-
-
     # 4 Top KPI Cards with Sparklines (Dynamically Computed from Weather Intelligence)
     col1, col2, col3, col4 = st.columns(4)
 
@@ -279,64 +238,38 @@ def render_overview_dashboard():
         # Top key locations to display prominently
         display_locs = filtered_locs[:8]
 
-        # Build custom styled HTML table matching the screenshot
+        # Build custom styled HTML table
         table_rows_html = ""
         for loc in display_locs:
             r_level = loc["risk_level"]
             pill_class = f"pill-{r_level.lower()}"
             fill_class = f"fill-{r_level.lower()}"
 
-            trend_icon = "↗" if loc["trend_24h"] == "up" else ("↘" if loc["trend_24h"] == "down" else "→")
-            trend_color = "#DC2626" if loc["trend_24h"] == "up" else ("#16A34A" if loc["trend_24h"] == "down" else "#64748B")
-
-            status_class = f"st-{loc['status'].lower().replace(' ', '-').replace('/', '-')}"
             p_val = loc.get("precip_mm", loc["rainfall_3h"])
-            t_pct = loc.get("traffic_congestion_pct", 40)
-            t_speed = loc.get("traffic_speed_kmh", 25.0)
-            is_busiest = loc.get("is_busiest_traffic", False)
             comp_score = loc.get("composite_score", loc["risk_score"])
-
-            # Traffic badge color
-            if t_pct >= 75:
-                t_bg, t_border, t_col = "#FEE2E2", "#FECACA", "#DC2626"
-            elif t_pct >= 50:
-                t_bg, t_border, t_col = "#FFEDD5", "#FED7AA", "#EA580C"
-            elif t_pct >= 25:
-                t_bg, t_border, t_col = "#FEF3C7", "#FDE68A", "#D97706"
-            else:
-                t_bg, t_border, t_col = "#DCFCE7", "#BBF7D0", "#16A34A"
-
-            busiest_pill = '<span style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-size:9px; font-weight:800; padding:1px 5px; border-radius:6px; margin-left:4px;">🔥 BUSIEST</span>' if is_busiest else ''
 
             table_rows_html += f"""
             <tr>
-                <td style="font-weight:600; color:#1E293B; white-space:nowrap;">
+                <td style="font-weight:600; color:#1E293B;">
                     <span style="display:inline-block; width:22px; font-weight:800; color:#7C3AED; font-size:11px;">#{loc.get('priority_rank', '-')}</span>
-                    {loc['name']}{busiest_pill}
+                    {loc['name']}
                 </td>
                 <td><span class="pill-badge {pill_class}">{r_level}</span></td>
                 <td style="font-weight:800; color:#0F172A; text-align:center;">{comp_score}</td>
                 <td>
-                    <span style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:11px; padding:2px 6px; border-radius:8px; display:inline-block; white-space:nowrap;">
+                    <span style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:11px; padding:2px 8px; border-radius:8px; display:inline-block; white-space:nowrap;">
                         🌧️ {p_val} mm
                     </span>
                 </td>
-                <td>
-                    <span style="background:{t_bg}; border:1px solid {t_border}; color:{t_col}; font-weight:800; font-size:11px; padding:2px 6px; border-radius:8px; display:inline-block; white-space:nowrap;">
-                        🚗 {t_pct}% ({t_speed}k)
-                    </span>
-                </td>
-                <td style="min-width:70px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-weight:600; font-size:11px; width:26px;">{loc['water_level_pct']}%</span>
-                        <div class="progress-track">
+                <td style="min-width:100px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
+                        <div class="progress-track" style="width:60px;">
                             <div class="progress-fill {fill_class}" style="width:{loc['water_level_pct']}%;"></div>
                         </div>
                     </div>
                 </td>
                 <td style="font-weight:700; color:#475569; font-size:11px; text-align:center;">{loc['blockage_pct']}%</td>
-                <td style="font-weight:800; color:{trend_color}; font-size:13px; text-align:center;">{trend_icon}</td>
-                <td><span class="{status_class}">{loc['status']}</span></td>
             </tr>"""
 
         full_table_html = f"""
@@ -349,7 +282,7 @@ def render_overview_dashboard():
                 .table-container {{
                     border: 1px solid #E2E8F0;
                     border-radius: 10px;
-                    padding: 6px 10px;
+                    padding: 6px 12px;
                     background: #FFFFFF;
                 }}
                 table {{
@@ -358,7 +291,7 @@ def render_overview_dashboard():
                     text-align: left;
                 }}
                 th {{
-                    padding: 8px 5px;
+                    padding: 9px 8px;
                     font-size: 11px;
                     color: #64748B;
                     font-weight: 700;
@@ -366,16 +299,16 @@ def render_overview_dashboard():
                     white-space: nowrap;
                 }}
                 td {{
-                    padding: 8px 5px;
+                    padding: 10px 8px;
                     border-bottom: 1px solid #F1F5F9;
-                    font-size: 11px;
+                    font-size: 12px;
                 }}
                 tr:last-child td {{
                     border-bottom: none;
                 }}
                 .pill-badge {{
                     display: inline-block;
-                    padding: 2px 6px;
+                    padding: 2px 7px;
                     border-radius: 10px;
                     font-size: 10px;
                     font-weight: 700;
@@ -388,8 +321,7 @@ def render_overview_dashboard():
                 .progress-track {{
                     background: #F1F5F9;
                     border-radius: 6px;
-                    height: 7px;
-                    width: 45px;
+                    height: 8px;
                     overflow: hidden;
                     display: inline-block;
                 }}
@@ -398,10 +330,6 @@ def render_overview_dashboard():
                 .fill-high {{ background: #F97316; }}
                 .fill-medium {{ background: #FBBF24; }}
                 .fill-low {{ background: #10B981; }}
-                .st-critical-gridlock-&-flood {{ color: #DC2626; font-weight: 700; }}
-                .st-heavy-traffic-surcharge {{ color: #EA580C; font-weight: 700; }}
-                .st-moderate-inflow---congestion {{ color: #D97706; font-weight: 600; }}
-                .st-optimal-flow-&-clearway {{ color: #16A34A; font-weight: 600; }}
             </style>
         </head>
         <body>
@@ -413,11 +341,8 @@ def render_overview_dashboard():
                             <th>Severity</th>
                             <th style="text-align:center;">Score</th>
                             <th>Precip</th>
-                            <th>Traffic Flow</th>
-                            <th>Conduit</th>
-                            <th style="text-align:center;">Debris</th>
-                            <th style="text-align:center;">Trend</th>
-                            <th>Status</th>
+                            <th>Conduit Saturation</th>
+                            <th style="text-align:center;">Debris Choke</th>
                         </tr>
                     </thead>
                     <tbody>
