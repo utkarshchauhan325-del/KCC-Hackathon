@@ -203,21 +203,32 @@ def compute_location_weather_risk(
         "rain_stress_score": round(precip_stress, 1),
     }
 
-def rank_locations_by_flood_priority(
+def rank_locations_by_all_attributes(
     locations: List[Dict[str, Any]],
     weather_rain_chance: int,
     weather_total_precip_mm: float,
     current_temp: float = 24.0,
-    humidity: int = 75
+    humidity: int = 75,
+    traffic_map: Optional[Dict[str, Any]] = None,
+    force_refresh_traffic: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Enrich and rank all municipal monitoring locations by precipitation in mm and flood probability.
+    """Enrich and rank all municipal monitoring locations on the basis of ALL attributes:
+    1. Precipitation intensity (mm) from WeatherAPI
+    2. Traffic congestion and gridlock (%) from TomTom Traffic Flow API
+    3. Conduit hydraulic saturation (water_level_pct)
+    4. Debris obstruction index (blockage_pct)
     
-    Every location receives a distinct precipitation amount at the same time, and
-    rankings are updated primarily on the basis of precipitation intensity (highest mm first).
+    Also identifies which place is the #1 busiest corridor in Pune right now.
     """
+    from app.core.traffic_client import fetch_bulk_traffic, _get_fallback_traffic
+
+    if traffic_map is None:
+        traffic_map = fetch_bulk_traffic(locations, force_refresh=force_refresh_traffic)
+
     enriched: List[Dict[str, Any]] = []
     seen_precips = set()
 
+    # Step 1: Calculate precipitation and attach raw traffic
     for idx, loc in enumerate(locations):
         loc_copy = dict(loc)
         
@@ -231,13 +242,11 @@ def rank_locations_by_flood_priority(
             loc_index=idx
         )
         
-        # Guarantee 100% collision-free distinct precipitation in mm
         p_val = metrics_preview["precip_mm"]
         while p_val in seen_precips:
             p_val = round(p_val + 0.1, 1)
         seen_precips.add(p_val)
 
-        # Final compute with guaranteed unique precipitation
         metrics = compute_location_weather_risk(
             loc=loc_copy,
             weather_rain_chance=weather_rain_chance,
@@ -248,22 +257,175 @@ def rank_locations_by_flood_priority(
             assigned_precip_mm=p_val
         )
 
-        loc_copy["risk_score"] = metrics["risk_score"]
-        loc_copy["risk_level"] = metrics["risk_level"]
-        loc_copy["status"] = metrics["status"]
-        loc_copy["flood_probability_pct"] = metrics["flood_probability_pct"]
-        loc_copy["rain_chance_pct"] = metrics["local_rain_chance"]
+        # Retrieve TomTom Traffic data
+        loc_id = loc_copy.get("id", "")
+        tf = traffic_map.get(loc_id)
+        if tf is None:
+            tf = _get_fallback_traffic(
+                float(loc_copy.get("lat", 18.52)),
+                float(loc_copy.get("lng", 73.85)),
+                loc_id,
+                float(loc_copy.get("water_level_pct", 0.0)),
+                "Cache Miss"
+            )
+
+        # Dedicated 'traffic' attribute object requested by user
+        traffic_delay = max(0, tf.current_travel_time_sec - tf.free_flow_travel_time_sec)
+        loc_copy["traffic"] = {
+            "congestion_pct": tf.congestion_pct,
+            "traffic_level": tf.traffic_level,
+            "current_speed_kmh": tf.current_speed_kmh,
+            "free_flow_kmh": tf.free_flow_kmh,
+            "delay_sec": traffic_delay,
+            "road_closure": tf.road_closure,
+            "is_busiest": False,
+            "traffic_rank": 0,
+            "is_live": tf.is_live,
+            "last_updated": tf.last_updated,
+            "source": "TomTom Traffic Flow API" if tf.is_live else "Model Baseline",
+        }
+        loc_copy["traffic_congestion_pct"] = tf.congestion_pct
+        loc_copy["traffic_speed_kmh"] = tf.current_speed_kmh
+        loc_copy["traffic_level"] = tf.traffic_level
+        loc_copy["traffic_delay_sec"] = traffic_delay
+        loc_copy["is_busiest_traffic"] = False
+
         loc_copy["precip_mm"] = metrics["precip_mm"]
         loc_copy["local_precip_load_mm"] = metrics["precip_mm"]
         loc_copy["rainfall_3h"] = int(round(metrics["precip_mm"]))
-        loc_copy["rain_stress"] = metrics["rain_stress_score"]
-        loc_copy["last_updated"] = "Live Doppler Sync"
+        loc_copy["rain_chance_pct"] = metrics["local_rain_chance"]
+        loc_copy["flood_probability_pct"] = metrics["flood_probability_pct"]
+
         enriched.append(loc_copy)
 
-    # Rank strictly on the basis of precipitation (mm) descending, followed by flood probability
+    # Step 2: Identify and rank traffic across all places to find the MOST BUSIEST place
+    # Primary traffic sort: congestion_pct desc, delay desc, current_speed asc
+    traffic_sorted = sorted(
+        enriched,
+        key=lambda x: (
+            x["traffic_congestion_pct"],
+            x["traffic_delay_sec"],
+            -x["traffic_speed_kmh"]
+        ),
+        reverse=True
+    )
+    for t_rank, t_loc in enumerate(traffic_sorted, 1):
+        t_loc["traffic"]["traffic_rank"] = t_rank
+        t_loc["traffic_rank"] = t_rank
+        if t_rank == 1:
+            t_loc["traffic"]["is_busiest"] = True
+            t_loc["is_busiest_traffic"] = True
+            t_loc["busiest_corridor_title"] = f"🚗 #1 Most Busiest Corridor: {t_loc['name']} ({t_loc['traffic_congestion_pct']}% Congestion | {t_loc['traffic_speed_kmh']} km/h)"
+
+    # Step 3: Compute Multi-Attribute Composite Score based on ALL ATTRIBUTES
+    # Weights:
+    # 30% Precipitation Intensity (mm normalized to 36mm baseline)
+    # 25% Traffic Congestion (TomTom gridlock %)
+    # 25% Hydraulic Conduit Saturation (water_level_pct)
+    # 20% Debris Blockage Obstruction (blockage_pct)
+    for loc_item in enriched:
+        p_stress = min(100.0, (loc_item["precip_mm"] / 36.0) * 100.0)
+        t_jam = float(loc_item["traffic_congestion_pct"])
+        w_sat = float(loc_item.get("water_level_pct", 50))
+        b_choke = float(loc_item.get("blockage_pct", 50))
+
+        contrib_p = 0.30 * p_stress
+        contrib_t = 0.25 * t_jam
+        contrib_w = 0.25 * w_sat
+        contrib_b = 0.20 * b_choke
+
+        comp_score = round(contrib_p + contrib_t + contrib_w + contrib_b, 1)
+        comp_score = max(0.0, min(100.0, comp_score))
+
+        loc_item["composite_score"] = comp_score
+        loc_item["risk_score"] = int(round(comp_score))
+
+        # Classify risk level based on multi-attribute stress and hydraulic thresholds
+        is_stressed = (w_sat >= 78 and b_choke >= 60) or comp_score >= 65.0
+        if is_stressed or comp_score >= 65.0 or w_sat >= 82:
+            loc_item["risk_level"] = "Critical"
+        elif comp_score >= 50.0 or w_sat >= 65:
+            loc_item["risk_level"] = "High"
+        elif comp_score >= 35.0:
+            loc_item["risk_level"] = "Medium"
+        else:
+            loc_item["risk_level"] = "Low"
+
+        loc_item["attribute_breakdown"] = {
+            "precipitation_contrib": round(contrib_p, 1),
+            "traffic_contrib": round(contrib_t, 1),
+            "water_level_contrib": round(contrib_w, 1),
+            "blockage_contrib": round(contrib_b, 1),
+            "p_stress": round(p_stress, 1),
+            "t_jam": int(t_jam),
+            "w_sat": int(w_sat),
+            "b_choke": int(b_choke),
+        }
+
+        # Multi-attribute status description
+        if comp_score >= 70.0:
+            loc_item["status"] = "Critical Gridlock & Flood"
+        elif comp_score >= 55.0:
+            loc_item["status"] = "Heavy Traffic Surcharge"
+        elif comp_score >= 35.0:
+            loc_item["status"] = "Moderate Inflow / Congestion"
+        else:
+            loc_item["status"] = "Optimal Flow & Clearway"
+
+    # Step 4: Rank strictly on the basis of ALL ATTRIBUTES together
+    enriched.sort(
+        key=lambda x: (
+            x["composite_score"],
+            x["precip_mm"],
+            x["traffic_congestion_pct"],
+            x.get("water_level_pct", 0),
+            x.get("blockage_pct", 0)
+        ),
+        reverse=True
+    )
+
+    # Assign priority rank and actionable multi-attribute directive
+    for idx, item in enumerate(enriched, 1):
+        item["priority_rank"] = idx
+        t_info = f"🚗 Traffic: {item['traffic_congestion_pct']}% ({item['traffic_speed_kmh']} km/h)"
+        p_info = f"🌧️ Precip: {item['precip_mm']} mm"
+        w_info = f"💧 Conduit: {item['water_level_pct']}%"
+        if idx <= 5:
+            item["priority_directive"] = f"🚨 Rank #{idx} Emergency ({item['composite_score']}/100): {p_info} | {t_info} | {w_info} — Dispatch Quick Response"
+        elif idx <= 15:
+            item["priority_directive"] = f"⚠️ Rank #{idx} High Alert ({item['composite_score']}/100): {p_info} | {t_info} — Traffic Diversion & Jetting"
+        elif idx <= 30:
+            item["priority_directive"] = f"🟡 Rank #{idx} Watchlist ({item['composite_score']}/100): {p_info} | {t_info} — Telemetry Surveillance"
+        else:
+            item["priority_directive"] = f"🟢 Rank #{idx} Low Risk ({item['composite_score']}/100): {p_info} | {t_info} — Normal Operations"
+
+    return enriched
+
+def get_busiest_location(locations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Identify and return the single most busiest location across Pune based on TomTom traffic."""
+    busiest = next((l for l in locations if l.get("is_busiest_traffic")), None)
+    if not busiest and locations:
+        busiest = max(locations, key=lambda l: (l.get("traffic_congestion_pct", 0), l.get("traffic_delay_sec", 0)))
+    return busiest or locations[0]
+
+def rank_locations_by_flood_priority(
+    locations: List[Dict[str, Any]],
+    weather_rain_chance: int,
+    weather_total_precip_mm: float,
+    current_temp: float = 24.0,
+    humidity: int = 75
+) -> List[Dict[str, Any]]:
+    """Enrich all locations and rank strictly by precipitation in mm descending."""
+    enriched = rank_locations_by_all_attributes(
+        locations=locations,
+        weather_rain_chance=weather_rain_chance,
+        weather_total_precip_mm=weather_total_precip_mm,
+        current_temp=current_temp,
+        humidity=humidity
+    )
+    # Sort strictly on the basis of precipitation (highest mm first)
     enriched.sort(key=lambda x: (x["precip_mm"], x["flood_probability_pct"], x["risk_score"]), reverse=True)
 
-    # Assign priority ranks & actionable directives
     for idx, item in enumerate(enriched, 1):
         item["priority_rank"] = idx
         if idx <= 5:
@@ -276,4 +438,6 @@ def rank_locations_by_flood_priority(
             item["priority_directive"] = f"🟢 Priority 4: Light Rain ({item['precip_mm']} mm) — Passive Monitoring"
 
     return enriched
+
+
 

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = Field(default="", description="Google Gemini API Key")
     GEMINI_MODEL: str = Field(default="gemini-3-flash-preview", description="Gemini model for video inspection")
     WEATHER_API_KEY: str = Field(default="", description="WeatherAPI Key for meteorological forecasting")
+    TOMTOM_API_KEY: str = Field(default="", description="TomTom Traffic API Key for road congestion monitoring")
     LOG_LEVEL: str = Field(default="INFO")
 
     # Storage Paths

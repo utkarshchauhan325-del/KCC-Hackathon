@@ -68,16 +68,25 @@ def create_floodguard_map(
         is_sel = (selected_location_id == loc["id"])
 
         p_mm = loc.get("precip_mm", loc["rainfall_3h"])
+        t_pct = loc.get("traffic_congestion_pct", 40)
+        t_speed = loc.get("traffic_speed_kmh", 25.0)
+        t_lvl = loc.get("traffic_level", "Moderate")
+        is_busiest = loc.get("is_busiest_traffic", False)
+        comp_score = loc.get("composite_score", loc["risk_score"])
+
+        busiest_html = '<div style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-weight:800; font-size:10px; padding:2px 6px; border-radius:6px; margin-bottom:6px; text-align:center;">🚗 #1 MOST BUSIEST CORRIDOR</div>' if is_busiest else ''
+
         popup_html = f"""
-        <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:210px; padding:4px;">
+        <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:220px; padding:4px;">
+            {busiest_html}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                 <b style="color:#0F172A; font-size:13px;">#{loc.get('priority_rank', '-')} {loc['name']}</b>
                 <span style="background:{col}22; color:{col}; font-weight:700; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid {col}55;">{r_level.upper()}</span>
             </div>
-            <div style="font-size:11px; color:#64748B; margin-bottom:6px;">Zone: {loc['zone']} | {loc['ward']}</div>
+            <div style="font-size:11px; color:#64748B; margin-bottom:6px;">Zone: {loc['zone']} | Score: <b>{comp_score}/100</b></div>
             <table style="width:100%; font-size:11px; border-top:1px solid #E2E8F0; padding-top:4px;">
-                <tr><td style="color:#64748B;">Live Precipitation:</td><td style="text-align:right; font-weight:800; color:#2563EB;">{p_mm} mm</td></tr>
-                <tr><td style="color:#64748B;">Flood Likelihood:</td><td style="text-align:right; font-weight:800; color:{col};">{loc.get('flood_probability_pct', loc['risk_score'])}%</td></tr>
+                <tr><td style="color:#64748B;">Live Precip:</td><td style="text-align:right; font-weight:800; color:#2563EB;">{p_mm} mm</td></tr>
+                <tr><td style="color:#64748B;">TomTom Traffic:</td><td style="text-align:right; font-weight:800; color:{'#DC2626' if t_pct>=75 else '#EA580C'};">{t_pct}% ({t_speed} km/h)</td></tr>
                 <tr><td style="color:#64748B;">Conduit Saturation:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['water_level_pct']}%</td></tr>
                 <tr><td style="color:#64748B;">Drain Blockage:</td><td style="text-align:right; font-weight:600;">{loc['blockage_pct']}%</td></tr>
                 <tr><td style="color:#64748B;">Status:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['status']}</td></tr>
@@ -85,15 +94,15 @@ def create_floodguard_map(
         </div>
         """
 
-        # Outer glow ring for Critical
-        if is_crit or is_sel:
+        # Outer glow ring for Critical or Busiest
+        if is_crit or is_sel or is_busiest:
             folium.CircleMarker(
                 location=[loc["lat"], loc["lng"]],
-                radius=18 if is_sel else 14,
-                color=col,
+                radius=18 if (is_sel or is_busiest) else 14,
+                color="#EF4444" if is_busiest else col,
                 weight=2,
                 fill=True,
-                fill_color=col,
+                fill_color="#EF4444" if is_busiest else col,
                 fill_opacity=0.25,
             ).add_to(m)
 
@@ -106,8 +115,9 @@ def create_floodguard_map(
             fill=True,
             fill_color=col,
             fill_opacity=0.95,
-            tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} ({p_mm} mm | Flood Prob: {loc.get('flood_probability_pct', loc['risk_score'])}%)",
-            popup=folium.Popup(popup_html, max_width=260)
+            tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} (Score: {comp_score} | 🌧️ {p_mm}mm | 🚗 {t_pct}% Jam)",
+            popup=folium.Popup(popup_html, max_width=270)
         ).add_to(m)
 
     return m
+

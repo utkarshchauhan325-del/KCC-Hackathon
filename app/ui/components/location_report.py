@@ -62,7 +62,19 @@ def get_location_diagnostic_data(loc: Dict[str, Any]) -> Dict[str, Any]:
         debris_mix = "Negligible debris (< 15% silt)"
         action_plan = "Routine telemetry surveillance."
         recede_eta = "Immediate drainage (< 15 mins)"
-        traffic_adv = "Normal traffic conditions."
+    t_pct = loc.get("traffic_congestion_pct", 35)
+    t_speed = loc.get("traffic_speed_kmh", 25.0)
+    t_level = loc.get("traffic_level", "Moderate Flow")
+    is_busiest = loc.get("is_busiest_traffic", False)
+
+    if is_busiest or t_pct >= 75:
+        traffic_adv = f"🚨 SEVERE TRAFFIC GRIDLOCK: {t_pct}% congestion (Vehicles crawling at {t_speed} km/h). Emergency green corridor & police diversion active."
+    elif t_pct >= 50:
+        traffic_adv = f"⚠️ Heavy Traffic Surcharge: {t_pct}% congestion ({t_speed} km/h). Caution advisory for two-wheelers and heavy transit vehicles."
+    elif t_pct >= 25:
+        traffic_adv = f"🚗 Moderate Traffic Flow: {t_pct}% congestion ({t_speed} km/h). Normal lane circulation."
+    else:
+        traffic_adv = f"🟢 Free Flow: {t_pct}% congestion ({t_speed} km/h). Clearway maintained."
 
     return {
         "problem_title": problem_title,
@@ -75,10 +87,17 @@ def get_location_diagnostic_data(loc: Dict[str, Any]) -> Dict[str, Any]:
         "traffic_adv": traffic_adv
     }
 
+
 def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "close_hotspot_report"):
     """Render the full-length detailed diagnostic report box under the map."""
     diag = get_location_diagnostic_data(loc)
     r_level = loc["risk_level"]
+    is_busiest = loc.get("is_busiest_traffic", False)
+    t_pct = loc.get("traffic_congestion_pct", 40)
+    t_speed = loc.get("traffic_speed_kmh", 25.0)
+    t_lvl = loc.get("traffic_level", "Moderate Flow")
+    t_delay = loc.get("traffic_delay_sec", 60)
+    comp_score = loc.get("composite_score", loc["risk_score"])
 
     col_map = {
         "Critical": "#DC2626",
@@ -96,15 +115,21 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
     border_color = col_map.get(r_level, "#2563EB")
     badge_bg = bg_map.get(r_level, "#EFF6FF")
 
+    busiest_badge = (
+        '<span style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-weight:800; font-size:11px; padding:3px 8px; border-radius:8px;">🔥 #1 MOST BUSIEST TRAFFIC CORRIDOR IN PUNE</span>'
+        if is_busiest else ''
+    )
+
     # Full length box container
     st.markdown(textwrap.dedent(f"""
 <div style="background:#FFFFFF; border:2px solid {border_color}; border-radius:14px; padding:22px 26px; margin:20px 0 24px 0; box-shadow:0 4px 14px rgba(0,0,0,0.06); font-family:'Plus Jakarta Sans',sans-serif;">
 <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #E2E8F0; padding-bottom:14px; margin-bottom:16px;">
 <div>
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
 <span style="background:{badge_bg}; color:{border_color}; font-weight:800; font-size:12px; padding:4px 10px; border-radius:12px; border:1px solid {border_color}40; letter-spacing:0.04em; text-transform:uppercase;">
-● {r_level} RISK LEVEL — SCORE {loc['risk_score']}/100
+● {r_level} RISK LEVEL — SCORE {comp_score}/100
 </span>
+{busiest_badge}
 <span style="font-size:12px; color:#64748B;">Sensor Node: <b>{loc['id']}</b></span>
 <span style="font-size:12px; color:#64748B;">• Updated: <b>{loc['last_updated']}</b></span>
 </div>
@@ -115,7 +140,7 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 </div>
 </div>
 
-<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
+<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
 <div>
 <div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Conduit Saturation</div>
 <div style="font-size:22px; font-weight:800; color:{border_color};">{loc['water_level_pct']}%</div>
@@ -127,14 +152,19 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 <div style="font-size:11px; color:#475569;">Rain Probability: <b>{loc.get('rain_chance_pct', 45)}%</b></div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Debris / Silt Choke Index</div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">🚗 TomTom Traffic</div>
+<div style="font-size:22px; font-weight:800; color:{'#DC2626' if t_pct>=75 else '#EA580C'};">{t_pct}%</div>
+<div style="font-size:11px; color:#475569;">Speed: <b>{t_speed} km/h</b> (Delay: +{t_delay}s)</div>
+</div>
+<div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Debris / Silt Choke</div>
 <div style="font-size:22px; font-weight:800; color:{border_color};">{loc['blockage_pct']}%</div>
 <div style="font-size:11px; color:#475569;">Intake Chamber Choke</div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Flood Likelihood & Priority</div>
-<div style="font-size:22px; font-weight:800; color:{border_color};">{loc.get('flood_probability_pct', loc['risk_score'])}% <span style="font-size:12px; font-weight:700; color:#7C3AED;">(Rank #{loc.get('priority_rank', '-')})</span></div>
-<div style="font-size:11px; color:#475569;">Status: <b>{loc['status']}</b></div>
+<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">All-Attribute Priority</div>
+<div style="font-size:22px; font-weight:800; color:#7C3AED;">Rank #{loc.get('priority_rank', '-')}</div>
+<div style="font-size:11px; color:#475569;">Multi-Score: <b>{comp_score}/100</b></div>
 </div>
 </div>
 </div>

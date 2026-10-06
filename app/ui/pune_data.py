@@ -582,22 +582,37 @@ OPERATIONS_INTERVENTIONS = [
     }
 ]
 
-def get_weather_adjusted_locations(force_refresh: bool = False) -> List[Dict[str, Any]]:
-    """Return all 53 Pune monitoring locations enriched with WeatherAPI predictions and deterministic flood priority."""
+def get_all_attribute_ranked_locations(force_refresh: bool = False) -> List[Dict[str, Any]]:
+    """Return all 53 Pune monitoring locations enriched with WeatherAPI precipitation,
+    TomTom live traffic, and deterministic multi-attribute ranking across all 4 pillars
+    (Precipitation mm, Traffic gridlock %, Conduit saturation %, and Blockage %).
+    """
     from app.core.weather_client import fetch_live_pune_weather
-    from app.core.scoring import rank_locations_by_flood_priority
+    from app.core.scoring import rank_locations_by_all_attributes
 
     weather = fetch_live_pune_weather(force_refresh=force_refresh)
-    return rank_locations_by_flood_priority(
+    return rank_locations_by_all_attributes(
         locations=PUNE_LOCATIONS,
         weather_rain_chance=weather.max_rain_chance,
         weather_total_precip_mm=weather.total_precip_mm,
         current_temp=weather.temp_c,
-        humidity=weather.humidity
+        humidity=weather.humidity,
+        force_refresh_traffic=force_refresh
     )
 
+def get_weather_adjusted_locations(force_refresh: bool = False) -> List[Dict[str, Any]]:
+    """Return all 53 Pune monitoring locations ranked on the basis of all attributes."""
+    return get_all_attribute_ranked_locations(force_refresh=force_refresh)
+
+def get_busiest_traffic_corridor(locations: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+    """Identify and return the single most busiest corridor across Pune based on TomTom traffic."""
+    from app.core.scoring import get_busiest_location
+    if locations is None:
+        locations = get_all_attribute_ranked_locations()
+    return get_busiest_location(locations)
+
 def get_live_pune_kpis(locations: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
-    """Calculate dynamic KPIs from active weather-adjusted location scores."""
+    """Calculate dynamic KPIs from active weather and traffic adjusted location scores."""
     if locations is None:
         locations = get_weather_adjusted_locations()
 
@@ -616,4 +631,5 @@ def get_live_pune_kpis(locations: Optional[List[Dict[str, Any]]] = None) -> Dict
         "drainage_risk": drain,
         "drainage_risk_diff": f"+{max(1, drain - 18)}",
     }
+
 
