@@ -169,16 +169,9 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 </div>
 </div>
 """).strip(), unsafe_allow_html=True)
-    # Quick Action Buttons
-    btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 5])
-    with btn_col1:
-        if st.button("🚀 Dispatch Pump", key=f"disp_pump_{loc['id']}", type="primary", use_container_width=True):
-            db = SessionLocal()
-            db.add(AuditLog(user="Chief Municipal Officer", action=f"dispatched_mobile_pump_{loc['id']}", entity="location", entity_id=loc['id']))
-            db.commit()
-            db.close()
-            st.success("Mobile Pump Unit OP-701 dispatched!")
-    with btn_col2:
+    # Action Buttons
+    btn_col, _ = st.columns([1.8, 6.2])
+    with btn_col:
         if st.button("❌ Close Report", key=f"close_{loc['id']}", use_container_width=True):
             st.session_state["selected_location_id"] = None
             st.rerun()
