@@ -19,9 +19,9 @@ def create_floodguard_map(
         tiles = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         attr = "Esri World Imagery"
     else:
-        # Crisp clean light map tiles
-        tiles = "CartoDB positron"
-        attr = "CartoDB"
+        # High quality OpenStreetMap tiles (free, public, no API key needed)
+        tiles = "OpenStreetMap"
+        attr = "OpenStreetMap"
 
     m = folium.Map(
         location=[center_lat, center_lng],

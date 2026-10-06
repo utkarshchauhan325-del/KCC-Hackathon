@@ -12,13 +12,14 @@ from app.ui.components.charts import (
     render_rainfall_forecast_bars,
     render_water_level_trend
 )
+import textwrap
 from app.ui.components.map_view import create_floodguard_map
 
 def render_overview_dashboard():
     """Render the exact FloodGuard dashboard overview."""
 
     # Top Header
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="flood-header">
         <div class="flood-title-block">
             <h1>Flood Risk Overview</h1>
@@ -37,13 +38,13 @@ def render_overview_dashboard():
             <div class="date-badge">📅 Sep 24, 2026 | 10:24 AM</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     # 4 Top KPI Cards with Sparklines
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="kpi-card">
             <div class="kpi-left">
                 <div class="kpi-header">
@@ -60,10 +61,10 @@ def render_overview_dashboard():
                 <path d="M2 24 L20 22 L40 18 L60 8 L78 2 L78 30 L2 30 Z" fill="rgba(239, 68, 68, 0.1)"/>
             </svg>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     with col2:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="kpi-card">
             <div class="kpi-left">
                 <div class="kpi-header">
@@ -80,10 +81,10 @@ def render_overview_dashboard():
                 <path d="M2 26 L22 20 L42 22 L62 12 L78 6 L78 30 L2 30 Z" fill="rgba(249, 115, 22, 0.1)"/>
             </svg>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     with col3:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="kpi-card">
             <div class="kpi-left">
                 <div class="kpi-header">
@@ -100,10 +101,10 @@ def render_overview_dashboard():
                 <path d="M2 28 L24 24 L44 14 L64 16 L78 8 L78 30 L2 30 Z" fill="rgba(59, 130, 246, 0.1)"/>
             </svg>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     with col4:
-        st.markdown(f"""
+        st.markdown(textwrap.dedent(f"""
         <div class="kpi-card">
             <div class="kpi-left">
                 <div class="kpi-header">
@@ -120,7 +121,7 @@ def render_overview_dashboard():
                 <path d="M2 25 L20 20 L40 24 L60 16 L78 10 L78 30 L2 30 Z" fill="rgba(245, 158, 11, 0.1)"/>
             </svg>
         </div>
-        """, unsafe_allow_html=True)
+        """), unsafe_allow_html=True)
 
     st.write("")
 
@@ -196,44 +197,111 @@ def render_overview_dashboard():
             status_class = f"st-{loc['status'].lower()}"
 
             table_rows_html += f"""
-            <tr style="border-bottom: 1px solid #F1F5F9; font-size:12px;">
-                <td style="padding:10px 8px; font-weight:600; color:#1E293B;">{loc['name']}</td>
-                <td style="padding:10px 8px;"><span class="pill-badge {pill_class}">{r_level}</span></td>
-                <td style="padding:10px 8px; font-weight:600; color:#334155;">{loc['rainfall_3h']}</td>
-                <td style="padding:10px 8px; min-width:140px;">
+            <tr>
+                <td style="font-weight:600; color:#1E293B;">{loc['name']}</td>
+                <td><span class="pill-badge {pill_class}">{r_level}</span></td>
+                <td style="font-weight:600; color:#334155;">{loc['rainfall_3h']}</td>
+                <td style="min-width:130px;">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-weight:600; font-size:11px; width:30px;">{loc['water_level_pct']}%</span>
+                        <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
                         <div class="progress-track">
                             <div class="progress-fill {fill_class}" style="width:{loc['water_level_pct']}%;"></div>
                         </div>
                     </div>
                 </td>
-                <td style="padding:10px 8px; font-weight:800; color:{trend_color}; font-size:14px; text-align:center;">{trend_icon}</td>
-                <td style="padding:10px 8px;"><span class="{status_class}">{loc['status']}</span></td>
-                <td style="padding:10px 8px; color:#94A3B8; text-align:right; cursor:pointer;">⋮</td>
-            </tr>
-            """
+                <td style="font-weight:800; color:{trend_color}; font-size:14px; text-align:center;">{trend_icon}</td>
+                <td><span class="{status_class}">{loc['status']}</span></td>
+                <td style="color:#94A3B8; text-align:right; font-weight:bold; cursor:pointer;">⋮</td>
+            </tr>"""
 
-        st.markdown(f"""
-        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; overflow-x:auto; padding:4px 10px;">
-            <table style="width:100%; border-collapse:collapse; text-align:left;">
-                <thead>
-                    <tr style="border-bottom:1px solid #E2E8F0; font-size:11px; color:#64748B; font-weight:700;">
-                        <th style="padding:8px 8px;">Location</th>
-                        <th style="padding:8px 8px;">Risk Level</th>
-                        <th style="padding:8px 8px;">Rainfall<br><span style="font-weight:400; font-size:10px;">(mm/3h)</span></th>
-                        <th style="padding:8px 8px;">Water Level<br><span style="font-weight:400; font-size:10px;">(% of capacity)</span></th>
-                        <th style="padding:8px 8px; text-align:center;">Trend<br><span style="font-weight:400; font-size:10px;">(24h)</span></th>
-                        <th style="padding:8px 8px;">Status</th>
-                        <th style="padding:8px 8px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {table_rows_html}
-                </tbody>
-            </table>
-        </div>
-        """, unsafe_allow_html=True)
+        full_table_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                * {{ box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }}
+                body {{ margin: 0; padding: 0; background: #FFFFFF; color: #1E293B; }}
+                .table-container {{
+                    border: 1px solid #E2E8F0;
+                    border-radius: 10px;
+                    padding: 6px 12px;
+                    background: #FFFFFF;
+                }}
+                table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    text-align: left;
+                }}
+                th {{
+                    padding: 8px 6px;
+                    font-size: 11px;
+                    color: #64748B;
+                    font-weight: 700;
+                    border-bottom: 1px solid #E2E8F0;
+                }}
+                td {{
+                    padding: 9px 6px;
+                    border-bottom: 1px solid #F1F5F9;
+                    font-size: 12px;
+                }}
+                tr:last-child td {{
+                    border-bottom: none;
+                }}
+                .pill-badge {{
+                    display: inline-block;
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                }}
+                .pill-critical {{ background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }}
+                .pill-high {{ background-color: #FFEDD5; color: #EA580C; border: 1px solid #FED7AA; }}
+                .pill-medium {{ background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }}
+                .pill-low {{ background-color: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }}
+                .progress-track {{
+                    background: #F1F5F9;
+                    border-radius: 6px;
+                    height: 8px;
+                    width: 80px;
+                    overflow: hidden;
+                    display: inline-block;
+                }}
+                .progress-fill {{ height: 100%; border-radius: 6px; }}
+                .fill-critical {{ background: #EF4444; }}
+                .fill-high {{ background: #F97316; }}
+                .fill-medium {{ background: #FBBF24; }}
+                .fill-low {{ background: #10B981; }}
+                .st-waterlogging {{ color: #DC2626; font-weight: 700; }}
+                .st-rising {{ color: #EA580C; font-weight: 700; }}
+                .st-normal {{ color: #16A34A; font-weight: 600; }}
+                .st-stable {{ color: #64748B; font-weight: 500; }}
+            </style>
+        </head>
+        <body>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th>Risk Level</th>
+                            <th>Rainfall<br><span style="font-weight:400; font-size:10px;">(mm/3h)</span></th>
+                            <th>Water Level<br><span style="font-weight:400; font-size:10px;">(% capacity)</span></th>
+                            <th style="text-align:center;">Trend<br><span style="font-weight:400; font-size:10px;">(24h)</span></th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {table_rows_html}
+                    </tbody>
+                </table>
+            </div>
+        </body>
+        </html>
+        """
+        import streamlit.components.v1 as components
+        components.html(full_table_html, height=440, scrolling=True)
 
     st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:24px 0;'>", unsafe_allow_html=True)
 
@@ -288,7 +356,7 @@ def render_overview_dashboard():
         """, unsafe_allow_html=True)
 
         for alert in RECENT_ALERTS:
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
             <div class="alert-item">
                 <span class="alert-dot">{alert['icon']}</span>
                 <div class="alert-content">
@@ -297,6 +365,6 @@ def render_overview_dashboard():
                 </div>
                 <span class="alert-time">{alert['time']}</span>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
