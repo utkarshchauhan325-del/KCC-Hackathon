@@ -6,10 +6,12 @@ from streamlit_folium import st_folium
 from app.ui.pune_data import PUNE_LOCATIONS, CCTV_CAMERAS
 from app.ui.components.map_view import create_floodguard_map
 
+import textwrap
+
 def render_live_risk_map():
     """Render full interactive GIS risk map with layers and filters."""
 
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="flood-header">
         <div class="flood-title-block">
             <h1>Live Risk Map & GIS Surveillance</h1>
@@ -19,7 +21,7 @@ def render_live_risk_map():
             <div class="date-badge">🟢 Live GIS Sync Active</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """).strip(), unsafe_allow_html=True)
 
     # Filter toolbar
     c1, c2, c3, c4 = st.columns([1.5, 1.5, 1.5, 1.5])

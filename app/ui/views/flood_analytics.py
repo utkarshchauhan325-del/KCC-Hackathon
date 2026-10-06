@@ -2,6 +2,7 @@
 
 import io
 import json
+import textwrap
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -184,7 +185,7 @@ def generate_printable_html_report() -> str:
 def render_flood_analytics():
     """Render comprehensive flood analytics graphs and municipal audit report."""
 
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="flood-header">
         <div class="flood-title-block">
             <h1>Flood Analytics & Municipal Audit Report</h1>
@@ -194,7 +195,7 @@ def render_flood_analytics():
             <div class="date-badge">📈 Automated AI Analysis Engine</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """).strip(), unsafe_allow_html=True)
 
     tab_graphs, tab_report, tab_export = st.tabs([
         "📊 Advanced Analytical Graphs",
@@ -206,92 +207,88 @@ def render_flood_analytics():
         st.markdown("### 📈 Hydrological Correlation & Surcharge Analytics")
 
         # Row 1: 7-Day Monsoon Correlation
-        st.markdown("""
+        st.markdown(textwrap.dedent("""
         <div class="fg-card">
             <h4 class="fg-card-title">Precipitation Accumulation vs City-Wide Risk Index</h4>
             <p class="fg-card-sub">Dual-axis correlation of cumulative rainfall against the deterministic sewer overflow risk index</p>
-        """, unsafe_allow_html=True)
+        </div>
+        """).strip(), unsafe_allow_html=True)
         corr_fig = render_7day_rainfall_water_correlation()
         st.plotly_chart(corr_fig, use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
         # Row 2: Ward Comparison and Scatter Correlation
         c1, c2 = st.columns([1, 1], gap="medium")
         with c1:
-            st.markdown("""
+            st.markdown(textwrap.dedent("""
             <div class="fg-card">
                 <h4 class="fg-card-title">Ward Vulnerability Matrix</h4>
                 <p class="fg-card-sub">Distribution of Critical, High, and Medium risk points per municipal zone</p>
-            """, unsafe_allow_html=True)
+            </div>
+            """).strip(), unsafe_allow_html=True)
             ward_fig = render_ward_vulnerability_bars()
             st.plotly_chart(ward_fig, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
 
         with c2:
-            st.markdown("""
+            st.markdown(textwrap.dedent("""
             <div class="fg-card">
                 <h4 class="fg-card-title">Culvert Blockage vs Standing Water Depth</h4>
                 <p class="fg-card-sub">Empirical validation: Solid debris blockage directly drives road waterlogging depth</p>
-            """, unsafe_allow_html=True)
+            </div>
+            """).strip(), unsafe_allow_html=True)
             scatter_fig = render_blockage_vs_flood_scatter()
             st.plotly_chart(scatter_fig, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
 
     with tab_report:
         st.markdown("### 🏛️ Executive Flood Risk & Drainage Audit Report")
         st.caption("Official Document: PMC/DRM/2026/FL-0924 • Pune Municipal Corporation Disaster Management Cell")
 
-        st.markdown("""
-        <div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:24px 30px; box-shadow:0 1px 4px rgba(0,0,0,0.05); font-family:'Plus Jakarta Sans',sans-serif;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1E3A8A; padding-bottom:12px; margin-bottom:20px;">
-                <div>
-                    <h2 style="color:#1E3A8A; margin:0; font-size:22px; font-weight:800;">PUNE MUNICIPAL CORPORATION</h2>
-                    <div style="color:#64748B; font-size:13px; font-weight:600;">Disaster Management Cell • Municipal Intelligence Flood Risk Audit</div>
-                </div>
-                <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; padding:6px 12px; font-size:12px; color:#1E40AF; font-weight:700;">
-                    STATUS: ACTIVE MONSOON SURCHARGE
-                </div>
-            </div>
-
-            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; background:#F8FAFC; border:1px solid #E2E8F0; padding:12px; border-radius:8px; margin-bottom:20px; font-size:12px;">
-                <div><b>Date:</b> Sep 24, 2026</div>
-                <div><b>City Risk Index:</b> <span style="color:#DC2626; font-weight:800;">78.4 / 100 (HIGH)</span></div>
-                <div><b>Monsoon Stage:</b> Active Monsoon Low Pressure</div>
-                <div><b>Monitored Nodes:</b> 53 Locations (6 CCTV Feeds)</div>
-            </div>
-
-            <h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:16px;">1. EXECUTIVE SUMMARY</h3>
-            <p style="font-size:13px; color:#334155; line-height:1.6;">
-                A city-wide automated surveillance audit utilizing computer vision telemetry across 53 arterial junctions indicates immediate waterlogging vulnerability in <b>5 critical locations</b>: MG Road Junction, FC Road Junction, Deccan Gymkhana, Dapodi Confluence, and Sangamwadi. Surface runoff is hindered by a composite effect of <b>high antecedent rainfall (avg 34mm / 3h)</b>, <b>debris blockage in stormwater box culverts (average 71% choke)</b>, and <b>elevated stage levels along the Mula-Mutha river corridor</b>.
-            </p>
-
-            <h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:20px;">2. CRITICAL BOTTLENECK ANALYSIS</h3>
-            <div style="font-size:13px; color:#334155; line-height:1.6;">
-                <ul>
-                    <li><b>MG Road Junction (Ward 14):</b> 90% water capacity reached with 28cm standing depth. Vision models indicate heavy plastic bag and debris entrapment on road gratings. Mobile dewatering pump unit deployed.</li>
-                    <li><b>FC Road Junction (Ward 09):</b> 80% capacity reached. Commercial cardboard and plastic dumping directly suffocating intake throat. Solid waste enforcement crew notified.</li>
-                    <li><b>Deccan Gymkhana Sluice Gate:</b> River backflow prevents gravity drainage into Mula river outfall. Requires flap gate clearance crane.</li>
-                </ul>
-            </div>
-
-            <h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:20px;">3. DETERMINISTIC SEWER OVERFLOW SCORING (PASS C)</h3>
-            <p style="font-size:13px; color:#334155; line-height:1.6;">
-                Risk scores are calculated using the deterministic formula:
-                <br>
-                <code>Risk = (0.35 × Water_State) + (0.25 × Trash_Inside) + (0.15 × Trash_Near) + (0.10 × Inlet_Blocked) + (0.10 × Hazard_Weight) + (0.05 × Wet_Condition)</code>
-                <br>
-                Where sewer overflow surcharge floor of 70 points is applied deterministically whenever standing sewage or bubbling water is identified by the Vision Language Model.
-            </p>
-
-            <h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:20px;">4. ACTIONABLE DIRECTIVES & REMEDIATION PLAN</h3>
-            <div style="background:#EFF6FF; border-left:4px solid #2563EB; padding:12px 16px; border-radius:4px; font-size:13px; color:#1E3A8A; line-height:1.6;">
-                <b>Immediate Orders:</b>
-                <br>1. Mobilize Mobile 500 GPM pump units to MG Road and FC Road junctions immediately.
-                <br>2. Activate Traffic Ward 3 underpass barricade protocol if rainfall exceeds 40mm in the next 2 hours.
-                <br>3. Engage desilting jetting machine for Deccan Gymkhana river discharge culvert.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        report_summary_html = textwrap.dedent("""
+<div style="background:#FFFFFF; border:1px solid #CBD5E1; border-radius:10px; padding:24px 30px; box-shadow:0 1px 4px rgba(0,0,0,0.05); font-family:'Plus Jakarta Sans',sans-serif;">
+<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1E3A8A; padding-bottom:12px; margin-bottom:20px;">
+<div>
+<h2 style="color:#1E3A8A; margin:0; font-size:22px; font-weight:800;">PUNE MUNICIPAL CORPORATION</h2>
+<div style="color:#64748B; font-size:13px; font-weight:600;">Disaster Management Cell • Municipal Intelligence Flood Risk Audit</div>
+</div>
+<div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:6px; padding:6px 12px; font-size:12px; color:#1E40AF; font-weight:700;">
+STATUS: ACTIVE MONSOON SURCHARGE
+</div>
+</div>
+<div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; background:#F8FAFC; border:1px solid #E2E8F0; padding:12px; border-radius:8px; margin-bottom:20px; font-size:12px;">
+<div><b>Date:</b> Sep 24, 2026</div>
+<div><b>City Risk Index:</b> <span style="color:#DC2626; font-weight:800;">78.4 / 100 (HIGH)</span></div>
+<div><b>Monsoon Stage:</b> Active Monsoon Low Pressure</div>
+<div><b>Monitored Nodes:</b> 53 Locations (6 CCTV Feeds)</div>
+</div>
+<h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:16px;">1. EXECUTIVE SUMMARY</h3>
+<p style="font-size:13px; color:#334155; line-height:1.6;">
+A city-wide automated surveillance audit utilizing computer vision telemetry across 53 arterial junctions indicates immediate waterlogging vulnerability in <b>5 critical locations</b>: MG Road Junction, FC Road Junction, Deccan Gymkhana, Dapodi Confluence, and Sangamwadi. Surface runoff is hindered by a composite effect of <b>high antecedent rainfall (avg 34mm / 3h)</b>, <b>debris blockage in stormwater box culverts (average 71% choke)</b>, and <b>elevated stage levels along the Mula-Mutha river corridor</b>.
+</p>
+<h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:20px;">2. CRITICAL BOTTLENECK ANALYSIS</h3>
+<div style="font-size:13px; color:#334155; line-height:1.6;">
+<ul>
+<li><b>MG Road Junction (Ward 14):</b> 90% water capacity reached with 28cm standing depth. Vision models indicate heavy plastic bag and debris entrapment on road gratings. Mobile dewatering pump unit deployed.</li>
+<li><b>FC Road Junction (Ward 09):</b> 80% capacity reached. Commercial cardboard and plastic dumping directly suffocating intake throat. Solid waste enforcement crew notified.</li>
+<li><b>Deccan Gymkhana Sluice Gate:</b> River backflow prevents gravity drainage into Mula river outfall. Requires flap gate clearance crane.</li>
+</ul>
+</div>
+<h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:20px;">3. DETERMINISTIC SEWER OVERFLOW SCORING (PASS C)</h3>
+<p style="font-size:13px; color:#334155; line-height:1.6;">
+Risk scores are calculated using the deterministic formula:
+<br>
+<code>Risk = (0.35 × Water_State) + (0.25 × Trash_Inside) + (0.15 × Trash_Near) + (0.10 × Inlet_Blocked) + (0.10 × Hazard_Weight) + (0.05 × Wet_Condition)</code>
+<br>
+Where sewer overflow surcharge floor of 70 points is applied deterministically whenever standing sewage or bubbling water is identified by the Vision Language Model.
+</p>
+<h3 style="color:#1E3A8A; font-size:16px; font-weight:700; border-bottom:1px solid #E2E8F0; padding-bottom:4px; margin-top:20px;">4. ACTIONABLE DIRECTIVES & REMEDIATION PLAN</h3>
+<div style="background:#EFF6FF; border-left:4px solid #2563EB; padding:12px 16px; border-radius:4px; font-size:13px; color:#1E3A8A; line-height:1.6;">
+<b>Immediate Orders:</b>
+<br>1. Mobilize Mobile 500 GPM pump units to MG Road and FC Road junctions immediately.
+<br>2. Activate Traffic Ward 3 underpass barricade protocol if rainfall exceeds 40mm in the next 2 hours.
+<br>3. Engage desilting jetting machine for Deccan Gymkhana river discharge culvert.
+</div>
+</div>
+""").strip()
+        st.markdown(report_summary_html, unsafe_allow_html=True)
 
     with tab_export:
         st.markdown("### 📥 Export Official Reports & Telemetry Datasets")

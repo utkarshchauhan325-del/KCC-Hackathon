@@ -1,5 +1,6 @@
 """Priority Queue View - Municipal Officer Action & Approval Workflow."""
 
+import textwrap
 import streamlit as st
 from datetime import datetime
 from app.ui.pune_data import PRIORITY_QUEUE
@@ -9,7 +10,7 @@ from app.db.models import Violation, AuditLog
 def render_priority_queue():
     """Render 3 Priority Queue actionable incidents for municipal officers."""
 
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="flood-header">
         <div class="flood-title-block">
             <h1>Priority Queue & Escalation Action</h1>
@@ -23,26 +24,27 @@ def render_priority_queue():
             <div class="date-badge">🔒 DPDP Compliant Human Verification Protocol</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """).strip(), unsafe_allow_html=True)
 
     st.info("🛡️ **Municipal Protocol:** All automated VLM violator detections and flood interventions require human municipal verification prior to fine dispatch or heavy machinery mobilization.")
 
     for i, item in enumerate(PRIORITY_QUEUE):
-        st.markdown(f"""
-        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:18px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span style="background:#FEE2E2; color:#DC2626; font-weight:800; font-size:11px; padding:3px 8px; border-radius:6px;">
-                        SEVERITY {item['severity']}
-                    </span>
-                    <b style="font-size:15px; color:#0F172A;">{item['location']}</b>
-                    <span style="font-size:12px; color:#64748B;">({item['zone']} Zone)</span>
-                </div>
-                <div style="font-size:12px; color:#94A3B8;">Reported {item['reported_at']}</div>
-            </div>
-            <div style="font-size:13px; color:#334155; margin-bottom:12px;">{item['description']}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        card_html = textwrap.dedent(f"""
+<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:18px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+<div style="display:flex; align-items:center; gap:10px;">
+<span style="background:#FEE2E2; color:#DC2626; font-weight:800; font-size:11px; padding:3px 8px; border-radius:6px;">
+SEVERITY {item['severity']}
+</span>
+<b style="font-size:15px; color:#0F172A;">{item['location']}</b>
+<span style="font-size:12px; color:#64748B;">({item['zone']} Zone)</span>
+</div>
+<div style="font-size:12px; color:#94A3B8;">Reported {item['reported_at']}</div>
+</div>
+<div style="font-size:13px; color:#334155; margin-bottom:12px;">{item['description']}</div>
+</div>
+""").strip()
+        st.markdown(card_html, unsafe_allow_html=True)
 
         col_meta, col_action = st.columns([2, 1])
         with col_meta:

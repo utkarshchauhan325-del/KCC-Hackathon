@@ -38,9 +38,11 @@ st.markdown(get_floodguard_css(), unsafe_allow_html=True)
 # -------------------------------------------------------------
 # SIDEBAR NAVIGATION - MATCHING SCREENSHOT PRECISELY
 # -------------------------------------------------------------
+import textwrap
+
 with st.sidebar:
     # FloodGuard Brand Header
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="brand-container">
         <div style="background:#0284C7; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-size:18px;">
             🌊
@@ -50,7 +52,7 @@ with st.sidebar:
             <div class="brand-sub">Municipal Intelligence</div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """).strip(), unsafe_allow_html=True)
 
     # Navigation options
     nav_options = [
@@ -70,7 +72,7 @@ with st.sidebar:
     )
 
     # Bottom Municipal Organization Tag
-    st.markdown("""
+    st.markdown(textwrap.dedent("""
     <div class="municipal-footer">
         <div style="font-size:20px;">🏛️</div>
         <div>
@@ -78,7 +80,7 @@ with st.sidebar:
             <p class="footer-sub">Zone: Central</p>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """).strip(), unsafe_allow_html=True)
 
 # -------------------------------------------------------------
 # VIEW ROUTING
