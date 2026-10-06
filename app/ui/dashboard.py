@@ -17,7 +17,7 @@ from app.ui.components.styles import get_floodguard_css
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
-from app.ui.views.priority_queue import render_priority_queue
+from app.ui.views.priority_queue import render_priority_queue, render_priority_queue_and_interventions
 from app.ui.views.interventions import render_interventions
 from app.ui.views.flood_analytics import render_flood_analytics
 
@@ -54,13 +54,12 @@ with st.sidebar:
     </div>
     """).strip(), unsafe_allow_html=True)
 
-    # Navigation options
+    # Navigation options (Merged Priority Queue & Interventions)
     nav_options = [
         "📊 Dashboard",
         "📍 Live Risk Map",
         "📹 CCTV Monitoring (6)",
-        "⚠️ Priority Queue (3)",
-        "🚜 Interventions",
+        "⚠️ Priority Queue & Interventions (3)",
         "📈 Flood Analytics"
     ]
 
@@ -94,11 +93,8 @@ elif selected_nav == "📍 Live Risk Map":
 elif selected_nav == "📹 CCTV Monitoring (6)":
     render_cctv_monitoring()
 
-elif selected_nav == "⚠️ Priority Queue (3)":
-    render_priority_queue()
-
-elif selected_nav == "🚜 Interventions":
-    render_interventions()
+elif "Priority Queue" in selected_nav or "Intervention" in selected_nav:
+    render_priority_queue_and_interventions()
 
 elif selected_nav == "📈 Flood Analytics":
     render_flood_analytics()

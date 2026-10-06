@@ -556,6 +556,41 @@ def get_floodguard_css() -> str:
         padding: 18px 20px !important;
     }
 
+    /* Executive Command Tabs */
+    div[data-testid="stTabs"] {
+        margin-bottom: 24px !important;
+    }
+
+    div[data-testid="stTabs"] div[role="tablist"] {
+        gap: 8px !important;
+        border-bottom: 2px solid #E2E8F0 !important;
+    }
+
+    div[data-testid="stTabs"] button[role="tab"] {
+        font-family: 'Plus Jakarta Sans', sans-serif !important;
+        font-size: 14px !important;
+        font-weight: 700 !important;
+        color: #64748B !important;
+        background-color: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        border-bottom: none !important;
+        padding: 10px 22px !important;
+        border-radius: 8px 8px 0 0 !important;
+        transition: all 0.15s ease !important;
+    }
+
+    div[data-testid="stTabs"] button[role="tab"]:hover {
+        color: #0284C7 !important;
+        background-color: #F1F5F9 !important;
+    }
+
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        color: #0284C7 !important;
+        background-color: #FFFFFF !important;
+        border-color: #CBD5E1 #CBD5E1 #FFFFFF #CBD5E1 !important;
+        box-shadow: 0 -2px 6px rgba(2, 132, 199, 0.08) !important;
+    }
+
     /* Hide standard Streamlit header clutter */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}

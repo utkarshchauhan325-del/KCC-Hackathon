@@ -24,7 +24,7 @@ PUNE_MUNICIPAL_CREW_ROSTER = [
     "D. Wagh (Hydraulic Emergency - Dapodi)",
 ]
 
-def render_interventions():
+def render_interventions(embedded: bool = False):
     """Render municipal interventions and machinery dispatch tracker with dynamic assignment."""
 
     # Initialize session state for persistent operations
@@ -151,17 +151,18 @@ def render_interventions():
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown(textwrap.dedent(f"""
-    <div class="flood-header">
-        <div class="flood-title-block">
-            <h1>Municipal Operations & Interventions</h1>
-            <p>Dewatering pumps, suction tankers, robotic rovers, and rapid response units</p>
+    if not embedded:
+        st.markdown(textwrap.dedent(f"""
+        <div class="flood-header">
+            <div class="flood-title-block">
+                <h1>Municipal Operations & Interventions</h1>
+                <p>Dewatering pumps, suction tankers, robotic rovers, and rapid response units</p>
+            </div>
+            <div class="header-actions">
+                <div class="date-badge">🚜 {len(operations)} Active Machinery Operations</div>
+            </div>
         </div>
-        <div class="header-actions">
-            <div class="date-badge">🚜 {len(operations)} Active Machinery Operations</div>
-        </div>
-    </div>
-    """).strip(), unsafe_allow_html=True)
+        """).strip(), unsafe_allow_html=True)
 
     # Top summary metrics
     m1, m2, m3, m4 = st.columns(4)
