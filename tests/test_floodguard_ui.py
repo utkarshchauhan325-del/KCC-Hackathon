@@ -51,3 +51,14 @@ def test_printable_html_report_generation():
     assert "MG Road Junction" in html_report
     assert "FC Road Junction" in html_report
     assert "Deccan Gymkhana" in html_report
+
+def test_location_diagnostic_data():
+    """Verify detailed site problem diagnostics generated correctly."""
+    from app.ui.components.location_report import get_location_diagnostic_data
+    loc = PUNE_LOCATIONS[0] # MG Road (Critical)
+    diag = get_location_diagnostic_data(loc)
+    assert "Severe" in diag["problem_title"]
+    assert diag["depth_cm"] > 0
+    assert len(diag["ai_tags"]) > 0
+    assert "Plastic" in diag["debris_mix"]
+

@@ -14,6 +14,7 @@ from app.ui.components.charts import (
 )
 import textwrap
 from app.ui.components.map_view import create_floodguard_map
+from app.ui.components.location_report import render_location_full_report_box
 
 def render_overview_dashboard():
     """Render the exact FloodGuard dashboard overview."""
@@ -136,18 +137,42 @@ def render_overview_dashboard():
         with m_head2:
             layer_mode = st.radio("Layer", ["Map", "Satellite"], horizontal=True, label_visibility="collapsed")
 
-        # Create and render map
+        # Ensure default selected hotspot
+        if "selected_location_id" not in st.session_state:
+            st.session_state["selected_location_id"] = "LOC-01"
+
+        # Create and render map with selected hotspot highlighted
         m = create_floodguard_map(
             locations=PUNE_LOCATIONS,
             center_lat=18.5240,
             center_lng=73.8550,
             zoom_start=12,
-            layer_type=layer_mode
+            layer_type=layer_mode,
+            selected_location_id=st.session_state.get("selected_location_id")
         )
-        st_folium(m, height=440, use_container_width=True, returned_objects=[])
+        map_data = st_folium(
+            m,
+            height=440,
+            use_container_width=True,
+            returned_objects=["last_object_clicked", "last_clicked"],
+            key="pune_flood_map_overview"
+        )
+
+        # Detect clicked marker on map
+        if map_data:
+            clicked_pt = map_data.get("last_object_clicked") or map_data.get("last_clicked")
+            if clicked_pt and isinstance(clicked_pt, dict) and "lat" in clicked_pt and "lng" in clicked_pt:
+                c_lat = clicked_pt["lat"]
+                c_lng = clicked_pt["lng"]
+                closest = min(PUNE_LOCATIONS, key=lambda l: (l["lat"] - c_lat)**2 + (l["lng"] - c_lng)**2)
+                dist_sq = (closest["lat"] - c_lat)**2 + (closest["lng"] - c_lng)**2
+                if dist_sq < 0.005:
+                    if st.session_state.get("selected_location_id") != closest["id"]:
+                        st.session_state["selected_location_id"] = closest["id"]
+                        st.rerun()
 
         # Map Bottom Legend
-        st.markdown("""
+        legend_html = textwrap.dedent("""
         <div style="display:flex; justify-content:space-between; align-items:center; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:8px; padding:8px 14px; margin-top:8px;">
             <div style="display:flex; align-items:center; gap:14px; font-size:12px; color:#475569;">
                 <b>Risk Level:</b>
@@ -158,7 +183,27 @@ def render_overview_dashboard():
             </div>
             <div style="font-size:11px; color:#94A3B8;">0 ── 2.5 ── 5 km</div>
         </div>
-        """, unsafe_allow_html=True)
+        """).strip()
+        st.markdown(legend_html, unsafe_allow_html=True)
+
+        # Quick location picker dropdown right under the map legend
+        loc_options = {l["id"]: f"📍 {l['name']} ({l['risk_level'].upper()} - {l['water_level_pct']}%)" for l in PUNE_LOCATIONS[:16]}
+        curr_sel = st.session_state.get("selected_location_id") or "LOC-01"
+        if curr_sel not in loc_options:
+            c_loc = next((l for l in PUNE_LOCATIONS if l["id"] == curr_sel), None)
+            if c_loc:
+                loc_options[curr_sel] = f"📍 {c_loc['name']} ({c_loc['risk_level'].upper()})"
+
+        chosen_id = st.selectbox(
+            "🎯 Click any dot on map OR select hotspot to inspect report:",
+            options=list(loc_options.keys()),
+            index=list(loc_options.keys()).index(curr_sel) if curr_sel in loc_options else 0,
+            format_func=lambda x: loc_options[x]
+        )
+        if chosen_id != st.session_state.get("selected_location_id"):
+            st.session_state["selected_location_id"] = chosen_id
+            st.rerun()
+
 
     with table_col:
         t_head1, t_head2 = st.columns([3, 1.5])
@@ -302,6 +347,13 @@ def render_overview_dashboard():
         """
         import streamlit.components.v1 as components
         components.html(full_table_html, height=440, scrolling=True)
+
+    # Full-Length Detailed Site Problem & Diagnostic Report Box
+    active_hotspot_id = st.session_state.get("selected_location_id")
+    if active_hotspot_id:
+        active_loc = next((l for l in PUNE_LOCATIONS if l["id"] == active_hotspot_id), None)
+        if active_loc:
+            render_location_full_report_box(active_loc)
 
     st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:24px 0;'>", unsafe_allow_html=True)
 
