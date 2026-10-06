@@ -106,6 +106,183 @@ def compute_sewer_score(assessment: SewerAssessment) -> Tuple[float, str, Dict[s
     return final_score, band, breakdown
 
 
+# --- CCTV Municipal Hazard Scoring Engine (Drainage, Garbage, Inundation) ---
+
+DRAINAGE_WATER_LEVEL_WEIGHTS = {
+    "none": 0.0,
+    "damp": 0.20,
+    "pooling": 0.50,
+    "flowing_over": 0.85,
+    "gushing": 1.0,
+}
+
+GARBAGE_INSIDE_WEIGHTS = {
+    "none": 0.0,
+    "light": 0.25,
+    "moderate": 0.55,
+    "heavy": 0.85,
+    "fully_blocked": 1.0,
+}
+
+GARBAGE_NEAR_WEIGHTS = {
+    "none": 0.0,
+    "light": 0.25,
+    "moderate": 0.60,
+    "heavy": 1.0,
+}
+
+DUMP_VOLUME_WEIGHTS = {
+    "none": 0.0,
+    "light": 0.25,
+    "moderate": 0.60,
+    "heavy": 0.85,
+    "massive": 1.0,
+}
+
+def compute_drainage_hazard_score(
+    water_level: str = "pooling",
+    grating_covered: bool = False,
+    cover_missing_or_broken: bool = False,
+    water_reaching_road: bool = False,
+    wet_conditions: bool = False,
+    conduit_depth_cm: Optional[float] = None,
+) -> Tuple[float, str, Dict[str, Any]]:
+    """Compute deterministic Drainage Hazard & Conduit Surcharge Risk Score (0-100).
+    
+    Formula weights:
+      - Internal conduit water level: 35%
+      - Grating / inlet blocked: 25%
+      - Roadway overflow / surface spill: 20%
+      - Structural hazard (broken/missing slab): 15%
+      - Wet weather runoff factor: 5%
+    
+    Floor override: if water_level is 'flowing_over' or 'gushing', minimum floor is 70.
+    """
+    w_factor = DRAINAGE_WATER_LEVEL_WEIGHTS.get(water_level, 0.3)
+    inlet_factor = 1.0 if grating_covered else 0.0
+    road_spill_factor = 1.0 if water_reaching_road else 0.0
+    structural_factor = 1.0 if cover_missing_or_broken else 0.0
+    wet_factor = 1.0 if wet_conditions else 0.0
+
+    # Depth adjustment if measured
+    if conduit_depth_cm is not None and conduit_depth_cm > 0:
+        depth_stress = min(1.0, conduit_depth_cm / 45.0)
+        w_factor = max(w_factor, depth_stress)
+
+    contrib_water = 35.0 * w_factor
+    contrib_inlet = 25.0 * inlet_factor
+    contrib_spill = 20.0 * road_spill_factor
+    contrib_structural = 15.0 * structural_factor
+    contrib_wet = 5.0 * wet_factor
+
+    raw_score = contrib_water + contrib_inlet + contrib_spill + contrib_structural + contrib_wet
+    is_floored = False
+    final_score = raw_score
+
+    if water_level in ["flowing_over", "gushing"] and raw_score < 70.0:
+        final_score = 70.0
+        is_floored = True
+
+    final_score = max(0.0, min(100.0, round(final_score, 1)))
+    band = get_risk_band(final_score)
+
+    breakdown = {
+        "score": final_score,
+        "band": band,
+        "is_floored": is_floored,
+        "factors": {
+            "water_level": {"val": water_level, "pts": round(contrib_water, 1)},
+            "grating_covered": {"val": grating_covered, "pts": round(contrib_inlet, 1)},
+            "water_reaching_road": {"val": water_reaching_road, "pts": round(contrib_spill, 1)},
+            "cover_broken": {"val": cover_missing_or_broken, "pts": round(contrib_structural, 1)},
+            "wet_conditions": {"val": wet_conditions, "pts": round(contrib_wet, 1)},
+        }
+    }
+    return final_score, band, breakdown
+
+
+def compute_garbage_hazard_score(
+    trash_inside: str = "moderate",
+    trash_near: str = "moderate",
+    dumping_detected: bool = False,
+    debris_volume: str = "moderate",
+) -> Tuple[float, str, Dict[str, Any]]:
+    """Compute deterministic Garbage & Debris Choking Score (0-100).
+    
+    Formula weights:
+      - Trash inside conduit/inlet: 45%
+      - Trash within 5m of intake mouth: 25%
+      - Debris heap volume: 20%
+      - Active illegal dumping activity: 10%
+    
+    Floor override: if trash_inside is 'fully_blocked', minimum floor is 75.
+    """
+    ti_factor = GARBAGE_INSIDE_WEIGHTS.get(trash_inside, 0.3)
+    tn_factor = GARBAGE_NEAR_WEIGHTS.get(trash_near, 0.3)
+    vol_factor = DUMP_VOLUME_WEIGHTS.get(debris_volume, 0.4)
+    dump_factor = 1.0 if dumping_detected else 0.0
+
+    contrib_inside = 45.0 * ti_factor
+    contrib_near = 25.0 * tn_factor
+    contrib_vol = 20.0 * vol_factor
+    contrib_dump = 10.0 * dump_factor
+
+    raw_score = contrib_inside + contrib_near + contrib_vol + contrib_dump
+    is_floored = False
+    final_score = raw_score
+
+    if trash_inside == "fully_blocked" and raw_score < 75.0:
+        final_score = 75.0
+        is_floored = True
+
+    final_score = max(0.0, min(100.0, round(final_score, 1)))
+    band = get_risk_band(final_score)
+
+    breakdown = {
+        "score": final_score,
+        "band": band,
+        "is_floored": is_floored,
+        "factors": {
+            "trash_inside": {"val": trash_inside, "pts": round(contrib_inside, 1)},
+            "trash_near": {"val": trash_near, "pts": round(contrib_near, 1)},
+            "debris_volume": {"val": debris_volume, "pts": round(contrib_vol, 1)},
+            "dumping_detected": {"val": dumping_detected, "pts": round(contrib_dump, 1)},
+        }
+    }
+    return final_score, band, breakdown
+
+
+def compute_cctv_composite_risk(
+    drainage_score: float,
+    garbage_score: float,
+    water_depth_cm: float = 0.0,
+) -> Tuple[float, str, Dict[str, Any]]:
+    """Compute unified composite risk score (0-100) combining drainage, garbage, and depth."""
+    depth_factor = min(100.0, (max(0.0, water_depth_cm) / 40.0) * 100.0)
+    composite = (0.42 * drainage_score) + (0.38 * garbage_score) + (0.20 * depth_factor)
+    composite = max(0.0, min(100.0, round(composite, 1)))
+
+    if drainage_score >= 80.0 or garbage_score >= 80.0 or water_depth_cm >= 30.0 or composite >= 75.0:
+        band = "Critical"
+    elif composite >= 55.0 or drainage_score >= 60.0 or garbage_score >= 60.0:
+        band = "High"
+    elif composite >= 30.0:
+        band = "Watch"
+    else:
+        band = "Low"
+
+    breakdown = {
+        "composite_score": composite,
+        "band": band,
+        "drainage_score": drainage_score,
+        "garbage_score": garbage_score,
+        "water_depth_cm": water_depth_cm,
+        "depth_stress": round(depth_factor, 1),
+    }
+    return composite, band, breakdown
+
+
+
 # --- Meteorological & Hydrological Flood Priority Scoring Engine ---
 
 ZONE_OROGRAPHIC_FACTORS: Dict[str, float] = {

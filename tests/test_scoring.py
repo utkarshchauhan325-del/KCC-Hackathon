@@ -145,3 +145,63 @@ def test_scoring_water_reaching_road_triggers_hazard():
     score, band, breakdown = compute_sewer_score(assessment)
     assert score == 10.0
     assert breakdown["factors"]["hazard"]["value"] is True
+
+def test_drainage_hazard_scoring():
+    from app.core.scoring import compute_drainage_hazard_score
+    # Clean dry conduit
+    score_clean, band_clean, _ = compute_drainage_hazard_score(
+        water_level="none",
+        grating_covered=False,
+        cover_missing_or_broken=False,
+        water_reaching_road=False,
+        wet_conditions=False,
+    )
+    assert score_clean == 0.0
+    assert band_clean == "Low"
+
+    # Severe surcharge with choked inlet & road spill
+    score_crit, band_crit, b_crit = compute_drainage_hazard_score(
+        water_level="gushing",
+        grating_covered=True,
+        cover_missing_or_broken=True,
+        water_reaching_road=True,
+        wet_conditions=True,
+        conduit_depth_cm=35.0,
+    )
+    assert score_crit >= 80.0
+    assert band_crit == "Critical"
+    assert b_crit["score"] == score_crit
+
+def test_garbage_hazard_scoring():
+    from app.core.scoring import compute_garbage_hazard_score
+    # Clean drain
+    score_clean, band_clean, _ = compute_garbage_hazard_score(
+        trash_inside="none",
+        trash_near="none",
+        dumping_detected=False,
+        debris_volume="none",
+    )
+    assert score_clean == 0.0
+    assert band_clean == "Low"
+
+    # Fully blocked with heavy debris & dumping
+    score_block, band_block, _ = compute_garbage_hazard_score(
+        trash_inside="fully_blocked",
+        trash_near="heavy",
+        dumping_detected=True,
+        debris_volume="massive",
+    )
+    assert score_block >= 75.0
+    assert band_block in ["High", "Critical"]
+
+def test_cctv_composite_risk():
+    from app.core.scoring import compute_cctv_composite_risk
+    comp_score, comp_band, breakdown = compute_cctv_composite_risk(
+        drainage_score=94.0,
+        garbage_score=90.0,
+        water_depth_cm=28.0,
+    )
+    assert comp_score >= 80.0
+    assert comp_band == "Critical"
+    assert breakdown["depth_stress"] == 70.0
+

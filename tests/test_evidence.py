@@ -43,3 +43,43 @@ def test_bystander_face_blur():
     # Does not crash on arbitrary synthetic frames
     blurred = blur_bystander_faces(frame, primary_box=None)
     assert blurred.shape == frame.shape
+
+def test_generate_annotated_surveillance_video(tmp_path):
+    from app.core.evidence import generate_annotated_surveillance_video
+    fixture_path = Path("tests/fixtures/sample_cctv.mp4")
+    out_video = tmp_path / "out_annotated.mp4"
+
+    detections = [
+        {
+            "category": "drainage",
+            "subtype": "choked_inlet",
+            "start_sec": 0.0,
+            "end_sec": 5.0,
+            "box": [400, 100, 800, 600],
+            "severity": 4,
+            "confidence": 0.92,
+        },
+        {
+            "category": "garbage",
+            "subtype": "solid_waste_pile",
+            "start_sec": 0.0,
+            "end_sec": 5.0,
+            "box": [200, 300, 600, 700],
+            "severity": 3,
+            "confidence": 0.86,
+        }
+    ]
+
+    res = generate_annotated_surveillance_video(
+        video_path=fixture_path,
+        output_path=out_video,
+        detections=detections,
+        camera_meta={"name": "Test Cam", "id": "TEST-01"},
+        drainage_score=85.0,
+        garbage_score=78.0,
+        water_depth_cm=20.0,
+    )
+
+    assert res.exists()
+    assert res.stat().st_size > 1000
+
