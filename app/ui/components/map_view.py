@@ -276,7 +276,12 @@ def render_floodguard_map_component(m: folium.Map, height: int = 440, key: Optio
             center=target_center,
             zoom=target_zoom,
             use_container_width=True,
-            returned_objects=["last_object_clicked", "last_clicked"]
+            returned_objects=[
+                "last_object_clicked",
+                "last_clicked",
+                "last_object_clicked_popup",
+                "last_object_clicked_tooltip"
+            ]
         )
     except Exception:
         import streamlit.components.v1 as components

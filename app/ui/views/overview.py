@@ -20,9 +20,15 @@ from app.ui.components.location_report import render_location_full_report_box
 def render_overview_dashboard():
     """Render the exact FloodGuard dashboard overview with live WeatherAPI & TomTom Traffic intelligence."""
 
-    # Check if a location was clicked via URL query param (e.g. from score table)
-    if hasattr(st, "query_params") and "inspect" in st.query_params and st.query_params["inspect"]:
-        st.session_state["selected_location_id"] = st.query_params["inspect"]
+    # Clear any residual query param so it doesn't freeze the selection
+    if hasattr(st, "query_params") and "inspect" in st.query_params:
+        inspect_id = st.query_params.get("inspect")
+        if inspect_id and "selected_location_id" not in st.session_state:
+            st.session_state["selected_location_id"] = inspect_id
+        try:
+            del st.query_params["inspect"]
+        except Exception:
+            pass
 
     # Fetch live weather and calculate deterministic multi-attribute priority
     force_refresh = st.session_state.pop("force_weather_refresh", False)
@@ -168,22 +174,29 @@ def render_overview_dashboard():
             height=440,
             key=f"overview_map_{selected_zone}_{layer_mode}"
         )
-
-        # Detect clicked marker on map
         if map_data:
-            clicked_pt = map_data.get("last_object_clicked") or map_data.get("last_clicked")
-            if clicked_pt and isinstance(clicked_pt, dict) and "lat" in clicked_pt and "lng" in clicked_pt:
-                c_lat = round(clicked_pt["lat"], 5)
-                c_lng = round(clicked_pt["lng"], 5)
-                click_key = (c_lat, c_lng)
-                if st.session_state.get("last_handled_map_click") != click_key:
-                    st.session_state["last_handled_map_click"] = click_key
+            clicked_loc = None
+            popup_val = map_data.get("last_object_clicked_popup") or map_data.get("last_object_clicked_tooltip")
+            if popup_val and isinstance(popup_val, str):
+                for l in locations:
+                    if l["name"] in popup_val or l["id"] in popup_val:
+                        clicked_loc = l
+                        break
+
+            if not clicked_loc:
+                clicked_pt = map_data.get("last_object_clicked") or map_data.get("last_clicked")
+                if clicked_pt and isinstance(clicked_pt, dict) and "lat" in clicked_pt and "lng" in clicked_pt:
+                    c_lat = clicked_pt["lat"]
+                    c_lng = clicked_pt["lng"]
                     closest = min(locations, key=lambda l: (l["lat"] - c_lat)**2 + (l["lng"] - c_lng)**2)
                     dist_sq = (closest["lat"] - c_lat)**2 + (closest["lng"] - c_lng)**2
-                    if dist_sq < 0.005:
-                        if st.session_state.get("selected_location_id") != closest["id"]:
-                            st.session_state["selected_location_id"] = closest["id"]
-                            st.rerun()
+                    if dist_sq < 0.01:
+                        clicked_loc = closest
+
+            if clicked_loc and clicked_loc["id"] != st.session_state.get("selected_location_id"):
+                st.session_state["selected_location_id"] = clicked_loc["id"]
+                st.session_state["last_handled_map_click"] = clicked_loc["id"]
+                st.rerun()
 
         # Map Bottom Legend
         legend_html = textwrap.dedent("""
@@ -199,7 +212,6 @@ def render_overview_dashboard():
         </div>
         """).strip()
         st.markdown(legend_html, unsafe_allow_html=True)
-
 
     with table_col:
         t_head1, t_head2 = st.columns([3, 1.5])
@@ -226,159 +238,136 @@ def render_overview_dashboard():
         # Top key locations to display prominently
         display_locs = filtered_locs[:8]
 
-        # Build compact, elegant HTML table with clickable rows
+        # Multi-Attribute Emergency Ranking Table (In-App Reactive, No Page Refresh)
         active_hotspot_id = st.session_state.get("selected_location_id")
 
-        table_rows_html = ""
-        for loc in display_locs:
-            r_level = loc["risk_level"]
-            pill_class = f"pill-{r_level.lower()}"
-            fill_class = f"fill-{r_level.lower()}"
-            p_val = loc.get("precip_mm", loc["rainfall_3h"])
-            comp_score = loc.get("composite_score", loc["risk_score"])
-            is_active = (loc["id"] == active_hotspot_id)
-            row_active_cls = " active-corridor-row" if is_active else ""
-            inspect_href = f"?inspect={loc['id']}#diagnostic-report-box"
+        st.html("""<style>
+        div[class*="st-key-ranking_table_box"] {
+            background: #FFFFFF;
+            border: 1px solid #E2E8F0;
+            border-radius: 10px;
+            padding: 8px 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        div[class*="st-key-ranking_table_box"] div[data-testid="stHorizontalBlock"] {
+            gap: 6px !important;
+            align-items: center !important;
+            margin-bottom: 2px !important;
+            padding: 1px 2px !important;
+        }
+        div[class*="st-key-ranking_table_box"] div[data-testid="column"] {
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+        div[class*="st-key-ranking_table_box"] button {
+            min-height: 26px !important;
+            height: 26px !important;
+            padding: 0 6px !important;
+            margin: 0 !important;
+            border: none !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #1E293B !important;
+            text-align: left !important;
+            justify-content: flex-start !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }
+        div[class*="st-key-ranking_table_box"] button:hover {
+            color: #2563EB !important;
+            background: #EFF6FF !important;
+            border-radius: 4px !important;
+        }
+        div[class*="st-key-ranking_table_box"] button[kind="primary"] {
+            background: #EFF6FF !important;
+            color: #1D4ED8 !important;
+            font-weight: 800 !important;
+            border-left: 3px solid #2563EB !important;
+            border-radius: 0 4px 4px 0 !important;
+        }
+        .pill-badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        .pill-critical { background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+        .pill-high { background-color: #FFEDD5; color: #EA580C; border: 1px solid #FED7AA; }
+        .pill-medium { background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }
+        .pill-low { background-color: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }
+        .progress-track {
+            background: #F1F5F9;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill { border-radius: 4px; height: 100%; }
+        .fill-critical { background: #EF4444; }
+        .fill-high { background: #F97316; }
+        .fill-medium { background: #FBBF24; }
+        .fill-low { background: #10B981; }
+        </style>""")
 
-            table_rows_html += f"""<tr class="ranking-row{row_active_cls}">
-<td style="font-weight:600; color:#1E293B;">
-<a href="{inspect_href}" target="_self" class="cell-link" title="Open diagnostic report for {loc['name']}">
-<span style="display:inline-block; width:22px; font-weight:800; color:{'#2563EB' if is_active else '#7C3AED'}; font-size:11px;">
-{'📍' if is_active else f"#{loc.get('priority_rank', '-')}"}
-</span>
-<span style="{'color:#1D4ED8; font-weight:700;' if is_active else ''}">{loc['name']}</span>
-</a>
-</td>
-<td>
-<a href="{inspect_href}" target="_self" class="cell-link">
-<span class="pill-badge {pill_class}">{r_level}</span>
-</a>
-</td>
-<td style="text-align:center;">
-<a href="{inspect_href}" target="_self" class="cell-link">
-<span style="font-weight:800; color:#0F172A; font-size:12px;">{comp_score}</span>
-</a>
-</td>
-<td>
-<a href="{inspect_href}" target="_self" class="cell-link">
-<span style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:11px; padding:2px 7px; border-radius:6px; display:inline-block; white-space:nowrap;">
-🌧️ {p_val} mm
-</span>
-</a>
-</td>
-<td>
-<a href="{inspect_href}" target="_self" class="cell-link">
-<div style="display:flex; align-items:center; gap:6px;">
-<span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
-<div class="progress-track" style="width:55px; height:7px; display:inline-block;">
-<div class="progress-fill {fill_class}" style="width:{loc['water_level_pct']}%;"></div>
-</div>
-</div>
-</a>
-</td>
-<td style="text-align:center;">
-<a href="{inspect_href}" target="_self" class="cell-link">
-<span style="font-weight:700; color:#475569; font-size:11px;">{loc['blockage_pct']}%</span>
-</a>
-</td>
-</tr>"""
+        with st.container(key="ranking_table_box"):
+            # Header Row
+            h_c1, h_c2, h_c3, h_c4, h_c5, h_c6 = st.columns([3.2, 1.2, 0.8, 1.3, 1.8, 0.8], vertical_alignment="center")
+            h_c1.markdown("<span style='font-size:11px; font-weight:700; color:#64748B;'>Rank & Corridor</span>", unsafe_allow_html=True)
+            h_c2.markdown("<span style='font-size:11px; font-weight:700; color:#64748B;'>Severity</span>", unsafe_allow_html=True)
+            h_c3.markdown("<div style='text-align:center;'><span style='font-size:11px; font-weight:700; color:#64748B;'>Score</span></div>", unsafe_allow_html=True)
+            h_c4.markdown("<span style='font-size:11px; font-weight:700; color:#64748B;'>Precip</span>", unsafe_allow_html=True)
+            h_c5.markdown("<span style='font-size:11px; font-weight:700; color:#64748B;'>Conduit Saturation</span>", unsafe_allow_html=True)
+            h_c6.markdown("<div style='text-align:center;'><span style='font-size:11px; font-weight:700; color:#64748B;'>Blockage</span></div>", unsafe_allow_html=True)
 
-        compact_table_html = f"""<style>
-.ranking-table-card {{
-background: #FFFFFF;
-border: 1px solid #E2E8F0;
-border-radius: 10px;
-padding: 6px 10px;
-box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-}}
-.ranking-html-table {{
-width: 100%;
-border-collapse: collapse;
-text-align: left;
-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}}
-.ranking-html-table th {{
-padding: 7px 6px;
-font-size: 11px;
-color: #64748B;
-font-weight: 700;
-border-bottom: 1px solid #E2E8F0;
-white-space: nowrap;
-}}
-.ranking-html-table td {{
-padding: 6px 6px;
-border-bottom: 1px solid #F1F5F9;
-font-size: 12px;
-vertical-align: middle;
-}}
-.ranking-html-table tr:last-child td {{
-border-bottom: none;
-}}
-.ranking-row {{
-transition: background 0.15s ease;
-}}
-.ranking-row:hover {{
-background: #F8FAFC !important;
-cursor: pointer;
-}}
-.active-corridor-row {{
-background: #EFF6FF !important;
-border-left: 3px solid #2563EB;
-}}
-.cell-link {{
-text-decoration: none !important;
-color: inherit !important;
-display: block;
-}}
-.cell-link:hover {{
-text-decoration: none !important;
-}}
-.pill-badge {{
-display: inline-block;
-padding: 2px 7px;
-border-radius: 8px;
-font-size: 10px;
-font-weight: 700;
-text-transform: uppercase;
-letter-spacing: 0.02em;
-}}
-.pill-critical {{ background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }}
-.pill-high {{ background-color: #FFEDD5; color: #EA580C; border: 1px solid #FED7AA; }}
-.pill-medium {{ background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }}
-.pill-low {{ background-color: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }}
-.progress-track {{
-background: #F1F5F9;
-border-radius: 4px;
-overflow: hidden;
-}}
-.progress-fill {{ border-radius: 4px; height: 100%; }}
-.fill-critical {{ background: #EF4444; }}
-.fill-high {{ background: #F97316; }}
-.fill-medium {{ background: #FBBF24; }}
-.fill-low {{ background: #10B981; }}
-</style>
-<div class="ranking-table-card">
-<table class="ranking-html-table">
-<thead>
-<tr>
-<th>Rank & Corridor</th>
-<th>Severity</th>
-<th style="text-align:center;">Score</th>
-<th>Precip</th>
-<th>Conduit Saturation</th>
-<th style="text-align:center;">Blockage</th>
-</tr>
-</thead>
-<tbody>
-{table_rows_html}
-</tbody>
-</table>
-<div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #F1F5F9; padding-top:6px; margin-top:4px; font-size:11px; color:#64748B;">
-<span>👆 Click any corridor above or map dot to open diagnostic report</span>
-<span>Top {len(display_locs)} corridors ({selected_zone})</span>
-</div>
-</div>"""
-        st.html(compact_table_html)
+            st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:3px 0 4px 0;'>", unsafe_allow_html=True)
+
+            for loc in display_locs:
+                r_level = loc["risk_level"]
+                pill_class = f"pill-{r_level.lower()}"
+                fill_class = f"fill-{r_level.lower()}"
+                p_val = loc.get("precip_mm", loc["rainfall_3h"])
+                comp_score = loc.get("composite_score", loc["risk_score"])
+                is_active = (loc["id"] == active_hotspot_id)
+
+                r_c1, r_c2, r_c3, r_c4, r_c5, r_c6 = st.columns([3.2, 1.2, 0.8, 1.3, 1.8, 0.8], vertical_alignment="center")
+
+                btn_prefix = f"📍 #{loc.get('priority_rank', '-')}" if is_active else f"#{loc.get('priority_rank', '-')}"
+                btn_type = "primary" if is_active else "secondary"
+                if r_c1.button(
+                    f"{btn_prefix} {loc['name']}",
+                    key=f"corridor_btn_{loc['id']}",
+                    type=btn_type,
+                    use_container_width=True,
+                    help=f"Inspect engineering diagnostic report for {loc['name']}"
+                ):
+                    if st.session_state.get("selected_location_id") != loc['id']:
+                        st.session_state["selected_location_id"] = loc['id']
+                        st.rerun()
+
+                r_c2.markdown(f"<span class='pill-badge {pill_class}'>{r_level}</span>", unsafe_allow_html=True)
+                r_c3.markdown(f"<div style='text-align:center; font-weight:800; font-size:12px; color:#0F172A;'>{comp_score}</div>", unsafe_allow_html=True)
+                r_c4.markdown(f"<span style='background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:11px; padding:2px 6px; border-radius:6px; display:inline-block; white-space:nowrap;'>🌧️ {p_val} mm</span>", unsafe_allow_html=True)
+                r_c5.markdown(f"""
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
+                    <div class="progress-track" style="width:55px; height:7px; display:inline-block;">
+                        <div class="progress-fill {fill_class}" style="width:{loc['water_level_pct']}%;"></div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                r_c6.markdown(f"<div style='text-align:center; font-weight:700; color:#475569; font-size:11px;'>{loc['blockage_pct']}%</div>", unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #F1F5F9; padding-top:6px; margin-top:4px; font-size:11px; color:#64748B;">
+                <span>👆 Click any corridor above or map dot to open diagnostic report</span>
+                <span>Top {len(display_locs)} corridors ({selected_zone})</span>
+            </div>
+            """, unsafe_allow_html=True)
 
     # -------------------------------------------------------------
     # SITE PROBLEM & DIAGNOSTIC REPORT BOX (COMPACT 5-KPI CARD)
