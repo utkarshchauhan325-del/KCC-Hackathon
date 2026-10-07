@@ -1,9 +1,7 @@
-"""FloodGuard - Municipal Intelligence Web Application.
-
-Real-time flood risk monitoring, early warning system, and CCTV AI inspection.
-"""
+"""FloodGuard - flood and drainage operations console for Pune Municipal Corporation."""
 
 import sys
+from datetime import datetime
 from pathlib import Path
 
 # Add project root to sys.path
@@ -11,117 +9,90 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
 
 import streamlit as st
-from app.config import settings
 from app.db.session import init_db
-from app.ui.components.styles import get_floodguard_css
+from app.ui.components.styles import BRAND_MARK, get_floodguard_css, icon
+from app.ui.pune_data import PRIORITY_QUEUE
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
-from app.ui.views.priority_queue import render_priority_queue, render_priority_queue_and_interventions
-from app.ui.views.interventions import render_interventions
+from app.ui.views.priority_queue import render_priority_queue_and_interventions
 from app.ui.views.flood_analytics import render_flood_analytics
 
 # Initialize SQLite/PostgreSQL Database
 init_db()
 
-# Streamlit Page Config
 st.set_page_config(
-    page_title="FloodGuard - Municipal Intelligence",
-    page_icon="🌊",
+    page_title="FloodGuard | Pune Municipal Corporation",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed",
 )
 
-# Inject custom FloodGuard CSS theme
 st.markdown(get_floodguard_css(), unsafe_allow_html=True)
 
-# Ensure sidebar remains permanently expanded even if previously collapsed in browser session
-import streamlit.components.v1 as components
-components.html(
-    """
-    <script>
-    (function() {
-        function expandSidebar() {
-            try {
-                const parentDoc = window.parent.document;
-                const expandBtn = parentDoc.querySelector('[data-testid="stExpandSidebarButton"]') || 
-                                  parentDoc.querySelector('[data-testid="collapsedControl"] button') ||
-                                  parentDoc.querySelector('[data-testid="collapsedControl"]');
-                if (expandBtn) {
-                    expandBtn.click();
-                }
-            } catch(e) {}
-        }
-        expandSidebar();
-        setTimeout(expandSidebar, 100);
-        setTimeout(expandSidebar, 300);
-    })();
-    </script>
-    """,
-    height=0,
-    width=0,
-)
+# -------------------------------------------------------------
+# Pages
+# -------------------------------------------------------------
+# (slug, title, short label, icon, description, function, badge)
+PAGE_SPECS = [
+    ("overview", "Overview", "Overview", "grid",
+     "City risk summary, ranked corridors and forecasts", render_overview_dashboard, None),
+    ("risk-map", "Risk map", "Risk map", "map",
+     "Monitored locations by zone, severity and camera", render_live_risk_map, None),
+    ("cctv", "CCTV analysis", "CCTV", "camera",
+     "Camera feeds and video analysis for drains and dumping", render_cctv_monitoring, None),
+    ("queue", "Priority queue", "Queue", "queue",
+     "Officer review, open incidents and crew dispatch", render_priority_queue_and_interventions, len(PRIORITY_QUEUE)),
+    ("analytics", "Analytics and reports", "Analytics", "chart",
+     "Rainfall correlation, ward comparison and exports", render_flood_analytics, None),
+]
+
+pages = {
+    slug: st.Page(fn, title=title, url_path=slug, default=(slug == "overview"))
+    for slug, title, _short, _ico, _desc, fn, _badge in PAGE_SPECS
+}
+current = st.navigation(list(pages.values()), position="hidden")
+current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
 
 # -------------------------------------------------------------
-# SIDEBAR NAVIGATION - MATCHING SCREENSHOT PRECISELY
+# Top bar: brand, inline links (wide screens) and pop-up menu
 # -------------------------------------------------------------
-import textwrap
+with st.container(key="fg_topbar", horizontal=True, vertical_alignment="center", gap="small"):
+    with st.container(key="fg_brand", width="content"):
+        st.markdown(
+            f'<div class="fg-brand">{BRAND_MARK}<div>'
+            f'<div class="fg-brand-name">FloodGuard</div>'
+            f'<div class="fg-brand-org">Pune Municipal Corporation &middot; Disaster Management Cell</div>'
+            f"</div></div>",
+            unsafe_allow_html=True,
+        )
 
-with st.sidebar:
-    # FloodGuard Brand Header
-    st.markdown(textwrap.dedent("""
-    <div class="brand-container">
-        <div style="background:#0284C7; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-size:18px;">
-            🌊
-        </div>
-        <div>
-            <div class="brand-title">FloodGuard</div>
-            <div class="brand-sub">Municipal Intelligence</div>
-        </div>
-    </div>
-    """).strip(), unsafe_allow_html=True)
+    with st.container(key="fg_links", horizontal=True, vertical_alignment="center", gap=None, width="content"):
+        for slug, _title, short, _ico, _desc, _fn, _badge in PAGE_SPECS:
+            state = "on" if slug == current_slug else "off"
+            with st.container(key=f"nav{state}_{slug.replace('-', '_')}", width="content"):
+                st.page_link(pages[slug], label=short)
 
-    # Navigation options (Merged Priority Queue & Interventions)
-    nav_options = [
-        "📊 Dashboard",
-        "📍 Live Risk Map",
-        "📹 CCTV Monitoring (3)",
-        "⚠️ Priority Queue & Interventions (3)",
-        "📈 Flood Analytics"
-    ]
+    st.html(f'<div class="fg-clock">{datetime.now():%d %b %Y &middot; %H:%M}</div>')
 
-    selected_nav = st.radio(
-        "Navigation Menu",
-        nav_options,
-        index=0,
-        label_visibility="collapsed"
-    )
+    menu = st.popover("Menu", icon=":material/menu:", key=f"fg_menu_{current_slug.replace('-', '_')}")
+    with menu:
+        st.html(
+            '<div class="fg-pal-head"><span class="fg-pal-title">Go to</span>'
+            '<span class="fg-pal-title">5 sections</span></div>'
+        )
+        for slug, title, _short, ico, desc, _fn, badge in PAGE_SPECS:
+            state = "on_" if slug == current_slug else ""
+            with st.container(key=f"pal_{state}{slug.replace('-', '_')}", gap=None):
+                st.page_link(pages[slug], label=title)
+                badge_html = f'<span class="fg-pal-count">{badge} open</span>' if badge else ""
+                st.markdown(
+                    f'<div class="fg-pal-ico">{icon(ico, 15)}</div>'
+                    f'<div class="fg-pal-desc">{desc}</div>{badge_html}',
+                    unsafe_allow_html=True,
+                )
+        st.html(
+            '<div class="fg-pal-foot"><span>Pune Municipal Corporation</span>'
+            '<span>Zone: Central</span></div>'
+        )
 
-    # Bottom Municipal Organization Tag
-    st.markdown(textwrap.dedent("""
-    <div class="municipal-footer">
-        <div style="font-size:20px;">🏛️</div>
-        <div>
-            <p class="footer-title">Pune Municipal Corp.</p>
-            <p class="footer-sub">Zone: Central</p>
-        </div>
-    </div>
-    """).strip(), unsafe_allow_html=True)
-
-# -------------------------------------------------------------
-# VIEW ROUTING
-# -------------------------------------------------------------
-if selected_nav == "📊 Dashboard":
-    render_overview_dashboard()
-
-elif selected_nav == "📍 Live Risk Map":
-    render_live_risk_map()
-
-elif "CCTV" in selected_nav:
-    render_cctv_monitoring()
-
-elif "Priority Queue" in selected_nav or "Intervention" in selected_nav:
-    render_priority_queue_and_interventions()
-
-elif selected_nav == "📈 Flood Analytics":
-    render_flood_analytics()
+current.run()

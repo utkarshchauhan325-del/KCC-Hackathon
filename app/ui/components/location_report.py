@@ -1,10 +1,12 @@
 """Detailed Site Investigation & Problem Diagnostic Report for clicked map hotspots."""
 
 import textwrap
+from html import escape
 import streamlit as st
 from typing import Dict, Any
 from app.db.session import SessionLocal
 from app.db.models import AuditLog
+from app.ui.components.styles import INK, chip, status_color, status_pill
 
 def get_location_diagnostic_data(loc: Dict[str, Any]) -> Dict[str, Any]:
     """Enrich location data with comprehensive hydraulic and vision diagnostics."""
@@ -68,13 +70,13 @@ def get_location_diagnostic_data(loc: Dict[str, Any]) -> Dict[str, Any]:
     is_busiest = loc.get("is_busiest_traffic", False)
 
     if is_busiest or t_pct >= 75:
-        traffic_adv = f"🚨 SEVERE TRAFFIC GRIDLOCK: {t_pct}% congestion (Vehicles crawling at {t_speed} km/h). Emergency green corridor & police diversion active."
+        traffic_adv = f"Severe congestion: {t_pct}% ({t_speed} km/h). Police diversion recommended."
     elif t_pct >= 50:
-        traffic_adv = f"⚠️ Heavy Traffic Surcharge: {t_pct}% congestion ({t_speed} km/h). Caution advisory for two-wheelers and heavy transit vehicles."
+        traffic_adv = f"Heavy congestion: {t_pct}% ({t_speed} km/h). Caution advisory for two-wheelers and heavy vehicles."
     elif t_pct >= 25:
-        traffic_adv = f"🚗 Moderate Traffic Flow: {t_pct}% congestion ({t_speed} km/h). Normal lane circulation."
+        traffic_adv = f"Moderate traffic: {t_pct}% congestion ({t_speed} km/h)."
     else:
-        traffic_adv = f"🟢 Free Flow: {t_pct}% congestion ({t_speed} km/h). Clearway maintained."
+        traffic_adv = f"Free flow: {t_pct}% congestion ({t_speed} km/h)."
 
     return {
         "problem_title": problem_title,
@@ -89,93 +91,68 @@ def get_location_diagnostic_data(loc: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "close_hotspot_report"):
-    """Render the full-length detailed diagnostic report box under the map."""
+    """Render the site report card for the selected location."""
     diag = get_location_diagnostic_data(loc)
     r_level = loc["risk_level"]
     is_busiest = loc.get("is_busiest_traffic", False)
     t_pct = loc.get("traffic_congestion_pct", 40)
     t_speed = loc.get("traffic_speed_kmh", 25.0)
-    t_lvl = loc.get("traffic_level", "Moderate Flow")
     t_delay = loc.get("traffic_delay_sec", 60)
     comp_score = loc.get("composite_score", loc["risk_score"])
+    level_color = status_color(r_level)
 
-    col_map = {
-        "Critical": "#DC2626",
-        "High": "#EA580C",
-        "Medium": "#D97706",
-        "Low": "#16A34A"
-    }
-    bg_map = {
-        "Critical": "#FEE2E2",
-        "High": "#FFEDD5",
-        "Medium": "#FEF3C7",
-        "Low": "#DCFCE7"
-    }
+    busiest_chip = chip("Heaviest traffic in Pune right now", "warn") if is_busiest else ""
+    tags = "".join(chip(escape(t)) for t in diag["ai_tags"])
 
-    border_color = col_map.get(r_level, "#2563EB")
-    badge_bg = bg_map.get(r_level, "#EFF6FF")
+    def metric(label, value, note, color=INK):
+        return (
+            f'<div><div class="fg-k">{label}</div>'
+            f'<div class="fg-mono" style="font-size:22px;font-weight:500;color:{color};margin:4px 0 2px 0;">{value}</div>'
+            f'<div style="font-size:11.5px;color:#64708A;">{note}</div></div>'
+        )
 
-    busiest_badge = (
-        '<span style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-weight:800; font-size:11px; padding:3px 8px; border-radius:8px;">🔥 #1 MOST BUSIEST TRAFFIC CORRIDOR IN PUNE</span>'
-        if is_busiest else ''
-    )
+    metrics = "".join([
+        metric("Conduit saturation", f"{loc['water_level_pct']}%", f"Standing depth {diag['depth_cm']} cm", level_color),
+        metric("Rainfall", f"{loc.get('precip_mm', loc['rainfall_3h'])} mm", f"Chance of rain {loc.get('rain_chance_pct', 45)}%"),
+        metric("Traffic congestion", f"{t_pct}%", f"{t_speed} km/h, +{t_delay}s delay",
+               status_color("Critical") if t_pct >= 75 else INK),
+        metric("Blockage", f"{loc['blockage_pct']}%", "Intake chamber", level_color),
+        metric("Priority", f"#{loc.get('priority_rank', '-')}", f"Composite {comp_score}/100"),
+    ])
 
-    ai_tag_pills = "".join([f'<span style="background:#E2E8F0; color:#334155; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; margin-right:6px; display:inline-block;">🏷️ {tag}</span>' for tag in diag['ai_tags']])
+    html = f"""
+<div id="diagnostic-report-box" class="fg-card" style="border-color:{level_color}55; box-shadow: 0 0 0 3px {level_color}0F, var(--fg-shadow); margin:18px 0 10px 0; padding:18px 20px;">
+  <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start; margin-bottom:14px;">
+    <div style="min-width:0;">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+        {status_pill(r_level, f"{r_level} &middot; score {comp_score}")}
+        {busiest_chip}
+        <span class="fg-mono" style="font-size:11px; color:#64708A;">{loc['id']} &middot; updated {loc['last_updated']}</span>
+      </div>
+      <h3 class="fg-h3" style="font-size:19px !important;">{escape(loc['name'])}</h3>
+      <div style="font-size:12.5px; color:#64708A; margin-top:3px;">
+        Ward {loc['ward']} &middot; {loc['zone']} zone &middot; <span class="fg-mono">{loc['lat']}, {loc['lng']}</span> &middot; {loc['drain_type']}
+      </div>
+    </div>
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:14px 18px; padding:14px 0; border-top:1px solid #EEF1F5; border-bottom:1px solid #EEF1F5;">
+    {metrics}
+  </div>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:14px 24px; padding-top:14px;">
+    <div><div class="fg-k">Assessment</div><div class="fg-v" style="margin-top:4px;">{escape(diag['problem_title'])}</div>
+      <p style="font-size:12.5px; margin:4px 0 0 0; line-height:1.5;">{escape(diag['failure_mech'])}</p></div>
+    <div><div class="fg-k">Recommended action</div><div class="fg-v" style="margin-top:4px;">{escape(diag['action_plan'])}</div>
+      <p style="font-size:12.5px; margin:4px 0 0 0;">Expected to recede: {escape(diag['recede_eta'])}</p>
+      <p style="font-size:12.5px; margin:2px 0 0 0;">Traffic: {escape(diag['traffic_adv'])}</p></div>
+  </div>
+  <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;">{tags}</div>
+</div>
+"""
+    st.markdown(" ".join(l.strip() for l in html.splitlines() if l.strip()), unsafe_allow_html=True)
 
-    # Compact original box container with target ID for auto-scroll
-    st.markdown(textwrap.dedent(f"""
-<div id="diagnostic-report-box" style="background:#FFFFFF; border:2px solid {border_color}; border-radius:12px; padding:16px 20px; margin:16px 0 18px 0; box-shadow:0 3px 10px rgba(0,0,0,0.05); font-family:'Plus Jakarta Sans',sans-serif;">
-<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #E2E8F0; padding-bottom:10px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-<div>
-<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
-<span style="background:{badge_bg}; color:{border_color}; font-weight:800; font-size:11px; padding:3px 8px; border-radius:10px; border:1px solid {border_color}40; letter-spacing:0.03em; text-transform:uppercase;">
-● {r_level} RISK LEVEL — SCORE {comp_score}/100
-</span>
-{busiest_badge}
-<span style="font-size:11px; color:#64748B;">Node: <b>{loc['id']}</b></span>
-<span style="font-size:11px; color:#64748B;">• Updated: <b>{loc['last_updated']}</b></span>
-</div>
-<h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">📍 {loc['name']} — Site Engineering & Diagnostic Report</h3>
-<p style="margin:2px 0 0 0; font-size:12px; color:#64748B;">
-<b>Ward:</b> {loc['ward']} &nbsp;|&nbsp; <b>Zone:</b> {loc['zone']} &nbsp;|&nbsp; <b>Coords:</b> {loc['lat']}, {loc['lng']} &nbsp;|&nbsp; <b>Conduit:</b> {loc['drain_type']}
-</p>
-</div>
-</div>
-
-<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:12px 14px;">
-<div>
-<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">Conduit Saturation</div>
-<div style="font-size:20px; font-weight:800; color:{border_color};">{loc['water_level_pct']}%</div>
-<div style="font-size:11px; color:#475569;">Standing Depth: <b>{diag['depth_cm']} cm</b></div>
-</div>
-<div>
-<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">Live Precipitation</div>
-<div style="font-size:20px; font-weight:800; color:#2563EB;">{loc.get('precip_mm', loc['rainfall_3h'])} mm</div>
-<div style="font-size:11px; color:#475569;">Rain Probability: <b>{loc.get('rain_chance_pct', 45)}%</b></div>
-</div>
-<div>
-<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">🚗 TomTom Traffic</div>
-<div style="font-size:20px; font-weight:800; color:{'#DC2626' if t_pct>=75 else '#EA580C'};">{t_pct}%</div>
-<div style="font-size:11px; color:#475569;">Speed: <b>{t_speed} km/h</b> (Delay: +{t_delay}s)</div>
-</div>
-<div>
-<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">Debris / Silt Choke</div>
-<div style="font-size:20px; font-weight:800; color:{border_color};">{loc['blockage_pct']}%</div>
-<div style="font-size:11px; color:#475569;">Intake Chamber Choke</div>
-</div>
-<div>
-<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">All-Attribute Priority</div>
-<div style="font-size:20px; font-weight:800; color:#7C3AED;">Rank #{loc.get('priority_rank', '-')}</div>
-<div style="font-size:11px; color:#475569;">Multi-Score: <b>{comp_score}/100</b></div>
-</div>
-</div>
-</div>
-""").strip(), unsafe_allow_html=True)
-
-    # Action Buttons
-    btn_col, _ = st.columns([1.6, 6.4])
+    btn_col, _ = st.columns([1.4, 6.6])
     with btn_col:
-        if st.button("❌ Close Report", key=f"close_{loc['id']}", use_container_width=True):
+        if st.button("Close report", key=f"close_{loc['id']}", use_container_width=True):
             st.session_state["selected_location_id"] = None
             st.session_state["last_handled_map_click"] = None
             if hasattr(st, "query_params") and "inspect" in st.query_params:
@@ -184,6 +161,3 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
                 except Exception:
                     pass
             st.rerun()
-
-    st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:12px 0 18px 0;'>", unsafe_allow_html=True)
-

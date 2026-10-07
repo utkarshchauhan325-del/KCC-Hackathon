@@ -383,7 +383,6 @@ RECENT_ALERTS = [
         "title": "Heavy rainfall alert",
         "subtitle": "Pune region - IMD nowcast",
         "time": "12 min ago",
-        "icon": "🔴"
     },
     {
         "id": "ALT-02",
@@ -391,7 +390,6 @@ RECENT_ALERTS = [
         "title": "Water level rising",
         "subtitle": "Mula-Mutha River",
         "time": "28 min ago",
-        "icon": "🟠"
     },
     {
         "id": "ALT-03",
@@ -399,7 +397,6 @@ RECENT_ALERTS = [
         "title": "Drainage blockage detected",
         "subtitle": "Deccan Gymkhana",
         "time": "1 hour ago",
-        "icon": "🟡"
     },
     {
         "id": "ALT-04",
@@ -407,7 +404,6 @@ RECENT_ALERTS = [
         "title": "High risk at FC Road",
         "subtitle": "Risk score increased to 87",
         "time": "2 hours ago",
-        "icon": "🟡"
     }
 ]
 

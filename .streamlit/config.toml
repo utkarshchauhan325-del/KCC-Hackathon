@@ -1,10 +1,19 @@
 [theme]
 base = "light"
-primaryColor = "#0284C7"
-backgroundColor = "#F8FAFC"
-secondaryBackgroundColor = "#FFFFFF"
-textColor = "#0F172A"
-font = "sans serif"
+primaryColor = "#0A7C8F"
+backgroundColor = "#F3F5F8"
+secondaryBackgroundColor = "#F8FAFC"
+textColor = "#0B1220"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Space Grotesk:https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&display=swap"
+codeFont = "JetBrains Mono:https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
+baseRadius = "8px"
+borderColor = "#E3E8EF"
+showWidgetBorder = true
+chartCategoricalColors = ["#0A7C8F", "#0B1220", "#C25A06", "#7C8BA1", "#14784F", "#9A7200", "#C8281C"]
+
+[client]
+toolbarMode = "minimal"
 
 [server]
 headless = true

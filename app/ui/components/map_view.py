@@ -95,13 +95,13 @@ def create_floodguard_map(
 
         folium.Rectangle(
             bounds=b,
-            color="#0284C7",
-            weight=2,
+            color="#0A7C8F",
+            weight=1.5,
             fill=True,
-            fill_color="#0284C7",
+            fill_color="#0A7C8F",
             fill_opacity=0.07,
             dash_array="6, 6",
-            tooltip=f"🏛️ Municipal Boundary: {zone} Zone"
+            tooltip=f"Municipal Boundary: {zone} Zone"
         ).add_to(m)
 
     # Automatically fit bounds to enclose all locations in the selected zone or city-wide
@@ -148,18 +148,18 @@ def create_floodguard_map(
     ]
     folium.PolyLine(
         mula_mutha_river,
-        color="#38BDF8",
-        weight=7,
-        opacity=0.6,
+        color="#5CC6D6",
+        weight=5,
+        opacity=0.55,
         tooltip="Mula-Mutha River Basin (Current Gauge: +1.4m)"
     ).add_to(m)
 
     # Color mapping
     color_map = {
-        "Critical": "#EF4444",
-        "High": "#F97316",
-        "Medium": "#F59E0B",
-        "Low": "#10B981"
+        "Critical": "#C8281C",
+        "High": "#C25A06",
+        "Medium": "#D4A106",
+        "Low": "#14784F"
     }
 
     # Add locations with custom circles
@@ -178,22 +178,22 @@ def create_floodguard_map(
         is_busiest = loc.get("is_busiest_traffic", False)
         comp_score = loc.get("composite_score", loc["risk_score"])
 
-        busiest_html = '<div style="background:#FEF3C7; color:#B45309; border:1px solid #FDE68A; font-weight:800; font-size:10px; padding:2px 6px; border-radius:6px; margin-bottom:6px; text-align:center;">🚗 #1 MOST BUSIEST CORRIDOR</div>' if is_busiest else ''
+        busiest_html = '<div style="color:#C25A06; font-size:10.5px; font-weight:600; margin-bottom:6px;">Heaviest traffic in Pune right now</div>' if is_busiest else ''
 
         popup_html = f"""
-        <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:220px; padding:4px;">
+        <div style="font-family:Inter,system-ui,sans-serif; min-width:220px; padding:4px;">
             {busiest_html}
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <b style="color:#0F172A; font-size:13px;">#{loc.get('priority_rank', '-')} {loc['name']}</b>
-                <span style="background:{col}22; color:{col}; font-weight:700; font-size:10px; padding:2px 6px; border-radius:10px; border:1px solid {col}55;">{r_level.upper()}</span>
+                <b style="color:#0B1220; font-size:13px; font-weight:600;">{loc.get('priority_rank', '-')}. {loc['name']}</b>
+                <span style="background:{col}22; color:{col}; font-weight:600; font-size:10.5px; padding:1px 7px; border-radius:999px; border:1px solid {col}55;">{r_level}</span>
             </div>
-            <div style="font-size:11px; color:#64748B; margin-bottom:6px;">Zone: {loc['zone']} | Score: <b>{comp_score}/100</b></div>
-            <table style="width:100%; font-size:11px; border-top:1px solid #E2E8F0; padding-top:4px;">
-                <tr><td style="color:#64748B;">Live Precip:</td><td style="text-align:right; font-weight:800; color:#2563EB;">{p_mm} mm</td></tr>
-                <tr><td style="color:#64748B;">TomTom Traffic:</td><td style="text-align:right; font-weight:800; color:{'#DC2626' if t_pct>=75 else '#EA580C'};">{t_pct}% ({t_speed} km/h)</td></tr>
-                <tr><td style="color:#64748B;">Conduit Saturation:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['water_level_pct']}%</td></tr>
-                <tr><td style="color:#64748B;">Drain Blockage:</td><td style="text-align:right; font-weight:600;">{loc['blockage_pct']}%</td></tr>
-                <tr><td style="color:#64748B;">Status:</td><td style="text-align:right; font-weight:700; color:{col};">{loc['status']}</td></tr>
+            <div style="font-size:11px; color:#64708A; margin-bottom:6px;">{loc['zone']} zone &middot; score {comp_score}/100</div>
+            <table style="width:100%; font-size:11px; border-top:1px solid #E3E8EF; padding-top:4px; font-variant-numeric:tabular-nums;">
+                <tr><td style="color:#64708A;">Rainfall</td><td style="text-align:right; font-weight:600;">{p_mm} mm</td></tr>
+                <tr><td style="color:#64708A;">Traffic</td><td style="text-align:right; font-weight:600;">{t_pct}% ({t_speed} km/h)</td></tr>
+                <tr><td style="color:#64708A;">Conduit saturation</td><td style="text-align:right; font-weight:600; color:{col};">{loc['water_level_pct']}%</td></tr>
+                <tr><td style="color:#64708A;">Blockage</td><td style="text-align:right; font-weight:600;">{loc['blockage_pct']}%</td></tr>
+                <tr><td style="color:#64708A;">Status</td><td style="text-align:right; font-weight:600;">{loc['status']}</td></tr>
             </table>
         </div>
         """
@@ -203,11 +203,11 @@ def create_floodguard_map(
             folium.CircleMarker(
                 location=[loc["lat"], loc["lng"]],
                 radius=18 if (is_sel or is_busiest) else 14,
-                color="#EF4444" if is_busiest else col,
-                weight=2,
+                color="#C8281C" if is_busiest else col,
+                weight=1.5,
                 fill=True,
-                fill_color="#EF4444" if is_busiest else col,
-                fill_opacity=0.25,
+                fill_color="#C8281C" if is_busiest else col,
+                fill_opacity=0.14,
             ).add_to(m)
 
         # Core circle marker
@@ -219,7 +219,7 @@ def create_floodguard_map(
             fill=True,
             fill_color=col,
             fill_opacity=0.95,
-            tooltip=f"#{loc.get('priority_rank', '-')} {loc['name']} (Score: {comp_score} | 🌧️ {p_mm}mm | 🚗 {t_pct}% Jam)",
+            tooltip=f"{loc.get('priority_rank', '-')}. {loc['name']} | score {comp_score} | rain {p_mm} mm | traffic {t_pct}%",
             popup=folium.Popup(popup_html, max_width=270)
         ).add_to(m)
 
@@ -232,29 +232,25 @@ def create_floodguard_map(
             c_lng = cam.get("lng")
             if c_lat and c_lng:
                 cam_html = f"""
-                <div style="font-family:'Plus Jakarta Sans',sans-serif; min-width:180px; padding:4px;">
-                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                        <span style="font-size:14px;">📹</span>
-                        <b style="color:#0F172A; font-size:12px;">{cam['name']}</b>
+                <div style="font-family:Inter,system-ui,sans-serif; min-width:180px; padding:4px;">
+                    <div style="margin-bottom:4px;">
+                        <b style="color:#0B1220; font-size:12px; font-weight:600;">{cam['name']}</b>
                     </div>
                     <div style="font-size:11px; color:#64748B; margin-bottom:4px;">
-                        ID: <b>{cam['id']}</b> &bull; Zone: {cam.get('zone', '-')}
+                        {cam['id']} &middot; {cam.get('zone', '-')} zone
                     </div>
-                    <div style="background:#ECFDF5; color:#065F46; border:1px solid #A7F3D0; font-size:10px; font-weight:700; padding:2px 6px; border-radius:6px; display:inline-block; margin-bottom:4px;">
-                        ● {cam['status']} ({cam.get('stream_fps', 30)} FPS)
-                    </div>
-                    <div style="font-size:11px; color:#475569;">AI Diagnosis: <b>{cam.get('ai_status', 'Nominal')}</b></div>
+                    <div style="font-size:11px; color:#334155;">Last finding: {cam.get('ai_status', 'None')}</div>
                 </div>
                 """
                 folium.CircleMarker(
                     location=[c_lat, c_lng],
                     radius=7,
-                    color="#2563EB",
+                    color="#0B1220",
                     weight=2,
                     fill=True,
-                    fill_color="#3B82F6",
+                    fill_color="#12B5CB",
                     fill_opacity=0.9,
-                    tooltip=f"📹 {cam['name']} (CCTV LIVE)",
+                    tooltip=f"Camera: {cam['name']}",
                     popup=folium.Popup(cam_html, max_width=230)
                 ).add_to(m)
 
