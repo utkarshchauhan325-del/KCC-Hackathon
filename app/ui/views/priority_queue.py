@@ -162,76 +162,95 @@ def render_priority_queue_and_interventions():
     </div>
     """).strip(), unsafe_allow_html=True)
 
-    # Top Summary Metrics
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Active Dewatering Pumps", f"{pump_count} Units", "+2 Deployed")
-    m2.metric("Water Discharged", f"{total_water:,} m³", "↑ 180 m³/h")
-    m3.metric("Units En Route", f"{en_route_count} Units", "ETA < 15m")
-    m4.metric("Avg Clearance Time", "42 mins", "↓ 12 mins")
-
-    st.write("")
-
-    # Auto-dismissing 3-Second Deployment Toast Notification Banner
+    # Auto-dismissing Deployment Toast Notification Overlay (Floats over the screen)
     if "deploy_success_data" in st.session_state and st.session_state["deploy_success_data"]:
         toast_data = st.session_state["deploy_success_data"]
         elapsed = time.time() - toast_data.get("timestamp", 0)
-        if elapsed < 4.5:
-            st.markdown(textwrap.dedent(f"""
-            <div id="deploy-notification-box" style="
-                background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        if elapsed < 5.0:
+            st.toast(f"🚀 Dispatched {toast_data['eq_type']} to {toast_data['target_loc']} (Lead: {toast_data['crew_head']})", icon="✅")
+            st.html(f"""
+            <div id="deploy-notification-overlay" style="
+                position: fixed;
+                top: 24px;
+                right: 28px;
+                z-index: 99999999;
+                background: linear-gradient(135deg, #065F46 0%, #047857 100%);
                 border: 1.5px solid #34D399;
-                border-radius: 12px;
-                padding: 16px 20px;
-                margin-bottom: 20px;
-                box-shadow: 0 8px 24px rgba(5, 150, 105, 0.28);
+                border-radius: 14px;
+                padding: 18px 24px;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15);
                 color: #FFFFFF;
                 font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-                position: relative;
-                overflow: hidden;
-                animation: toastFadeOut 0.6s ease-in 3.0s forwards;
+                min-width: 360px;
+                max-width: 520px;
+                pointer-events: auto;
+                animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastFadeOut 0.5s ease-in 4.0s forwards;
             ">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-                    <div style="display:flex; align-items:center; gap:14px;">
-                        <span style="font-size:24px; background:#10B98133; border:1px solid #34D39960; width:44px; height:44px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+                    <div style="display:flex; align-items:flex-start; gap:14px;">
+                        <span style="font-size:24px; background:#10B98133; border:1px solid #34D39960; width:44px; height:44px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                             🚀
                         </span>
                         <div>
                             <div style="font-size:15px; font-weight:800; color:#ECFDF5; letter-spacing:0.01em;">
                                 Deployment Order Dispatched Successfully!
                             </div>
-                            <div style="font-size:13px; color:#A7F3D0; margin-top:3px;">
-                                <b>{toast_data['eq_type']}</b> deployed to <b>{toast_data['target_loc']}</b> &bull; Lead: <b>{toast_data['crew_head']}</b> &bull; Priority: <b>{toast_data['priority']}</b>
+                            <div style="font-size:13px; color:#A7F3D0; margin-top:4px; line-height:1.4;">
+                                <b>{toast_data['eq_type']}</b> mobilized to <b>{toast_data['target_loc']}</b>
+                            </div>
+                            <div style="font-size:12px; color:#D1FAE5; margin-top:4px;">
+                                👷 Lead: <b>{toast_data['crew_head']}</b> &bull; 🎯 {toast_data['priority']}
                             </div>
                         </div>
                     </div>
-                    <div style="background:#065F46; border:1px solid #34D39955; color:#D1FAE5; font-size:11px; font-weight:700; padding:5px 12px; border-radius:14px; white-space:nowrap;">
-                        ⏱️ Auto-dismissing in 3s &bull; Alerted via SMS & Radio
-                    </div>
+                    <button onclick="document.getElementById('deploy-notification-overlay').remove();" style="
+                        background: rgba(255, 255, 255, 0.15);
+                        border: none;
+                        color: #FFFFFF;
+                        font-size: 16px;
+                        font-weight: 700;
+                        width: 26px;
+                        height: 26px;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 0;
+                    ">✕</button>
                 </div>
-                <div style="position:absolute; bottom:0; left:0; height:4px; background:#34D399; width:100%; animation: toastTimer 3.0s linear forwards;"></div>
+                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#A7F3D0;">
+                    <span>⏱️ Auto-dismissing</span>
+                    <span style="background:#065F46; padding:3px 8px; border-radius:10px; border:1px solid #34D39944;">Alerted via SMS & Radio</span>
+                </div>
+                <div style="position:absolute; bottom:0; left:0; height:4px; background:#34D399; width:100%; animation: toastTimer 4.0s linear forwards; border-radius: 0 0 14px 14px;"></div>
             </div>
 
             <style>
+            @keyframes toastSlideDown {{
+                0% {{ opacity: 0; transform: translateY(-20px) scale(0.96); }}
+                100% {{ opacity: 1; transform: translateY(0) scale(1); }}
+            }}
             @keyframes toastTimer {{
                 from {{ width: 100%; }}
                 to {{ width: 0%; }}
             }}
             @keyframes toastFadeOut {{
-                0% {{ opacity: 1; transform: translateY(0); max-height: 120px; margin-bottom: 20px; }}
-                80% {{ opacity: 0; transform: translateY(-6px); max-height: 120px; margin-bottom: 20px; }}
-                100% {{ opacity: 0; transform: translateY(-16px); max-height: 0; padding: 0; margin-bottom: 0; border: none; overflow: hidden; display: none; }}
+                0% {{ opacity: 1; transform: translateY(0); }}
+                100% {{ opacity: 1; transform: translateY(-15px); pointer-events: none; }}
             }}
             </style>
             <script>
             setTimeout(function() {{
-                var el = document.getElementById('deploy-notification-box');
+                var el = document.getElementById('deploy-notification-overlay');
                 if (el) {{
-                    el.style.display = 'none';
                     el.remove();
                 }}
-            }}, 3500);
+            }}, 4600);
             </script>
-            """).strip(), unsafe_allow_html=True)
+            """)
+        else:
+            st.session_state["deploy_success_data"] = None
 
     st.markdown("### 🚨 Hotspots Requiring Immediate Attention")
     st.info("🛡️ **Municipal Rapid Response Protocol:** Each critical incident below provides real-time diagnostic telemetry. Configure machinery and assign an open engineer directly to mobilize crews.")
@@ -250,7 +269,8 @@ def render_priority_queue_and_interventions():
                 break
 
         # Incident Card Container
-        st.markdown(textwrap.dedent(f"""
+        detected_plate_html = f"<div>🚗 <b>Detected Plate:</b> <code style='background:#F1F5F9; padding:2px 6px; border-radius:4px;'>{item['plate_text']}</code></div>" if "plate_text" in item else ""
+        st.html(f"""
         <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:18px 20px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -267,17 +287,17 @@ def render_priority_queue_and_interventions():
                 <div>📂 <b>Issue Category:</b> <span style="color:#0284C7; font-weight:600;">{item['category']}</span></div>
                 <div>📊 <b>Risk Score:</b> <span style="color:#DC2626; font-weight:700;">{item['risk_score']}/100</span></div>
                 <div>📋 <b>Suggested Protocol:</b> {item['suggested_action']}</div>
-                {f"<div>🚗 <b>Detected Plate:</b> <code style='background:#F1F5F9; padding:2px 6px; border-radius:4px;'>{item['plate_text']}</code></div>" if "plate_text" in item else ""}
+                {detected_plate_html}
             </div>
         </div>
-        """).strip(), unsafe_allow_html=True)
+        """)
 
         # UNDER EACH PLACE: Show deployed crew details OR the 4 dropdown boxes to deploy
         if deployed_op:
             # Active Crew Deployed for this Place
             status_color = "#16A34A" if "Operating" in deployed_op["status"] or "Deployed" in deployed_op["status"] else "#EA580C"
-            dep_html = textwrap.dedent(f"""
-            <div style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:12px; padding:16px 20px; margin-bottom:20px; box-shadow:0 2px 6px rgba(22, 163, 74, 0.08);">
+            st.html(f"""
+            <div style="background:#F0FDF4; border:1.5px solid #86EFAC; border-radius:12px; padding:16px 20px; margin-bottom:12px; box-shadow:0 2px 6px rgba(22, 163, 74, 0.08);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                     <div style="display:flex; align-items:center; gap:10px;">
                         <span style="background:#DCFCE7; color:#15803D; font-weight:800; font-size:11px; padding:4px 10px; border-radius:8px; border:1px solid #BBF7D0;">
@@ -296,8 +316,7 @@ def render_priority_queue_and_interventions():
                     <div>⏱️ <b>ETA Resolution:</b> <b>{deployed_op.get('eta_cleared', '30 mins')}</b></div>
                 </div>
             </div>
-            """).strip()
-            st.markdown(dep_html, unsafe_allow_html=True)
+            """)
 
             # Demobilize action button
             demob_c1, demob_c2 = st.columns([5, 1])
@@ -316,95 +335,93 @@ def render_priority_queue_and_interventions():
 
         else:
             # NO CREW DEPLOYED YET: Show the 4 Dropdown Boxes directly under this place
-            st.markdown("<div style='background:#F8FAFC; border:1.5px dashed #CBD5E1; border-radius:12px; padding:16px 20px; margin-bottom:20px;'>", unsafe_allow_html=True)
-            st.markdown("<div style='font-size:13.5px; font-weight:800; color:#0F172A; margin-bottom:12px;'>🚜 Dispatch Intervention Machinery & Emergency Crew to this Site:</div>", unsafe_allow_html=True)
+            with st.container(border=True):
+                st.markdown("<div style='font-size:13.5px; font-weight:800; color:#0F172A; margin-bottom:12px;'>🚜 Dispatch Intervention Machinery & Emergency Crew to this Site:</div>", unsafe_allow_html=True)
 
-            d1, d2 = st.columns(2)
-            with d1:
-                mach_type = st.selectbox(
-                    "Machinery Type",
-                    [
-                        "High Pressure Silt Jetting & Suction Tanker",
-                        "Mobile 500 GPM Dewatering Pump",
-                        "Mobile 1000 GPM Heavy Surcharge Pump",
-                        "Robotic Drain Cleaning Crawler",
-                        "Traffic Diversion Barricade Unit"
-                    ],
-                    key=f"mach_{item['id']}"
-                )
-
-                # Target location dropdown (defaults to this place's name, plus any other unassigned spots)
-                loc_options = [item['location']] + [l for l in available_locations if l.lower() != loc_lower]
-                target_loc = st.selectbox(
-                    "Target Location",
-                    loc_options,
-                    index=0,
-                    key=f"loc_{item['id']}",
-                    help="Target location where the machinery and crew will be mobilized"
-                )
-
-            with d2:
-                if available_leads:
-                    assigned_lead = st.selectbox(
-                        "Assigned Junior Engineer / Lead (Available Officers Only)",
-                        available_leads,
-                        key=f"lead_{item['id']}",
-                        help="Only crew leads who are open and not currently deployed are shown"
+                d1, d2 = st.columns(2)
+                with d1:
+                    mach_type = st.selectbox(
+                        "Machinery Type",
+                        [
+                            "High Pressure Silt Jetting & Suction Tanker",
+                            "Mobile 500 GPM Dewatering Pump",
+                            "Mobile 1000 GPM Heavy Surcharge Pump",
+                            "Robotic Drain Cleaning Crawler",
+                            "Traffic Diversion Barricade Unit"
+                        ],
+                        key=f"mach_{item['id']}"
                     )
-                else:
-                    st.warning("⚠️ All municipal officers are currently deployed.")
-                    assigned_lead = None
 
-                prio = st.selectbox(
-                    "Deployment Priority",
-                    [
-                        "Emergency Priority 1 (Within 10m)",
-                        "Priority 2 (Within 30m)",
-                        "Routine Preventive"
-                    ],
-                    key=f"prio_{item['id']}"
-                )
+                    # Target location dropdown (defaults to this place's name, plus any other unassigned spots)
+                    loc_options = [item['location']] + [l for l in available_locations if l.lower() != loc_lower]
+                    target_loc = st.selectbox(
+                        "Target Location",
+                        loc_options,
+                        index=0,
+                        key=f"loc_{item['id']}",
+                        help="Target location where the machinery and crew will be mobilized"
+                    )
 
-            can_deploy = bool(target_loc and assigned_lead)
-            if st.button(f"🚀 Confirm Deployment Order to {item['location']}", key=f"deploy_btn_{item['id']}", type="primary", disabled=not can_deploy, use_container_width=False):
-                new_id = f"OP-{700 + len(operations) + 1}"
-                eta = "20 mins" if "10m" in prio else ("45 mins" if "30m" in prio else "1h 30m")
-                new_op = {
-                    "id": new_id,
-                    "type": mach_type,
-                    "location": target_loc,
-                    "status": "Deployed & En Route",
-                    "crew_head": assigned_lead,
-                    "units": 1,
-                    "water_discharged_m3": 0,
-                    "eta_cleared": eta
-                }
+                with d2:
+                    if available_leads:
+                        assigned_lead = st.selectbox(
+                            "Assigned Junior Engineer / Lead (Available Officers Only)",
+                            available_leads,
+                            key=f"lead_{item['id']}",
+                            help="Only crew leads who are open and not currently deployed are shown"
+                        )
+                    else:
+                        st.warning("⚠️ All municipal officers are currently deployed.")
+                        assigned_lead = None
 
-                # Prepend to active operations list
-                st.session_state["operations_list"].insert(0, new_op)
+                    prio = st.selectbox(
+                        "Deployment Priority",
+                        [
+                            "Emergency Priority 1 (Within 10m)",
+                            "Priority 2 (Within 30m)",
+                            "Routine Preventive"
+                        ],
+                        key=f"prio_{item['id']}"
+                    )
 
-                # Set toast data for 3-second auto-dismissing banner
-                st.session_state["deploy_success_data"] = {
-                    "id": new_id,
-                    "eq_type": mach_type,
-                    "target_loc": target_loc,
-                    "crew_head": assigned_lead,
-                    "priority": prio,
-                    "timestamp": time.time()
-                }
+                can_deploy = bool(target_loc and assigned_lead)
+                if st.button(f"🚀 Confirm Deployment Order to {item['location']}", key=f"deploy_btn_{item['id']}", type="primary", disabled=not can_deploy, use_container_width=False):
+                    new_id = f"OP-{700 + len(operations) + 1}"
+                    eta = "20 mins" if "10m" in prio else ("45 mins" if "30m" in prio else "1h 30m")
+                    new_op = {
+                        "id": new_id,
+                        "type": mach_type,
+                        "location": target_loc,
+                        "status": "Deployed & En Route",
+                        "crew_head": assigned_lead,
+                        "units": 1,
+                        "water_discharged_m3": 0,
+                        "eta_cleared": eta
+                    }
 
-                # Audit log
-                try:
-                    db = SessionLocal()
-                    db.add(AuditLog(user="Chief Municipal Officer", action=f"dispatched_{new_id}_{mach_type}_to_{target_loc}", entity="operation", entity_id=new_id))
-                    db.commit()
-                    db.close()
-                except Exception:
-                    pass
+                    # Prepend to active operations list
+                    st.session_state["operations_list"].insert(0, new_op)
 
-                st.rerun()
+                    # Set toast data for floating screen overlay
+                    st.session_state["deploy_success_data"] = {
+                        "id": new_id,
+                        "eq_type": mach_type,
+                        "target_loc": target_loc,
+                        "crew_head": assigned_lead,
+                        "priority": prio,
+                        "timestamp": time.time()
+                    }
 
-            st.markdown("</div>", unsafe_allow_html=True)
+                    # Audit log
+                    try:
+                        db = SessionLocal()
+                        db.add(AuditLog(user="Chief Municipal Officer", action=f"dispatched_{new_id}_{mach_type}_to_{target_loc}", entity="operation", entity_id=new_id))
+                        db.commit()
+                        db.close()
+                    except Exception:
+                        pass
+
+                    st.rerun()
 
         st.markdown("<hr style='border:none; border-top:1px dashed #E2E8F0; margin:16px 0 20px 0;'>", unsafe_allow_html=True)
 
