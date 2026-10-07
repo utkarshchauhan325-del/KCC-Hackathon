@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -53,6 +53,12 @@ class Settings(BaseSettings):
     WEBHOOK_URL: str = ""
     ALERT_MIN_SEVERITY: int = 3  # hazards at or above this severity (1-5) alert the municipality
     ALERT_TIMEOUT_SECONDS: int = 20
+
+    @field_validator("DATA_DIR", "UPLOADS_DIR", "EVIDENCE_DIR", "REPORTS_DIR", "MODELS_DIR")
+    @classmethod
+    def _resolve_against_project(cls, v: Path) -> Path:
+        """Relative paths in .env (e.g. DATA_DIR=data) are relative to the project, not the CWD."""
+        return v if v.is_absolute() else BASE_DIR / v
 
     def ensure_directories(self) -> None:
         """Ensure all runtime directories exist."""
