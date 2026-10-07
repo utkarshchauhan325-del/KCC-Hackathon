@@ -166,6 +166,124 @@ def get_temporal_telemetry(
     return round(d, 1), round(g, 1), round(dep, 1), round(comp, 1), band, status
 
 
+class GarbageObjectTracker:
+    """Kalman-filter powered object tracker for physical garbage and hazard objects across video frames."""
+
+    def __init__(
+        self,
+        bbox: Union[list, tuple],
+        label: str = "GARBAGE",
+        category: str = "garbage",
+        track_id: int = 1,
+        severity: int = 4,
+    ):
+        self.id = track_id
+        self.label = label
+        self.category = category
+        self.severity = severity
+        self.time_since_update = 0
+        self.hits = 1
+        self.active = True
+
+        # State vector: [cx, cy, w, h, vx, vy]
+        self.kf = cv2.KalmanFilter(6, 4)
+        self.kf.transitionMatrix = np.array([
+            [1, 0, 0, 0, 1, 0],
+            [0, 1, 0, 0, 0, 1],
+            [0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0.82, 0],
+            [0, 0, 0, 0, 0, 0.82],
+        ], np.float32)
+        self.kf.measurementMatrix = np.array([
+            [1, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0],
+        ], np.float32)
+        self.kf.processNoiseCov = np.eye(6, dtype=np.float32) * 1e-3
+        self.kf.measurementNoiseCov = np.eye(4, dtype=np.float32) * 1e-2
+
+        w = max(15.0, float(bbox[2] - bbox[0]))
+        h = max(15.0, float(bbox[3] - bbox[1]))
+        cx = float(bbox[0] + bbox[2]) / 2.0
+        cy = float(bbox[1] + bbox[3]) / 2.0
+        self.kf.statePost = np.array([cx, cy, w, h, 0, 0], np.float32).reshape(6, 1)
+
+    def update(self, bbox: Union[list, tuple]) -> None:
+        self.time_since_update = 0
+        self.hits += 1
+        w = max(15.0, float(bbox[2] - bbox[0]))
+        h = max(15.0, float(bbox[3] - bbox[1]))
+        cx = float(bbox[0] + bbox[2]) / 2.0
+        cy = float(bbox[1] + bbox[3]) / 2.0
+        measurement = np.array([cx, cy, w, h], np.float32).reshape(4, 1)
+        self.kf.correct(measurement)
+
+    def predict(self, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
+        self.time_since_update += 1
+        pred = self.kf.predict()
+        cx = float(np.clip(pred[0][0], 0, img_w))
+        cy = float(np.clip(pred[1][0], 0, img_h))
+        w = float(np.clip(pred[2][0], 15, img_w))
+        h = float(np.clip(pred[3][0], 15, img_h))
+        self.kf.statePost[0][0] = cx
+        self.kf.statePost[1][0] = cy
+        self.kf.statePost[2][0] = w
+        self.kf.statePost[3][0] = h
+        return int(cx - w / 2.0), int(cy - h / 2.0), int(cx + w / 2.0), int(cy + h / 2.0)
+
+    def get_box(self, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
+        s = self.kf.statePost
+        cx = float(np.clip(s[0][0], 0, img_w))
+        cy = float(np.clip(s[1][0], 0, img_h))
+        w = float(np.clip(s[2][0], 15, img_w))
+        h = float(np.clip(s[3][0], 15, img_h))
+        x1 = max(0, int(cx - w / 2.0))
+        y1 = max(0, int(cy - h / 2.0))
+        x2 = min(img_w, max(x1 + 10, int(cx + w / 2.0)))
+        y2 = min(img_h, max(y1 + 10, int(cy + h / 2.0)))
+        return x1, y1, x2, y2
+
+
+def detect_frame_objects(frame: np.ndarray, category: str, img_w: int, img_h: int) -> list:
+    """Run real-time vision detection on the current frame for garbage debris or drainage canal."""
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    candidates = []
+
+    if category == "garbage":
+        mask = (gray > 165) & (frame[:, :, 2] > 150)
+        mask[:int(0.25 * img_h), :] = False
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+        mask_closed = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
+        cnts, _ = cv2.findContours(mask_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in cnts:
+            area = cv2.contourArea(c)
+            if 150 < area < 45000:
+                bx, by, bw, bh = cv2.boundingRect(c)
+                if bw >= 12 and bh >= 12:
+                    candidates.append({
+                        "box": [bx, by, bx + bw, by + bh],
+                        "area": area,
+                    })
+        candidates.sort(key=lambda d: d["area"], reverse=True)
+    elif category == "drainage":
+        mask = (gray < 145) & (frame[:, :, 1] < 145)
+        mask[:int(0.30 * img_h), :] = False
+        cnts, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for c in cnts:
+            area = cv2.contourArea(c)
+            if 1500 < area < 90000:
+                bx, by, bw, bh = cv2.boundingRect(c)
+                candidates.append({
+                    "box": [bx, by, bx + bw, by + bh],
+                    "area": area,
+                })
+        candidates.sort(key=lambda d: d["area"], reverse=True)
+
+    return candidates
+
+
 def generate_annotated_surveillance_video(
     video_path: Union[str, Path],
     output_path: Union[str, Path],
@@ -175,12 +293,7 @@ def generate_annotated_surveillance_video(
     garbage_score: float = 70.0,
     water_depth_cm: float = 25.0,
 ) -> Path:
-    """Render real-time bounding boxes, edge-AI telemetry, and dynamic surveillance HUD onto video.
-    
-    Produces an H.264 / MP4 video that streams and plays natively in browsers with
-    live detection bounding boxes and municipal telemetry that dynamically updates as the
-    video moves and the drain is cleaned.
-    """
+    """Render real-time bounding boxes, edge-AI telemetry, and dynamic surveillance HUD onto video."""
     video_path = Path(video_path)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -205,6 +318,7 @@ def generate_annotated_surveillance_video(
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(str(output_path), fourcc, fps, (w, h))
 
+    trackers: dict[int, GarbageObjectTracker] = {}
     frame_idx = 0
     while True:
         ret, frame = cap.read()
@@ -220,74 +334,73 @@ def generate_annotated_surveillance_video(
         )
         is_cleaned_phase = (curr_sec >= 0.68 * total_sec)
 
-        # Find active detections for this timestamp
-        active_dets = []
-        for d in detections:
+        # Real-time frame vision detection for garbage and drainage objects
+        cands_g = detect_frame_objects(frame, "garbage", w, h)
+        cands_d = detect_frame_objects(frame, "drainage", w, h)
+
+        # Register trackers for active detections in this temporal slice
+        for d_idx, d in enumerate(detections):
             s = d.get("start_sec", 0.0)
             e = d.get("end_sec", 9999.0)
-            if s <= curr_sec <= e:
-                active_dets.append(d)
+            if s <= curr_sec <= e and d_idx not in trackers:
+                box = d.get("box")
+                cat = d.get("category", "garbage")
+                base_label = d.get("label") or d.get("subtype", "Hazard").replace("_", " ").upper()
+                sev = d.get("severity", 4)
+                if hasattr(box, "ymin"):
+                    ix1, iy1, ix2, iy2 = scale_bbox_to_pixels(box, w, h)
+                elif isinstance(box, (list, tuple)) and len(box) == 4:
+                    ix1 = int((box[1] / 1000.0) * w)
+                    iy1 = int((box[0] / 1000.0) * h)
+                    ix2 = int((box[3] / 1000.0) * w)
+                    iy2 = int((box[2] / 1000.0) * h)
+                else:
+                    ix1, iy1, ix2, iy2 = int(0.3 * w), int(0.4 * h), int(0.6 * w), int(0.6 * h)
 
-        # Draw active bounding boxes
-        for det in active_dets:
-            box = det.get("box")
-            cat = det.get("category", "drainage")
-            base_label = det.get("label") or det.get("subtype", "Hazard").replace("_", " ").upper()
-            conf = det.get("confidence", 0.88)
-            sev = det.get("severity", 3)
+                trackers[d_idx] = GarbageObjectTracker(
+                    bbox=[ix1, iy1, ix2, iy2],
+                    label=base_label,
+                    category=cat,
+                    track_id=d_idx + 1,
+                    severity=sev,
+                )
 
-            if hasattr(box, "ymin"):
-                x1, y1, x2, y2 = scale_bbox_to_pixels(box, w, h)
-            elif isinstance(box, (list, tuple)) and len(box) == 4:
-                x1 = int((box[1] / 1000.0) * w)
-                y1 = int((box[0] / 1000.0) * h)
-                x2 = int((box[3] / 1000.0) * w)
-                y2 = int((box[2] / 1000.0) * h)
-            else:
+        # Update and render active trackers
+        for d_idx, tracker in list(trackers.items()):
+            d_info = detections[d_idx] if d_idx < len(detections) else {}
+            if curr_sec > d_info.get("end_sec", 9999.0):
+                tracker.active = False
                 continue
 
-            x1 = max(0, min(w - 1, x1))
-            y1 = max(0, min(h - 1, y1))
-            x2 = max(0, min(w, max(x1 + 1, x2)))
-            y2 = max(0, min(h, max(y1 + 1, y2)))
+            # Advance Kalman filter prediction
+            tracker.predict(w, h)
 
-            # Dynamic movement tracking: shift and contract boxes as garbage is cleaned along the conduit
-            p_time = min(1.0, max(0.0, curr_sec / max(1.0, total_sec)))
-            if cat == "garbage":
-                if p_time < 0.30:
-                    shift_x = int(math.sin(curr_sec * 2.5) * 3)
-                    shift_y = int(math.cos(curr_sec * 2.0) * 2)
-                    scale = 1.0
-                elif p_time < 0.70:
-                    prog = (p_time - 0.30) / 0.40
-                    shift_x = int(prog * (0.08 * w) + math.sin(curr_sec * 3.0) * 4)
-                    shift_y = int(prog * (0.28 * h))
-                    scale = 1.0 - (prog * 0.55)
-                else:
-                    prog = (p_time - 0.70) / 0.30
-                    shift_x = int(0.08 * w)
-                    shift_y = int(0.28 * h + prog * (0.06 * h))
-                    scale = 0.40
+            # Match to actual detected objects in this frame
+            cands = cands_g if tracker.category == "garbage" else cands_d
+            if cands:
+                cur_box = tracker.get_box(w, h)
+                tcx = (cur_box[0] + cur_box[2]) / 2.0
+                tcy = (cur_box[1] + cur_box[3]) / 2.0
+                best_c = None
+                min_d = 9999.0
+                for c in cands:
+                    ccx = (c["box"][0] + c["box"][2]) / 2.0
+                    ccy = (c["box"][1] + c["box"][3]) / 2.0
+                    dist = math.hypot(tcx - ccx, tcy - ccy)
+                    if dist < min_d and dist < 170:
+                        min_d = dist
+                        best_c = c
+                if best_c:
+                    tracker.update(best_c["box"])
+                elif tracker.time_since_update > 25:
+                    tracker.active = False
 
-                cw = max(24, int((x2 - x1) * scale))
-                ch = max(24, int((y2 - y1) * scale))
-                cx = ((x1 + x2) // 2) + shift_x
-                cy = ((y1 + y2) // 2) + shift_y
+            if not tracker.active:
+                continue
 
-                x1 = max(0, min(w - 1, cx - cw // 2))
-                y1 = max(0, min(h - 1, cy - ch // 2))
-                x2 = max(x1 + 1, min(w, cx + cw // 2))
-                y2 = max(y1 + 1, min(h, cy + ch // 2))
-            elif cat == "drainage":
-                if p_time < 0.30:
-                    pass
-                elif p_time < 0.70:
-                    prog = (p_time - 0.30) / 0.40
-                    # Upper conduit clears, shifting blockage frontline downstream
-                    y1 = min(y2 - 24, y1 + int(prog * 0.42 * (y2 - y1)))
-                    y2 = min(h, y2 + int(prog * 0.10 * (y2 - y1)))
-                    x1 = max(0, min(w - 1, x1 + int(prog * (0.04 * w))))
-                    x2 = max(x1 + 1, min(w, x2 + int(prog * (0.04 * w))))
+            # Read tight bounding box coordinates from tracker state
+            x1, y1, x2, y2 = tracker.get_box(w, h)
+            cat = tracker.category
 
             # Calculate dynamic ranking and hazard percentage for the block
             if cat == "garbage":
@@ -296,44 +409,46 @@ def generate_annotated_surveillance_video(
                     rank_num = 1
                     status_lbl = "CRITICAL"
                     box_color = (0, 0, 230)  # Red
-                    tag_label = f"GARBAGE DUMP: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "GARBAGE DUMP"
                 elif target_val >= 45.0:
                     rank_num = 2
                     status_lbl = "CLEARING"
                     box_color = (0, 140, 255)  # Orange
-                    tag_label = f"GARBAGE DESILTING: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "GARBAGE DESILTING"
                 elif target_val >= 25.0:
                     rank_num = 3
                     status_lbl = "RESIDUAL"
                     box_color = (0, 215, 255)  # Yellow-Gold
-                    tag_label = f"GARBAGE RECEDING: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "GARBAGE RECEDING"
                 else:
                     rank_num = 4
                     status_lbl = "CLEANED"
                     box_color = (0, 205, 30)  # Bright Green
-                    tag_label = f"GARBAGE CLEARED: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "GARBAGE CLEARED"
+                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
             elif cat == "drainage":
                 target_val = d_val
                 if target_val >= 70.0:
                     rank_num = 1
                     status_lbl = "CRITICAL"
                     box_color = (0, 0, 230)  # Red
-                    tag_label = f"BLOCKED DRAIN: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "BLOCKED DRAIN"
                 elif target_val >= 45.0:
                     rank_num = 2
                     status_lbl = "CLEARING"
                     box_color = (0, 140, 255)  # Orange
-                    tag_label = f"FLOW RESTORING: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "FLOW RESTORING"
                 elif target_val >= 25.0:
                     rank_num = 3
                     status_lbl = "RESIDUAL"
                     box_color = (0, 215, 255)  # Yellow-Gold
-                    tag_label = f"SILT RECEDING: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "SILT RECEDING"
                 else:
                     rank_num = 4
                     status_lbl = "CLEANED"
                     box_color = (0, 205, 30)  # Bright Green
-                    tag_label = f"DRAIN RESTORED: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "DRAIN RESTORED"
+                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
             else:
                 target_val = g_val
                 if target_val >= 70.0:
@@ -352,7 +467,7 @@ def generate_annotated_surveillance_video(
                     rank_num = 4
                     status_lbl = "RESOLVED"
                     box_color = (0, 205, 30)
-                tag_label = f"{base_label}: {target_val:.1f}% GARBAGE • RANK {rank_num} [{status_lbl}]"
+                tag_label = f"[TRK-{tracker.id:02d}] {tracker.label}: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
 
             # Draw outer box
             cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 2)
