@@ -169,12 +169,43 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
 </div>
 </div>
 """).strip(), unsafe_allow_html=True)
-    # Action Buttons
-    btn_col, _ = st.columns([1.8, 6.2])
-    with btn_col:
-        if st.button("❌ Close Report", key=f"close_{loc['id']}", use_container_width=True):
-            st.session_state["selected_location_id"] = None
-            st.rerun()
+    # 3 Detailed Diagnostic Sections
+    col_prob, col_ai, col_action = st.columns([1.2, 1, 1], gap="medium")
+
+    with col_prob:
+        st.markdown("#### 🔍 1. Root Cause & Hydraulic Diagnosis")
+        st.markdown(f"**Primary Issue:** `{diag['problem_title']}`")
+        st.write(diag["failure_mech"])
+        st.markdown(f"**Structural Conduit:** `{loc['drain_type']}`")
+        st.markdown(f"**Recession Velocity:** `{diag['recede_eta']}`")
+
+    with col_ai:
+        st.markdown("#### 🤖 2. Vision AI Inspection (Gemini VLM)")
+        st.write("Identified issues via street camera analysis:")
+        tags_html = " ".join([f"<span class='pill-badge pill-critical' style='margin:2px;'>{t}</span>" for t in diag["ai_tags"]])
+        st.markdown(tags_html, unsafe_allow_html=True)
+        st.markdown(f"**Entrapped Debris Mix:**\n{diag['debris_mix']}")
+        st.caption("🔒 Analyzed under DPDP Privacy Compliance Protocol")
+
+    with col_action:
+        st.markdown("#### 🚜 3. Actionable Directives & SOP")
+        st.markdown(f"**Recommended Action:**\n{diag['action_plan']}")
+        st.markdown(f"**Traffic Advisory:**\n{diag['traffic_adv']}")
+
+        st.write("")
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("🚀 Dispatch Pump", key=f"disp_pump_{loc['id']}", type="primary", use_container_width=True):
+                db = SessionLocal()
+                db.add(AuditLog(user="Chief Municipal Officer", action=f"dispatched_mobile_pump_{loc['id']}", entity="location", entity_id=loc['id']))
+                db.commit()
+                db.close()
+                st.success(f"Mobile Pump Unit dispatched to {loc['name']}!")
+        with btn_col2:
+            if st.button("❌ Close Report", key=f"close_{loc['id']}", use_container_width=True):
+                st.session_state["selected_location_id"] = None
+                st.rerun()
 
     st.markdown("<hr style='border:none; border-top:2px solid #E2E8F0; margin:16px 0 24px 0;'>", unsafe_allow_html=True)
+
 

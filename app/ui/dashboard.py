@@ -63,11 +63,19 @@ with st.sidebar:
         "📈 Flood Analytics"
     ]
 
-    selected_nav = st.radio(
+    if "nav_selection" not in st.session_state or st.session_state["nav_selection"] not in nav_options:
+        st.session_state["nav_selection"] = "📊 Dashboard"
+
+    def on_sidebar_nav_change():
+        st.session_state["nav_selection"] = st.session_state["sidebar_nav_radio"]
+
+    st.radio(
         "Navigation Menu",
         nav_options,
-        index=0,
-        label_visibility="collapsed"
+        index=nav_options.index(st.session_state["nav_selection"]),
+        label_visibility="collapsed",
+        key="sidebar_nav_radio",
+        on_change=on_sidebar_nav_change
     )
 
     # Bottom Municipal Organization Tag
@@ -82,19 +90,33 @@ with st.sidebar:
     """).strip(), unsafe_allow_html=True)
 
 # -------------------------------------------------------------
+# TOP NAVIGATION STRIP (Always visible even if sidebar is collapsed)
+# -------------------------------------------------------------
+nav_cols = st.columns([1, 1, 1.15, 1.45, 1.1])
+for i, opt in enumerate(nav_options):
+    with nav_cols[i]:
+        is_active = (st.session_state["nav_selection"] == opt)
+        btn_type = "primary" if is_active else "secondary"
+        if st.button(opt, key=f"top_nav_{i}", type=btn_type, use_container_width=True):
+            st.session_state["nav_selection"] = opt
+            st.rerun()
+
+current_view = st.session_state["nav_selection"]
+
+# -------------------------------------------------------------
 # VIEW ROUTING
 # -------------------------------------------------------------
-if selected_nav == "📊 Dashboard":
+if current_view == "📊 Dashboard":
     render_overview_dashboard()
 
-elif selected_nav == "📍 Live Risk Map":
+elif current_view == "📍 Live Risk Map":
     render_live_risk_map()
 
-elif selected_nav == "📹 CCTV Monitoring (6)":
+elif current_view == "📹 CCTV Monitoring (6)":
     render_cctv_monitoring()
 
-elif "Priority Queue" in selected_nav or "Intervention" in selected_nav:
+elif "Priority Queue" in current_view or "Intervention" in current_view:
     render_priority_queue_and_interventions()
 
-elif selected_nav == "📈 Flood Analytics":
+elif current_view == "📈 Flood Analytics":
     render_flood_analytics()
