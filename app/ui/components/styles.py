@@ -591,9 +591,47 @@ def get_floodguard_css() -> str:
         box-shadow: 0 -2px 6px rgba(2, 132, 199, 0.08) !important;
     }
 
-    /* Hide standard Streamlit header clutter */
+    /* Top Navigation Button Styling */
+    div.stButton > button[kind="primary"] {
+        background-color: #0284C7 !important;
+        color: #FFFFFF !important;
+        font-weight: 700 !important;
+        border: 1px solid #0284C7 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28) !important;
+    }
+    div.stButton > button[kind="secondary"] {
+        background-color: #FFFFFF !important;
+        color: #334155 !important;
+        font-weight: 600 !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        transition: all 0.15s ease !important;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        background-color: #F8FAFC !important;
+        color: #0284C7 !important;
+        border-color: #0284C7 !important;
+    }
+
+    /* Keep Streamlit sidebar toggle accessible while hiding menu clutter */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    header[data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    header [data-testid="stToolbar"] {
+        visibility: hidden;
+    }
+    div[data-testid="collapsedControl"] {
+        visibility: visible !important;
+        display: block !important;
+        background: #FFFFFF !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+        padding: 4px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
+        margin: 6px !important;
+    }
 </style>
 """
