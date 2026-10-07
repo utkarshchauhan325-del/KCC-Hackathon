@@ -18,11 +18,19 @@ class Settings(BaseSettings):
     TOMTOM_API_KEY: str = Field(default="", description="TomTom Traffic API Key for road congestion monitoring")
     LOG_LEVEL: str = Field(default="INFO")
 
+    # Local per-frame segmentation + tracking (YOLOE open-vocabulary model, runs on CPU)
+    DETECTOR_ENABLED: bool = True
+    DETECTOR_MODEL: str = Field(default="yoloe-26s-seg.pt", description="Ultralytics YOLOE segmentation weights")
+    DETECTOR_CONF: float = 0.25
+    DETECTOR_IMGSZ: int = 640
+    DETECTOR_FPS: float = Field(default=6.0, description="Frames per second of video to run the detector on")
+
     # Storage Paths
     DATA_DIR: Path = Field(default=BASE_DIR / "data")
     UPLOADS_DIR: Path = Field(default=BASE_DIR / "data" / "uploads")
     EVIDENCE_DIR: Path = Field(default=BASE_DIR / "data" / "evidence")
     REPORTS_DIR: Path = Field(default=BASE_DIR / "data" / "reports")
+    MODELS_DIR: Path = Field(default=BASE_DIR / "data" / "models")
     MAX_UPLOAD_SIZE_MB: int = Field(default=500)
 
     # Sewer Overflow Scoring Weights (Deterministic 0-100)
@@ -43,10 +51,12 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
     WEBHOOK_URL: str = ""
+    ALERT_MIN_SEVERITY: int = 3  # hazards at or above this severity (1-5) alert the municipality
+    ALERT_TIMEOUT_SECONDS: int = 20
 
     def ensure_directories(self) -> None:
         """Ensure all runtime directories exist."""
-        for path in [self.DATA_DIR, self.UPLOADS_DIR, self.EVIDENCE_DIR, self.REPORTS_DIR]:
+        for path in [self.DATA_DIR, self.UPLOADS_DIR, self.EVIDENCE_DIR, self.REPORTS_DIR, self.MODELS_DIR]:
             path.mkdir(parents=True, exist_ok=True)
 
 settings = Settings()

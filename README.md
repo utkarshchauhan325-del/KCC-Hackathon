@@ -62,8 +62,16 @@ cd KCC-Hackathon
 ### 2. Set Up Virtual Environment & Dependencies
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate
-pip install -r pyproject.toml  # or pip install streamlit plotly folium streamlit-folium pydantic sqlalchemy google-genai
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+# CPU-only PyTorch (skip this line if you have an NVIDIA GPU and want CUDA)
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+pip install -e ".[dev]"
+pip install plotly folium streamlit-folium pandas
+```
+
+Build the local object detector once (downloads ~280 MB of YOLOE weights into `data/models/`):
+```bash
+python scripts/prepare_detector.py
 ```
 
 ### 3. Configure Environment Variables

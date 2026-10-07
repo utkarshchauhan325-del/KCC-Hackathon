@@ -44,59 +44,21 @@ def test_bystander_face_blur():
     blurred = blur_bystander_faces(frame, primary_box=None)
     assert blurred.shape == frame.shape
 
-def test_generate_annotated_surveillance_video(tmp_path):
+def test_generate_annotated_surveillance_video_without_detector(tmp_path):
     from app.core.evidence import generate_annotated_surveillance_video
-    fixture_path = Path("tests/fixtures/sample_cctv.mp4")
-    out_video = tmp_path / "out_annotated.mp4"
+    from app.core.schemas import InfraIssue
 
-    detections = [
-        {
-            "category": "drainage",
-            "subtype": "choked_inlet",
-            "start_sec": 0.0,
-            "end_sec": 5.0,
-            "box": [400, 100, 800, 600],
-            "severity": 4,
-            "confidence": 0.92,
-        },
-        {
-            "category": "garbage",
-            "subtype": "solid_waste_pile",
-            "start_sec": 0.0,
-            "end_sec": 5.0,
-            "box": [200, 300, 600, 700],
-            "severity": 3,
-            "confidence": 0.86,
-        }
-    ]
-
-    res = generate_annotated_surveillance_video(
-        video_path=fixture_path,
-        output_path=out_video,
-        detections=detections,
-        camera_meta={"name": "Test Cam", "id": "TEST-01"},
-        drainage_score=85.0,
-        garbage_score=78.0,
-        water_depth_cm=20.0,
+    issue = InfraIssue(
+        category="drainage", subtype="blocked_drain", severity=4, start_ts="00:00", end_ts="00:03",
+        best_frame_ts="00:01", box=BBox(ymin=400, xmin=100, ymax=800, xmax=600),
+        description="Drain inlet covered with plastic.", confidence=0.9,
     )
-
-    assert res.exists()
-    assert res.stat().st_size > 1000
-
-def test_temporal_telemetry():
-    from app.core.evidence import get_temporal_telemetry
-    # Initial phase (t = 0.5s of 10s)
-    d1, g1, dep1, comp1, band1, status1 = get_temporal_telemetry(0.5, 10.0, 94.0, 90.0, 28.0)
-    assert d1 >= 85.0
-    assert g1 >= 80.0
-    assert band1 == "CRITICAL"
-    assert "CHOKED" in status1
-
-    # Cleaned phase (t = 8.5s of 10s)
-    d2, g2, dep2, comp2, band2, status2 = get_temporal_telemetry(8.5, 10.0, 94.0, 90.0, 28.0)
-    assert d2 < 40.0
-    assert g2 < 35.0
-    assert band2 in ["OPTIMAL", "WATCH", "LOW"]
-    assert "CLEANED" in status2
-
-
+    out_video = tmp_path / "out_annotated.mp4"
+    res, summary = generate_annotated_surveillance_video(
+        video_path=Path("tests/fixtures/sample_cctv.mp4"),
+        output_path=out_video,
+        vlm_issues=[issue],
+        camera_meta={"name": "Test Cam", "id": "TEST-01"},
+    )
+    assert res.exists() and res.stat().st_size > 1000
+    assert summary is None

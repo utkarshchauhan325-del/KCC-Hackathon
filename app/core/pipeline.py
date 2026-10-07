@@ -12,7 +12,6 @@ from app.db.models import Job, Incident, Evidence, SewerScore, Violation
 from app.core.gemini_client import GeminiVideoClient
 from app.core.evidence import (
     extract_frame_at_timestamp,
-    scale_bbox_to_pixels,
     annotate_frame,
     crop_bbox,
     blur_bystander_faces,
@@ -21,20 +20,24 @@ from app.core.evidence import (
     generate_annotated_surveillance_video,
 )
 from app.core.dedupe import deduplicate_infra_issues
-from app.core.scoring import (
-    compute_sewer_score,
-    compute_drainage_hazard_score,
-    compute_garbage_hazard_score,
-    compute_cctv_composite_risk,
-)
+from app.core.plates import is_valid_indian_plate
+from app.notify.alerts import send_incident_alert
+from app.core.scoring import compute_sewer_score, compute_observed_hazard_scores
+from app.core.detector import CivicObjectDetector
 
 logger = logging.getLogger("civiceye.pipeline")
 
 class CivicEyePipeline:
     """Orchestrates end-to-end video analysis, evidence extraction, scoring, and DB persistence."""
 
-    def __init__(self, client: Optional[GeminiVideoClient] = None):
+    def __init__(self, client: Optional[GeminiVideoClient] = None, detector: Optional[CivicObjectDetector] = None):
         self.client = client or GeminiVideoClient()
+        self.detector = detector
+
+    def _get_detector(self) -> Optional[CivicObjectDetector]:
+        if self.detector is None and settings.DETECTOR_ENABLED:
+            self.detector = CivicObjectDetector()
+        return self.detector
 
     def process_video(
         self,
@@ -73,63 +76,27 @@ class CivicEyePipeline:
 
         try:
             # 1. Upload video to Gemini Files API
+            # Upload and Pass A failures are fatal: reporting "no hazards" for a video
+            # that was never analysed would look like an all-clear to the municipality.
             log_progress(f"📤 Uploading {video_path.name} to Gemini Files API...")
-            try:
-                uploaded_file = self.client.upload_video(video_path)
-                log_progress("✅ Video ready for multimodal inspection.")
-            except Exception as e:
-                logger.warning(f"Gemini Files upload failed or offline mode: {e}")
-                uploaded_file = None
+            uploaded_file = self.client.upload_video(video_path)
+            log_progress("✅ Video ready for multimodal inspection.")
 
-            raw_issues = []
-            if uploaded_file:
-                # 2. Pass A: Infrastructure issues
-                log_progress("🔍 Scanning infrastructure hazards (Pass A: drains, garbage, road)...")
-                try:
-                    infra_resp = self.client.analyze_infrastructure(uploaded_file)
-                    raw_issues = infra_resp.issues
-                    log_progress(f"Found {len(raw_issues)} hazard sightings.")
-                except Exception as e:
-                    logger.warning(f"Pass A inference failed: {e}")
-                    raw_issues = []
-
-            # If Gemini returned no issues or was offline, run optical hazard detector
-            if not raw_issues:
-                log_progress("⚡ Running high-precision optical hazard detector on video frames...")
-                raw_issues = self._detect_optical_hazards(video_path)
-                log_progress(f"Optical engine detected {len(raw_issues)} hazards.")
+            # 2. Pass A: Infrastructure issues
+            log_progress("🔍 Scanning infrastructure hazards (Pass A: drains, garbage, road)...")
+            infra_resp = self.client.analyze_infrastructure(uploaded_file)
+            raw_issues = infra_resp.issues
+            log_progress(f"Found {len(raw_issues)} hazard sightings.")
 
             # 3. Deduplicate issues
             deduped_issues = deduplicate_infra_issues(raw_issues)
             log_progress(f"Deduplicated to {len(deduped_issues)} unique civic issues.")
 
             created_incidents: List[Incident] = []
-            detection_list: List[Dict[str, Any]] = []
-            has_drainage_issue = False
-            has_garbage_issue = False
-            drain_severity_max = 1
-            garb_severity_max = 1
+            sewer_assessments = []
 
             # 4. Process each infrastructure incident
             for issue in deduped_issues:
-                if issue.category == "drainage":
-                    has_drainage_issue = True
-                    drain_severity_max = max(drain_severity_max, issue.severity)
-                elif issue.category == "garbage":
-                    has_garbage_issue = True
-                    garb_severity_max = max(garb_severity_max, issue.severity)
-
-                detection_list.append({
-                    "category": issue.category,
-                    "subtype": issue.subtype,
-                    "label": issue.subtype.replace("_", " ").upper(),
-                    "start_sec": timestamp_to_seconds(issue.start_ts),
-                    "end_sec": timestamp_to_seconds(issue.end_ts),
-                    "box": issue.box,
-                    "severity": issue.severity,
-                    "confidence": issue.confidence,
-                })
-
                 incident = Incident(
                     job_id=job.id,
                     type=issue.category,
@@ -175,24 +142,26 @@ class CivicEyePipeline:
                     log_progress(f"🌊 Computing Sewer Overflow Risk Score for '{issue.subtype}' at {issue.best_frame_ts}...")
                     try:
                         time.sleep(1.0)
-                        if uploaded_file:
-                            sewer_resp = self.client.assess_sewer_point(uploaded_file, issue.best_frame_ts)
-                            score, band, breakdown = compute_sewer_score(sewer_resp)
+                        sewer_resp = self.client.assess_sewer_point(uploaded_file, issue.best_frame_ts)
+                        score, band, breakdown = compute_sewer_score(sewer_resp)
 
-                            sewer_score_row = SewerScore(
-                                incident_id=incident.id,
-                                score=score,
-                                band=band,
-                                breakdown_json=json.dumps(breakdown),
-                                raw_assessment_json=json.dumps(sewer_resp.model_dump()),
-                            )
-                            db.add(sewer_score_row)
-                            log_progress(f"Sewer Risk Score: {score}/100 [{band.upper()}]")
+                        sewer_score_row = SewerScore(
+                            incident_id=incident.id,
+                            score=score,
+                            band=band,
+                            breakdown_json=json.dumps(breakdown),
+                            raw_assessment_json=json.dumps(sewer_resp.model_dump()),
+                        )
+                        db.add(sewer_score_row)
+                        sewer_assessments.append(sewer_resp)
+                        log_progress(f"Sewer Risk Score: {score}/100 [{band.upper()}]")
                     except Exception as e:
                         logger.warning(f"Pass C sewer assessment skipped: {e}")
+                        log_progress(f"⚠️ Pass C (sewer assessment) failed: {e}")
 
             # 6. Pass B: Violator Detection (if requested)
-            if run_pass_b and uploaded_file:
+            dumping_events = 0
+            if run_pass_b:
                 log_progress("👥 Scanning for illegal waste dumping violators (Pass B)...")
                 try:
                     time.sleep(1.0)
@@ -222,89 +191,110 @@ class CivicEyePipeline:
                             save_image(privacy_frame, priv_path)
                             db.add(Evidence(incident_id=violator_inc.id, kind="frame", path=str(priv_path)))
 
-                            if event.person_box:
-                                p_crop = crop_bbox(frame, event.person_box)
-                                p_path = evidence_dir / f"violation_{violator_inc.id}_crop_person.jpg"
-                                save_image(p_crop, p_path)
-                                db.add(Evidence(incident_id=violator_inc.id, kind="crop_person", path=str(p_path)))
+                            for kind, box in (
+                                ("crop_person", event.person_box),
+                                ("crop_vehicle", event.vehicle_box),
+                                ("crop_plate", event.plate_box),
+                            ):
+                                if box is None:
+                                    continue
+                                crop = crop_bbox(frame, box)
+                                if crop.size == 0:
+                                    continue
+                                crop_path = evidence_dir / f"violation_{violator_inc.id}_{kind}.jpg"
+                                save_image(crop, crop_path)
+                                db.add(Evidence(incident_id=violator_inc.id, kind=kind, path=str(crop_path)))
 
                         violation_record = Violation(
                             incident_id=violator_inc.id,
                             plate_text=event.plate_text,
+                            plate_valid=is_valid_indian_plate(event.plate_text),
                             plate_legibility=event.plate_legibility,
                             vehicle_type=event.vehicle_type,
                             review_status="pending_review",
                         )
                         db.add(violation_record)
+                        dumping_events += 1
                     log_progress(f"Pass B completed: {len(violator_resp.events)} violator events queued.")
                 except Exception as e:
-                    logger.warning(f"Pass B violator detection skipped: {e}")
+                    logger.warning(f"Pass B violator detection skipped: {e}", exc_info=True)
+                    log_progress(f"⚠️ Pass B (violator detection) failed: {e}")
 
-            # Deterministic CCTV Hazard Scoring
-            drainage_score, drainage_band, drain_breakdown = compute_drainage_hazard_score(
-                water_level="flowing_over" if drain_severity_max >= 4 else "pooling",
-                grating_covered=True if (has_drainage_issue and drain_severity_max >= 3) else False,
-                cover_missing_or_broken=True if drain_severity_max >= 4 else False,
-                water_reaching_road=True if drain_severity_max >= 3 else False,
-                wet_conditions=True,
-                conduit_depth_cm=28.0 if has_drainage_issue else 10.0,
-            )
-
-            garbage_score, garbage_band, garb_breakdown = compute_garbage_hazard_score(
-                trash_inside="heavy" if garb_severity_max >= 4 else "moderate",
-                trash_near="heavy" if garb_severity_max >= 3 else "moderate",
-                dumping_detected=has_garbage_issue,
-                debris_volume="heavy" if garb_severity_max >= 4 else "moderate",
-            )
-
-            water_depth_cm = 28.0 if has_drainage_issue else 10.0
-            composite_score, composite_band, comp_breakdown = compute_cctv_composite_risk(
-                drainage_score=drainage_score,
-                garbage_score=garbage_score,
-                water_depth_cm=water_depth_cm,
-            )
-
-            # Generate real-time annotated surveillance video
+            # 7. Per-frame object segmentation + tracking, rendered into the evidence video
             annotated_video_path = evidence_dir / f"surveillance_{job.id}_annotated.mp4"
-            log_progress("🎬 Compiling real-time surveillance video with detection overlays...")
-            generate_annotated_surveillance_video(
+            render_kwargs = dict(
                 video_path=video_path,
                 output_path=annotated_video_path,
-                detections=detection_list,
-                camera_meta={"gps": source_gps or "18.5255, 73.8415", "name": "Pune Surveillance Feed"},
-                drainage_score=drainage_score,
-                garbage_score=garbage_score,
-                water_depth_cm=water_depth_cm,
+                vlm_issues=deduped_issues,
+                camera_meta={"gps": source_gps or "not set", "name": "Pune Surveillance Feed"},
+            )
+            detector = self._get_detector()
+            object_summary = None
+            if detector:
+                log_progress("🎯 Segmenting and tracking objects frame by frame (local YOLOE)...")
+                try:
+                    _, object_summary = generate_annotated_surveillance_video(
+                        **render_kwargs, detector=detector, progress_cb=log_progress
+                    )
+                except Exception as e:
+                    logger.warning(f"Local detector failed: {e}", exc_info=True)
+                    log_progress(f"⚠️ Local detector failed ({e}); video shows Gemini findings only.")
+                    detector = None
+            if not detector:
+                log_progress("🎬 Rendering evidence video with Gemini findings...")
+                generate_annotated_surveillance_video(**render_kwargs)
+            if object_summary:
+                log_progress(
+                    f"Tracked {len(object_summary['objects'])} objects: "
+                    + ", ".join(f"{n} {c}" for c, n in object_summary["counts_by_category"].items())
+                )
+
+            # 8. Deterministic scores from observed evidence only (Pass C + detector + Pass B)
+            garbage_severities = [i.severity for i in deduped_issues if i.category == "garbage"]
+            scores = compute_observed_hazard_scores(
+                sewer_assessments=sewer_assessments,
+                dumping_detected=dumping_events > 0,
+                garbage_coverage=object_summary["max_garbage_coverage"] if object_summary else None,
+                vlm_garbage_severity=max(garbage_severities) if garbage_severities else None,
             )
 
-            # Save annotated video evidence
-            db.add(Evidence(
-                incident_id=created_incidents[0].id if created_incidents else None,
-                kind="annotated_video",
-                path=str(annotated_video_path),
-            ))
+            # Save annotated video evidence (Evidence rows require an incident)
+            if created_incidents:
+                db.add(Evidence(
+                    incident_id=created_incidents[0].id,
+                    kind="annotated_video",
+                    path=str(annotated_video_path),
+                ))
 
             job.status = "completed"
             db.commit()
-            log_progress("🎉 Real-time surveillance video & municipal hazard scores ready!")
 
-            return {
+            # Hazards go to the municipality immediately; dumping violations wait for
+            # officer approval in the Priority Queue before any evidence is sent.
+            alertable = [i for i in created_incidents if i.severity >= settings.ALERT_MIN_SEVERITY]
+            if alertable:
+                log_progress(f"📣 Alerting municipal corporation about {len(alertable)} hazard(s)...")
+                for incident in alertable:
+                    logs = send_incident_alert(db, incident)
+                    sent = sum(1 for log in logs if log.status == "sent")
+                    if not logs:
+                        log_progress("⚠️ No alert channel configured (SMTP / Telegram / webhook); alert not sent.")
+                        break
+                    log_progress(f"Alert for '{incident.subtype}': {sent}/{len(logs)} channel(s) delivered.")
+            log_progress("🎉 Analysis complete.")
+
+            result = {
                 "job_id": job.id,
                 "status": "completed",
+                "filename": video_path.name,
                 "incidents_count": len(created_incidents),
+                "violations_count": dumping_events,
                 "annotated_video_path": str(annotated_video_path),
-                "drainage_score": drainage_score,
-                "drainage_band": drainage_band,
-                "drainage_breakdown": drain_breakdown,
-                "garbage_score": garbage_score,
-                "garbage_band": garbage_band,
-                "garbage_breakdown": garb_breakdown,
-                "composite_score": composite_score,
-                "composite_band": composite_band,
-                "composite_breakdown": comp_breakdown,
-                "water_depth_cm": water_depth_cm,
-                "detections": detection_list,
+                "objects": object_summary,
+                **scores,
             }
+            (evidence_dir / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+            return result
 
         except Exception as e:
             job.status = "failed"
@@ -316,41 +306,3 @@ class CivicEyePipeline:
             if uploaded_file:
                 self.client.delete_file(uploaded_file.name)
             db.close()
-
-    def _detect_optical_hazards(self, video_path: Path) -> List[Any]:
-        """Detect infrastructure hazards using optical analysis on video frames."""
-        import cv2
-        from app.core.schemas import InfraIssue, BBox
-
-        cap = cv2.VideoCapture(str(video_path))
-        fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 100)
-        cap.release()
-
-        duration_sec = total_frames / fps
-        half_sec = max(1.0, duration_sec / 2.0)
-
-        return [
-            InfraIssue(
-                category="drainage",
-                subtype="choked_storm_drain",
-                severity=4,
-                start_ts="00:00",
-                end_ts=f"00:{int(min(59, duration_sec)):02d}",
-                best_frame_ts=f"00:{int(min(59, half_sec)):02d}",
-                box=BBox(ymin=450, xmin=120, ymax=920, xmax=680),
-                description="Severe stormwater conduit choking with heavy solid silt and runoff surcharge.",
-                confidence=0.92,
-            ),
-            InfraIssue(
-                category="garbage",
-                subtype="illegal_debris_accumulation",
-                severity=4,
-                start_ts="00:01",
-                end_ts=f"00:{int(min(59, duration_sec)):02d}",
-                best_frame_ts=f"00:{int(min(59, max(1.0, half_sec - 1))):02d}",
-                box=BBox(ymin=300, xmin=450, ymax=780, xmax=950),
-                description="Unsegregated municipal solid waste and plastic debris obstruction choking drainage inlet mouth.",
-                confidence=0.88,
-            ),
-        ]

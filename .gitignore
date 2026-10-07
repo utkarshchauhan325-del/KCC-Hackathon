@@ -45,6 +45,8 @@ data/uploads/*
 data/evidence/*
 !data/evidence/.gitkeep
 data/reports/*
+# Detector weights (downloaded / built locally)
+data/models/
 !data/reports/.gitkeep
 
 # OS & Editor

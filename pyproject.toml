@@ -8,7 +8,7 @@ dependencies = [
     "google-genai>=1.0.0",
     "fastapi>=0.110.0",
     "uvicorn>=0.28.0",
-    "opencv-python-headless>=4.8.0",
+    "opencv-python>=4.8.0,<5",  # 5.x removed CascadeClassifier (bystander face blur); ultralytics needs opencv-python
     "pydantic>=2.6.0",
     "pydantic-settings>=2.2.0",
     "sqlalchemy>=2.0.0",
@@ -16,6 +16,12 @@ dependencies = [
     "pillow>=10.0.0",
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
+    # Local per-frame segmentation + tracking (YOLOE). For CPU-only torch, install first:
+    #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    "imageio-ffmpeg>=0.5.0",  # H.264 transcode so evidence videos play in browsers
+    "ultralytics>=8.4.0",
+    "lap>=0.5.12",  # ByteTrack association
+    "clip @ git+https://github.com/ultralytics/CLIP.git",  # text encoder for building YOLOE class prompts
 ]
 
 [project.optional-dependencies]
@@ -30,3 +36,6 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[tool.setuptools.packages.find]
+include = ["app*"]

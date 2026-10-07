@@ -282,6 +282,105 @@ def compute_cctv_composite_risk(
     return composite, band, breakdown
 
 
+_LEVEL_ORDER = ["none", "light", "moderate", "heavy", "fully_blocked", "massive"]
+
+
+def _worst(levels: List[str]) -> str:
+    return max(levels, key=_LEVEL_ORDER.index) if levels else "none"
+
+
+def _coverage_level(coverage: float) -> str:
+    """Largest fraction of the frame covered by garbage masks -> volume level."""
+    if coverage <= 0.0:
+        return "none"
+    if coverage < 0.02:
+        return "light"
+    if coverage < 0.08:
+        return "moderate"
+    if coverage < 0.20:
+        return "heavy"
+    return "massive"
+
+
+_SEVERITY_VOLUME = {1: "light", 2: "light", 3: "moderate", 4: "heavy", 5: "massive"}
+
+
+def compute_observed_hazard_scores(
+    sewer_assessments: List[SewerAssessment],
+    dumping_detected: bool,
+    garbage_coverage: Optional[float] = None,
+    vlm_garbage_severity: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Score one video using only what was observed in it.
+
+    - Drainage: the worst Pass C (Gemini) drain assessment. None if no drain was assessed.
+    - Garbage: trash in/near drains from Pass C, heap volume from the local detector's
+      garbage mask coverage (falling back to Gemini's garbage severity when the detector
+      is off), and dumping from Pass B.
+    - Water depth cannot be measured from video, so it never contributes.
+    """
+    sources: Dict[str, str] = {}
+
+    drainage_score: Optional[float] = None
+    drainage_band = "Not assessed"
+    drain_breakdown: Dict[str, Any] = {}
+    if sewer_assessments:
+        scored = [
+            compute_drainage_hazard_score(
+                water_level=a.water_level,
+                grating_covered=a.grating_covered,
+                cover_missing_or_broken=a.cover_missing_or_broken,
+                water_reaching_road=a.water_reaching_road,
+                wet_conditions=a.wet_conditions,
+            )
+            for a in sewer_assessments
+        ]
+        drainage_score, drainage_band, drain_breakdown = max(scored, key=lambda s: s[0])
+        sources["drainage"] = f"Gemini drain assessment ({len(sewer_assessments)} point(s))"
+
+    trash_inside = _worst([a.trash_inside for a in sewer_assessments])
+    trash_near = _worst([a.trash_near for a in sewer_assessments])
+    if garbage_coverage is not None:
+        debris_volume = _coverage_level(garbage_coverage)
+        sources["debris_volume"] = f"local detector mask coverage ({garbage_coverage:.1%} of frame)"
+    elif vlm_garbage_severity:
+        debris_volume = _SEVERITY_VOLUME.get(vlm_garbage_severity, "moderate")
+        sources["debris_volume"] = f"Gemini garbage severity {vlm_garbage_severity}/5"
+    else:
+        debris_volume = "none"
+    # Visible heaps count as trash near the drain even when no drain point was assessed
+    near_from_volume = {"massive": "heavy"}.get(debris_volume, debris_volume)
+    trash_near = _worst([trash_near, near_from_volume])
+
+    observed_garbage = trash_inside != "none" or trash_near != "none" or debris_volume != "none" or dumping_detected
+    if observed_garbage:
+        garbage_score, garbage_band, garb_breakdown = compute_garbage_hazard_score(
+            trash_inside=trash_inside,
+            trash_near=trash_near,
+            dumping_detected=dumping_detected,
+            debris_volume=debris_volume,
+        )
+    else:
+        garbage_score, garbage_band, garb_breakdown = 0.0, get_risk_band(0.0), {}
+
+    composite_score, composite_band, comp_breakdown = compute_cctv_composite_risk(
+        drainage_score=drainage_score or 0.0,
+        garbage_score=garbage_score,
+        water_depth_cm=0.0,
+    )
+    return {
+        "drainage_score": drainage_score,
+        "drainage_band": drainage_band,
+        "drainage_breakdown": drain_breakdown,
+        "garbage_score": garbage_score,
+        "garbage_band": garbage_band,
+        "garbage_breakdown": garb_breakdown,
+        "composite_score": composite_score,
+        "composite_band": composite_band,
+        "composite_breakdown": comp_breakdown,
+        "score_sources": sources,
+    }
+
 
 # --- Meteorological & Hydrological Flood Priority Scoring Engine ---
 

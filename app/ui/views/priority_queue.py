@@ -4,9 +4,12 @@ import time
 import textwrap
 import streamlit as st
 from datetime import datetime
+from pathlib import Path
+from sqlalchemy.orm import joinedload
 from app.ui.pune_data import PRIORITY_QUEUE, PUNE_LOCATIONS, OPERATIONS_INTERVENTIONS
 from app.db.session import SessionLocal
-from app.db.models import Violation, AuditLog
+from app.db.models import Violation, Incident, Job, AuditLog
+from app.notify.alerts import send_incident_alert
 
 # Municipal roster of Junior Engineers and Rapid Response Unit Leads across Pune
 PUNE_MUNICIPAL_CREW_ROSTER = [
@@ -26,6 +29,109 @@ PUNE_MUNICIPAL_CREW_ROSTER = [
     "C. Kamble (Culvert Maintenance - PCMC)",
     "D. Wagh (Hydraulic Emergency - Dapodi)",
 ]
+
+VIOLATION_EVIDENCE_LABELS = {
+    "frame": "Scene (bystanders blurred)",
+    "crop_person": "Person",
+    "crop_vehicle": "Vehicle",
+    "crop_plate": "Number plate",
+}
+
+
+def _review_violation(violation_id: str, decision: str, officer: str):
+    """Record an officer's decision; approved violations are sent to the municipality.
+
+    Returns the AlertLog rows for approvals (empty when no channel is configured).
+    """
+    db = SessionLocal()
+    try:
+        violation = db.query(Violation).filter(Violation.id == violation_id).first()
+        if violation is None or violation.review_status != "pending_review":
+            return []
+        violation.review_status = decision
+        violation.reviewed_by = officer
+        violation.reviewed_at = datetime.utcnow()
+        violation.incident.status = "acknowledged" if decision == "approved" else "rejected"
+        db.add(AuditLog(user=officer, action=f"{decision}_violation", entity="violation", entity_id=violation.id))
+        db.commit()
+        if decision != "approved":
+            return []
+        return [(log.channel, log.status, log.response) for log in send_incident_alert(db, violation.incident)]
+    finally:
+        db.close()
+
+
+def render_violation_review():
+    """Officer review of AI-detected dumping violations from uploaded videos."""
+    st.markdown("### 🚯 Illegal Dumping Violations Awaiting Officer Review")
+
+    result = st.session_state.pop("violation_review_result", None)
+    if result:
+        decision, channels = result
+        if decision == "rejected":
+            st.info("Violation rejected. No evidence was sent.")
+        elif not channels:
+            st.warning("Violation approved, but no alert channel is configured (SMTP / Telegram / webhook in `.env`), so nothing was sent.")
+        else:
+            for channel, status, response in channels:
+                (st.success if status == "sent" else st.error)(f"{channel}: {status} — {response}")
+
+    db = SessionLocal()
+    try:
+        pending = (
+            db.query(Violation)
+            .options(joinedload(Violation.incident).joinedload(Incident.evidences), joinedload(Violation.incident).joinedload(Incident.job))
+            .join(Violation.incident).join(Incident.job)
+            .filter(Violation.review_status == "pending_review")
+            .order_by(Job.created_at.desc())
+            .all()
+        )
+
+        if not pending:
+            st.caption("No pending violations. Violations appear here after a video is analysed with Pass B enabled on the CCTV Monitoring page.")
+            return
+
+        st.caption(
+            "Evidence is sent to the municipal corporation only after you approve it. "
+            "Check that the person is clearly dumping waste and that the plate matches the vehicle before approving."
+        )
+        officer = st.text_input("Reviewing officer name", value=st.session_state.get("reviewing_officer", ""), key="reviewing_officer")
+
+        for v in pending:
+            inc = v.incident
+            with st.container(border=True):
+                st.markdown(f"**{inc.description}**")
+                plate = v.plate_text or "not legible"
+                plate_note = "" if not v.plate_text else (" ✅ valid format" if v.plate_valid else " ⚠️ unusual format, verify manually")
+                st.markdown(
+                    f"🎞️ `{inc.job.filename if inc.job else '?'}` at **{inc.video_ts}** · "
+                    f"🚗 {v.vehicle_type or 'on foot / none'} · "
+                    f"🔢 Plate: `{plate}` ({v.plate_legibility}){plate_note} · "
+                    f"🎯 AI confidence {inc.confidence:.0%}"
+                )
+                images = [(ev.kind, ev.path) for ev in inc.evidences if ev.kind in VIOLATION_EVIDENCE_LABELS and Path(ev.path).is_file()]
+                images.sort(key=lambda kp: list(VIOLATION_EVIDENCE_LABELS).index(kp[0]))
+                if images:
+                    cols = st.columns(len(images))
+                    for col, (kind, path) in zip(cols, images):
+                        col.image(path, caption=VIOLATION_EVIDENCE_LABELS[kind], use_container_width=True)
+                else:
+                    st.warning("No evidence images were saved for this violation.")
+
+                a, r, _ = st.columns([1.4, 1, 3])
+                if a.button("✅ Approve & send to PMC", key=f"approve_{v.id}", type="primary", disabled=not officer.strip()):
+                    channels = _review_violation(v.id, "approved", officer.strip())
+                    st.session_state["violation_review_result"] = ("approved", channels)
+                    st.rerun()
+                if r.button("❌ Reject", key=f"reject_{v.id}", disabled=not officer.strip()):
+                    _review_violation(v.id, "rejected", officer.strip())
+                    st.session_state["violation_review_result"] = ("rejected", [])
+                    st.rerun()
+    finally:
+        db.close()
+
+    st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:16px 0 20px 0;'>", unsafe_allow_html=True)
+
 
 def render_priority_queue_and_interventions():
     """Render unified Priority Queue & Field Interventions Command Center.
@@ -277,6 +383,8 @@ def render_priority_queue_and_interventions():
             }}
             </style>
             """)
+
+    render_violation_review()
 
     st.markdown("### 🚨 Hotspots Requiring Immediate Attention")
     st.info("🛡️ **Municipal Rapid Response Protocol:** Each critical incident below provides real-time diagnostic telemetry. Configure machinery and assign an open engineer directly to mobilize crews.")

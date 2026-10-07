@@ -2,7 +2,6 @@
 
 import cv2
 import numpy as np
-import math
 from pathlib import Path
 from typing import Tuple, Optional, Union
 from app.config import settings
@@ -130,196 +129,109 @@ def save_image(img: np.ndarray, output_path: Union[str, Path]) -> Path:
     return out
 
 
-def get_city_rank_and_status(score: float) -> Tuple[int, str, Tuple[int, int, int]]:
-    """Map dynamic telemetry hazard score to city emergency priority rank (#1 to #53) and BGR color.
-    
-    Ranks fall down the city emergency priority ladder at greater speeds as jetting/clearing progresses:
-    - Score >= 80%: Rank #1 to #5 [CRITICAL] (BGR: 0, 0, 230 - Red)
-    - 55% <= Score < 80%: Rank #6 to #15 [HIGH] (BGR: 0, 140, 255 - Orange)
-    - 32% <= Score < 55%: Rank #16 to #30 [WATCHLIST] (BGR: 0, 215, 255 - Gold/Amber)
-    - Score < 32%: Rank #31 to #52 [SAFE] (BGR: 0, 205, 30 - Emerald Green)
-    """
-    if score >= 80.0:
-        rank = max(1, min(5, round(1 + (95.0 - score) * (4.0 / 15.0))))
-        return rank, "CRITICAL", (0, 0, 230)
-    elif score >= 55.0:
-        rank = round(6 + (80.0 - score) * (9.0 / 25.0))
-        return rank, "HIGH", (0, 140, 255)
-    elif score >= 32.0:
-        rank = round(16 + (55.0 - score) * (14.0 / 23.0))
-        return rank, "WATCHLIST", (0, 215, 255)
-    else:
-        rank = min(52, round(31 + (32.0 - score) * (21.0 / 20.0)))
-        return rank, "SAFE", (0, 205, 30)
+# BGR colours per object category, and per waste stream for garbage
+CATEGORY_COLORS = {
+    "garbage": (0, 140, 255),    # orange
+    "bin": (180, 180, 180),      # grey
+    "drainage": (230, 160, 0),   # blue
+    "road": (0, 0, 220),         # red
+    "person": (60, 200, 60),     # green
+    "vehicle": (200, 80, 200),   # purple
+    "plate": (0, 230, 255),      # yellow
+}
+WASTE_COLORS = {
+    "dry_plastic": (255, 180, 60),   # light blue
+    "dry_paper": (90, 160, 210),     # tan
+    "wet_organic": (40, 160, 40),    # dark green
+    "construction": (120, 120, 120), # grey
+    "e_waste": (200, 40, 160),       # magenta
+    "mixed": (0, 140, 255),          # orange
+}
 
 
-def get_temporal_telemetry(
-    curr_sec: float,
-    total_sec: float,
-    initial_drain: float = 94.8,
-    initial_garb: float = 90.2,
-    initial_depth: float = 28.0,
-) -> Tuple[float, float, float, float, str, str]:
-    """Calculate real-time changing telemetry as video moves and drain is cleaned at high speed."""
-    p = min(1.0, max(0.0, curr_sec / max(1.0, total_sec)))
-    if p < 0.14:
-        # Phase 1: Heavy choking and active surcharge detection
-        f = p / 0.14
-        d = initial_drain - (f * 6.8)
-        g = initial_garb - (f * 8.2)
-        dep = initial_depth - (f * 4.0)
-        status = "CHOKED / CRITICAL EMERGENCY"
-    elif p < 0.58:
-        # Phase 2: High-speed jetting & suction — values and ranks plummet rapidly
-        f = (p - 0.14) / 0.44
-        d = (initial_drain - 6.8) - (f * 64.0)
-        g = (initial_garb - 8.2) - (f * 62.0)
-        dep = (initial_depth - 4.0) - (f * 18.0)
-        status = "RAPID CLEARING / HIGH-SPEED JETTING"
-    else:
-        # Phase 3: Drain cleared, debris removed, flow optimal and safe
-        f = (p - 0.58) / 0.42
-        d = max(13.8, 24.0 - (f * 10.2))
-        g = max(11.2, 20.0 - (f * 8.8))
-        dep = max(3.0, 6.0 - (f * 3.0))
-        status = "DRAIN CLEANED & RESTORED / NOMINAL FLOW"
-
-    comp = 0.42 * d + 0.38 * g + 0.20 * min(100.0, (dep / 40.0) * 100.0)
-    band = "CRITICAL" if comp >= 75 else ("HIGH" if comp >= 50 else ("WATCH" if comp >= 30 else "OPTIMAL"))
-    return round(d, 1), round(g, 1), round(dep, 1), round(comp, 1), band, status
+def _draw_tag(img: np.ndarray, text: str, x: int, y: int, color: Tuple[int, int, int], scale: float) -> None:
+    (tw, th), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
+    h, w = img.shape[:2]
+    x = max(0, min(w - tw - 8, x))
+    y = max(th + 6, y)
+    cv2.rectangle(img, (x, y - th - 6), (x + tw + 8, y + 3), color, -1)
+    cv2.putText(img, text, (x + 4, y - 2), cv2.FONT_HERSHEY_SIMPLEX, scale, (255, 255, 255), 1, cv2.LINE_AA)
 
 
-class GarbageObjectTracker:
-    """Kalman-filter powered object tracker for physical garbage and hazard objects across video frames."""
-
-    def __init__(
-        self,
-        bbox: Union[list, tuple],
-        label: str = "GARBAGE",
-        category: str = "garbage",
-        track_id: int = 1,
-        severity: int = 4,
-    ):
-        self.id = track_id
-        self.label = label
-        self.category = category
-        self.severity = severity
-        self.time_since_update = 0
-        self.hits = 1
-        self.active = True
-
-        # State vector: [cx, cy, w, h, vx, vy]
-        self.kf = cv2.KalmanFilter(6, 4)
-        self.kf.transitionMatrix = np.array([
-            [1, 0, 0, 0, 1, 0],
-            [0, 1, 0, 0, 0, 1],
-            [0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0.82, 0],
-            [0, 0, 0, 0, 0, 0.82],
-        ], np.float32)
-        self.kf.measurementMatrix = np.array([
-            [1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0],
-        ], np.float32)
-        self.kf.processNoiseCov = np.eye(6, dtype=np.float32) * 1e-3
-        self.kf.measurementNoiseCov = np.eye(4, dtype=np.float32) * 1e-2
-
-        w = max(15.0, float(bbox[2] - bbox[0]))
-        h = max(15.0, float(bbox[3] - bbox[1]))
-        cx = float(bbox[0] + bbox[2]) / 2.0
-        cy = float(bbox[1] + bbox[3]) / 2.0
-        self.kf.statePost = np.array([cx, cy, w, h, 0, 0], np.float32).reshape(6, 1)
-
-    def update(self, bbox: Union[list, tuple]) -> None:
-        self.time_since_update = 0
-        self.hits += 1
-        w = max(15.0, float(bbox[2] - bbox[0]))
-        h = max(15.0, float(bbox[3] - bbox[1]))
-        cx = float(bbox[0] + bbox[2]) / 2.0
-        cy = float(bbox[1] + bbox[3]) / 2.0
-        measurement = np.array([cx, cy, w, h], np.float32).reshape(4, 1)
-        self.kf.correct(measurement)
-
-    def predict(self, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
-        self.time_since_update += 1
-        pred = self.kf.predict()
-        cx = float(np.clip(pred[0][0], 0, img_w))
-        cy = float(np.clip(pred[1][0], 0, img_h))
-        w = float(np.clip(pred[2][0], 15, img_w))
-        h = float(np.clip(pred[3][0], 15, img_h))
-        self.kf.statePost[0][0] = cx
-        self.kf.statePost[1][0] = cy
-        self.kf.statePost[2][0] = w
-        self.kf.statePost[3][0] = h
-        return int(cx - w / 2.0), int(cy - h / 2.0), int(cx + w / 2.0), int(cy + h / 2.0)
-
-    def get_box(self, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
-        s = self.kf.statePost
-        cx = float(np.clip(s[0][0], 0, img_w))
-        cy = float(np.clip(s[1][0], 0, img_h))
-        w = float(np.clip(s[2][0], 15, img_w))
-        h = float(np.clip(s[3][0], 15, img_h))
-        x1 = max(0, int(cx - w / 2.0))
-        y1 = max(0, int(cy - h / 2.0))
-        x2 = min(img_w, max(x1 + 10, int(cx + w / 2.0)))
-        y2 = min(img_h, max(y1 + 10, int(cy + h / 2.0)))
-        return x1, y1, x2, y2
+def _det_color(det) -> Tuple[int, int, int]:
+    return WASTE_COLORS.get(det.cls.waste_type) or CATEGORY_COLORS.get(det.cls.category, (255, 255, 255))
 
 
-def detect_frame_objects(frame: np.ndarray, category: str, img_w: int, img_h: int) -> list:
-    """Run real-time vision detection on the current frame for garbage debris or drainage canal."""
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    candidates = []
+def draw_detections(frame: np.ndarray, detections: list) -> np.ndarray:
+    """Draw per-object segmentation masks, outlines and labels from the local detector."""
+    from app.core.detector import WASTE_TYPE_LABELS
 
-    if category == "garbage":
-        mask = (gray > 165) & (frame[:, :, 2] > 150)
-        mask[:int(0.25 * img_h), :] = False
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
-        mask_closed = cv2.morphologyEx(mask.astype(np.uint8), cv2.MORPH_CLOSE, kernel)
-        cnts, _ = cv2.findContours(mask_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for c in cnts:
-            area = cv2.contourArea(c)
-            if 150 < area < 45000:
-                bx, by, bw, bh = cv2.boundingRect(c)
-                if bw >= 12 and bh >= 12:
-                    candidates.append({
-                        "box": [bx, by, bx + bw, by + bh],
-                        "area": area,
-                    })
-        candidates.sort(key=lambda d: d["area"], reverse=True)
-    elif category == "drainage":
-        mask = (gray < 145) & (frame[:, :, 1] < 145)
-        mask[:int(0.30 * img_h), :] = False
-        cnts, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        for c in cnts:
-            area = cv2.contourArea(c)
-            if 1500 < area < 90000:
-                bx, by, bw, bh = cv2.boundingRect(c)
-                candidates.append({
-                    "box": [bx, by, bx + bw, by + bh],
-                    "area": area,
-                })
-        candidates.sort(key=lambda d: d["area"], reverse=True)
+    out = frame.copy()
+    overlay = frame.copy()
+    w = frame.shape[1]
+    scale = max(0.35, min(0.55, w / 1300.0))
+    for det in detections:
+        if det.polygon is not None:
+            cv2.fillPoly(overlay, [det.polygon], _det_color(det))
+        else:
+            x1, y1, x2, y2 = det.box
+            cv2.rectangle(overlay, (x1, y1), (x2, y2), _det_color(det), -1)
+    cv2.addWeighted(overlay, 0.35, out, 0.65, 0, out)
 
-    return candidates
+    for det in detections:
+        color = _det_color(det)
+        x1, y1, x2, y2 = det.box
+        if det.polygon is not None:
+            cv2.polylines(out, [det.polygon], True, color, 2, cv2.LINE_AA)
+        else:
+            cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
+        tid = f"#{det.track_id} " if det.track_id is not None else ""
+        waste = f" | {WASTE_TYPE_LABELS[det.cls.waste_type]}" if det.cls.waste_type else ""
+        _draw_tag(out, f"{tid}{det.cls.label}{waste} {det.confidence:.2f}", x1, y1, color, scale)
+    return out
+
+
+def _draw_vlm_issues(frame: np.ndarray, issues: list, curr_sec: float) -> np.ndarray:
+    """Draw Gemini (VLM) findings: its box around the best frame, and a list of issues active now."""
+    h, w = frame.shape[:2]
+    scale = max(0.35, min(0.5, w / 1300.0))
+    active = []
+    for issue in issues:
+        start, end = timestamp_to_seconds(issue.start_ts), timestamp_to_seconds(issue.end_ts)
+        if start - 0.5 <= curr_sec <= end + 0.5:
+            active.append(issue)
+        # Gemini's box is only valid for its best frame, so show it for one second around it
+        if abs(curr_sec - timestamp_to_seconds(issue.best_frame_ts)) <= 0.5:
+            x1, y1, x2, y2 = scale_bbox_to_pixels(issue.box, w, h)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
+            cv2.rectangle(frame, (x1 + 2, y1 + 2), (x2 - 2, y2 - 2), (0, 0, 0), 1)
+            _draw_tag(frame, f"VLM: {issue.subtype.replace('_', ' ')} sev {issue.severity}", x1, y2 + 18, (40, 40, 40), scale)
+
+    y = max(28, int(h * 0.055)) + 24
+    for issue in active[:5]:
+        _draw_tag(frame, f"VLM {issue.category}: {issue.subtype.replace('_', ' ')} (sev {issue.severity})", 8, y, (40, 40, 40), scale)
+        y += int(24 * scale / 0.45)
+    return frame
 
 
 def generate_annotated_surveillance_video(
     video_path: Union[str, Path],
     output_path: Union[str, Path],
-    detections: list,
+    vlm_issues: Optional[list] = None,
     camera_meta: Optional[dict] = None,
-    drainage_score: float = 75.0,
-    garbage_score: float = 70.0,
-    water_depth_cm: float = 25.0,
-) -> Path:
-    """Render real-time bounding boxes, edge-AI telemetry, and dynamic surveillance HUD onto video."""
+    detector=None,
+    progress_cb=None,
+) -> Tuple[Path, Optional[dict]]:
+    """Render the evidence video: per-object masks/tracks from the local detector plus Gemini findings.
+
+    Returns the output path and the detector's object summary (None when no detector was used).
+    """
+    from app.core.detector import VideoObjectSummary, CATEGORY_LABELS, WASTE_TYPE_LABELS
+
     video_path = Path(video_path)
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    vlm_issues = vlm_issues or []
 
     cap = cv2.VideoCapture(str(video_path))
     if not cap.isOpened():
@@ -328,12 +240,11 @@ def generate_annotated_surveillance_video(
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 100)
-    total_sec = total_frames / fps if fps else 10.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
 
     camera_id = camera_meta.get("id", "CAM-PUNE-01") if camera_meta else "CAM-PUNE-01"
-    camera_name = camera_meta.get("name", "Optical Surveillance") if camera_meta else "Optical Stream"
-    gps_str = camera_meta.get("gps", "18.5255, 73.8415") if camera_meta else "18.5255, 73.8415"
+    camera_name = camera_meta.get("name", "CCTV feed") if camera_meta else "CCTV feed"
+    gps_str = camera_meta.get("gps", "not set") if camera_meta else "not set"
 
     fourcc = cv2.VideoWriter_fourcc(*"avc1")
     out = cv2.VideoWriter(str(output_path), fourcc, fps, (w, h))
@@ -341,168 +252,86 @@ def generate_annotated_surveillance_video(
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(str(output_path), fourcc, fps, (w, h))
 
-    trackers: dict[int, GarbageObjectTracker] = {}
+    summary = VideoObjectSummary(w, h) if detector else None
+    stride = max(1, round(fps / settings.DETECTOR_FPS)) if detector else 1
+    if detector:
+        detector.start_video()
+
+    detections: list = []
     frame_idx = 0
     while True:
         ret, frame = cap.read()
         if not ret or frame is None:
             break
-
         curr_sec = frame_idx / fps
-        annotated = frame.copy()
 
-        # Compute dynamic real-time scores for this frame
-        d_val, g_val, dep_val, comp_val, band_str, status_str = get_temporal_telemetry(
-            curr_sec, total_sec, drainage_score, garbage_score, water_depth_cm
-        )
-        is_cleaned_phase = (curr_sec >= 0.68 * total_sec)
+        if detector and frame_idx % stride == 0:
+            detections = detector.track(frame)
+            summary.add(curr_sec, detections)
+            if progress_cb and total_frames and frame_idx % (stride * 25) == 0:
+                progress_cb(f"Segmenting objects: frame {frame_idx}/{total_frames}")
 
-        # Real-time frame vision detection for garbage and drainage objects
-        cands_g = detect_frame_objects(frame, "garbage", w, h)
-        cands_d = detect_frame_objects(frame, "drainage", w, h)
+        annotated = draw_detections(frame, detections) if detector else frame.copy()
+        annotated = _draw_vlm_issues(annotated, vlm_issues, curr_sec)
 
-        # Register trackers for active detections in this video
-        for d_idx, d in enumerate(detections):
-            s = d.get("start_sec", 0.0)
-            if curr_sec >= s and d_idx not in trackers:
-                box = d.get("box")
-                cat = d.get("category", "garbage")
-                base_label = d.get("label") or d.get("subtype", "Hazard").replace("_", " ").upper()
-                sev = d.get("severity", 4)
-                if hasattr(box, "ymin"):
-                    ix1, iy1, ix2, iy2 = scale_bbox_to_pixels(box, w, h)
-                elif isinstance(box, (list, tuple)) and len(box) == 4:
-                    ix1 = int((box[1] / 1000.0) * w)
-                    iy1 = int((box[0] / 1000.0) * h)
-                    ix2 = int((box[3] / 1000.0) * w)
-                    iy2 = int((box[2] / 1000.0) * h)
-                else:
-                    ix1, iy1, ix2, iy2 = int(0.3 * w), int(0.4 * h), int(0.6 * w), int(0.6 * h)
-
-                trackers[d_idx] = GarbageObjectTracker(
-                    bbox=[ix1, iy1, ix2, iy2],
-                    label=base_label,
-                    category=cat,
-                    track_id=d_idx + 1,
-                    severity=sev,
-                )
-
-        # Update and render active trackers (persist across the entire video session)
-        for d_idx, tracker in list(trackers.items()):
-            # Advance Kalman filter prediction for smooth tracking
-            tracker.predict(w, h)
-
-            # Match to actual detected objects in this frame if available
-            cands = cands_g if tracker.category == "garbage" else cands_d
-            if cands:
-                cur_box = tracker.get_box(w, h)
-                tcx = (cur_box[0] + cur_box[2]) / 2.0
-                tcy = (cur_box[1] + cur_box[3]) / 2.0
-                best_c = None
-                min_d = 9999.0
-                for c in cands:
-                    ccx = (c["box"][0] + c["box"][2]) / 2.0
-                    ccy = (c["box"][1] + c["box"][3]) / 2.0
-                    dist = math.hypot(tcx - ccx, tcy - ccy)
-                    if dist < min_d and dist < 180:
-                        min_d = dist
-                        best_c = c
-                if best_c:
-                    tracker.update(best_c["box"])
-
-            # Read tight bounding box coordinates from tracker state
-            x1, y1, x2, y2 = tracker.get_box(w, h)
-            cat = tracker.category
-
-            # Dynamic City Emergency Priority Ranking (#1 to #52) falling at greater speeds:
-            if cat == "garbage":
-                target_val = g_val
-                rank_num, status_lbl, box_color = get_city_rank_and_status(target_val)
-                if target_val >= 80.0:
-                    tag_prefix = "GARBAGE DUMP"
-                elif target_val >= 55.0:
-                    tag_prefix = "CLEARING WASTE"
-                elif target_val >= 32.0:
-                    tag_prefix = "RESIDUAL DEBRIS"
-                else:
-                    tag_prefix = "WASTE CLEARED"
-                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK #{rank_num} [{status_lbl}]"
-            elif cat == "drainage":
-                target_val = d_val
-                rank_num, status_lbl, box_color = get_city_rank_and_status(target_val)
-                if target_val >= 80.0:
-                    tag_prefix = "CHOKED DRAIN"
-                elif target_val >= 55.0:
-                    tag_prefix = "RAPID JETTING"
-                elif target_val >= 32.0:
-                    tag_prefix = "FLOW RESTORING"
-                else:
-                    tag_prefix = "DRAIN RESTORED"
-                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK #{rank_num} [{status_lbl}]"
-            else:
-                target_val = g_val
-                rank_num, status_lbl, box_color = get_city_rank_and_status(target_val)
-                tag_label = f"[TRK-{tracker.id:02d}] {tracker.label}: {target_val:.1f}% • RANK #{rank_num} [{status_lbl}]"
-
-            # Draw outer box
-            cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 2)
-
-            # Draw tactical corner L-brackets
-            corner_len = min(18, max(6, (x2 - x1) // 5), max(6, (y2 - y1) // 5))
-            thick = 3
-            cv2.line(annotated, (x1, y1), (x1 + corner_len, y1), box_color, thick)
-            cv2.line(annotated, (x1, y1), (x1, y1 + corner_len), box_color, thick)
-            cv2.line(annotated, (x2, y1), (x2 - corner_len, y1), box_color, thick)
-            cv2.line(annotated, (x2, y1), (x2, y1 + corner_len), box_color, thick)
-            cv2.line(annotated, (x1, y2), (x1 + corner_len, y2), box_color, thick)
-            cv2.line(annotated, (x1, y2), (x1, y2 - corner_len), box_color, thick)
-            cv2.line(annotated, (x2, y2), (x2 - corner_len, y2), box_color, thick)
-            cv2.line(annotated, (x2, y2), (x2, y2 - corner_len), box_color, thick)
-
-            # Header tag
-            font_scale = max(0.38, min(0.60, w / 1100.0))
-            (tw, th), _ = cv2.getTextSize(tag_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
-            tag_y = max(th + 6, y1)
-            tag_x = max(0, min(w - tw - 10, x1))
-            cv2.rectangle(annotated, (tag_x, tag_y - th - 6), (tag_x + tw + 8, tag_y + 4), box_color, -1)
-            cv2.putText(annotated, tag_label, (tag_x + 4, tag_y - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
-
-        # Draw Top HUD
+        # Top HUD: camera, timecode, GPS
         hud_h = max(28, int(h * 0.055))
-        hud_overlay = annotated.copy()
-        cv2.rectangle(hud_overlay, (0, 0), (w, hud_h), (15, 23, 42), -1)
-        cv2.addWeighted(hud_overlay, 0.75, annotated, 0.25, 0, annotated)
+        hud = annotated.copy()
+        cv2.rectangle(hud, (0, 0), (w, hud_h), (15, 23, 42), -1)
+        cv2.addWeighted(hud, 0.75, annotated, 0.25, 0, annotated)
+        font = max(0.35, min(0.52, w / 1200.0))
+        tc = f"{int(curr_sec // 60):02d}:{curr_sec % 60:05.2f}"
+        cv2.putText(annotated, f"{camera_name} ({camera_id})", (12, int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, font, (241, 245, 249), 1, cv2.LINE_AA)
+        right = f"TS {tc} | GPS {gps_str}"
+        (rw, _), _ = cv2.getTextSize(right, cv2.FONT_HERSHEY_SIMPLEX, font, 1)
+        cv2.putText(annotated, right, (max(w - rw - 12, w // 2), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, font, (203, 213, 225), 1, cv2.LINE_AA)
 
-        mins = int(curr_sec // 60)
-        secs = int(curr_sec % 60)
-        millis = int((curr_sec - int(curr_sec)) * 100)
-        tc_str = f"{mins:02d}:{secs:02d}.{millis:02d}"
-
-        rec_color = (0, 0, 255) if int(curr_sec * 2) % 2 == 0 else (50, 50, 180)
-        cv2.circle(annotated, (14, hud_h // 2), 5, rec_color, -1)
-        top_font_scale = max(0.35, min(0.52, w / 1200.0))
-        top_left_text = f"REC  LIVE CCTV | {camera_name} ({camera_id})"
-        cv2.putText(annotated, top_left_text, (26, int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, top_font_scale, (241, 245, 249), 1, cv2.LINE_AA)
-
-        top_right_text = f"TS: {tc_str} | GPS: {gps_str}"
-        (trw, _), _ = cv2.getTextSize(top_right_text, cv2.FONT_HERSHEY_SIMPLEX, top_font_scale, 1)
-        cv2.putText(annotated, top_right_text, (max(w - trw - 12, int(w * 0.5)), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, top_font_scale, (203, 213, 225), 1, cv2.LINE_AA)
-
-        # Draw Bottom Telemetry Banner with real-time changing numbers
-        b_hud_h = max(28, int(h * 0.06))
-        b_overlay = annotated.copy()
-        cv2.rectangle(b_overlay, (0, h - b_hud_h), (w, h), (15, 23, 42), -1)
-        cv2.addWeighted(b_overlay, 0.85, annotated, 0.15, 0, annotated)
-
-        bot_font_scale = max(0.33, min(0.48, w / 1200.0))
-        rank_comp, _, _ = get_city_rank_and_status(comp_val)
-        bot_text = f"DRAIN: {int(d_val)}% | GARBAGE: {int(g_val)}% | DEPTH: {int(dep_val)}cm | PRIORITY: RANK #{rank_comp} [{band_str}] | {status_str}"
-        cv2.putText(annotated, bot_text, (12, h - int(b_hud_h * 0.35)), cv2.FONT_HERSHEY_SIMPLEX, bot_font_scale, (255, 255, 255), 1, cv2.LINE_AA)
+        # Bottom banner: what the detector sees in this frame
+        if detector:
+            counts: dict = {}
+            waste: dict = {}
+            for det in detections:
+                counts[det.cls.category] = counts.get(det.cls.category, 0) + 1
+                if det.cls.waste_type:
+                    waste[det.cls.waste_type] = waste.get(det.cls.waste_type, 0) + 1
+            parts = [f"{CATEGORY_LABELS[c]} {n}" for c, n in counts.items()]
+            text = " | ".join(parts) if parts else "No objects detected in this frame"
+            if waste:
+                text += "  ||  Waste: " + ", ".join(f"{WASTE_TYPE_LABELS[k]} {n}" for k, n in waste.items())
+        else:
+            text = "Local detector off: showing Gemini findings only"
+        b_h = max(28, int(h * 0.06))
+        band = annotated.copy()
+        cv2.rectangle(band, (0, h - b_h), (w, h), (15, 23, 42), -1)
+        cv2.addWeighted(band, 0.85, annotated, 0.15, 0, annotated)
+        bfont = max(0.33, min(0.48, w / 1250.0))
+        cv2.putText(annotated, text, (12, h - int(b_h * 0.35)), cv2.FONT_HERSHEY_SIMPLEX, bfont, (255, 255, 255), 1, cv2.LINE_AA)
 
         out.write(annotated)
         frame_idx += 1
 
     cap.release()
     out.release()
-    return output_path
+    if fourcc != cv2.VideoWriter_fourcc(*"avc1"):
+        _transcode_to_h264(output_path)
+    return output_path, (summary.to_dict(detector.model_name) if detector else None)
 
+
+def _transcode_to_h264(path: Path) -> None:
+    """Re-encode an mp4v file to H.264 in place; browsers cannot play mp4v."""
+    import subprocess
+    try:
+        import imageio_ffmpeg
+        ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return
+    tmp = path.with_name(path.stem + ".h264.mp4")
+    proc = subprocess.run(
+        [ffmpeg, "-y", "-loglevel", "error", "-i", str(path), "-c:v", "libx264",
+         "-pix_fmt", "yuv420p", "-preset", "veryfast", "-movflags", "+faststart", str(tmp)],
+        capture_output=True,
+    )
+    if proc.returncode == 0 and tmp.is_file():
+        tmp.replace(path)
+    else:
+        tmp.unlink(missing_ok=True)
