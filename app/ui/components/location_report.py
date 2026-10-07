@@ -120,92 +120,70 @@ def render_location_full_report_box(loc: Dict[str, Any], on_close_key: str = "cl
         if is_busiest else ''
     )
 
-    # Full length box container
+    ai_tag_pills = "".join([f'<span style="background:#E2E8F0; color:#334155; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; margin-right:6px; display:inline-block;">🏷️ {tag}</span>' for tag in diag['ai_tags']])
+
+    # Compact original box container with target ID for auto-scroll
     st.markdown(textwrap.dedent(f"""
-<div style="background:#FFFFFF; border:2px solid {border_color}; border-radius:14px; padding:22px 26px; margin:20px 0 24px 0; box-shadow:0 4px 14px rgba(0,0,0,0.06); font-family:'Plus Jakarta Sans',sans-serif;">
-<div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:1px solid #E2E8F0; padding-bottom:14px; margin-bottom:16px;">
+<div id="diagnostic-report-box" style="background:#FFFFFF; border:2px solid {border_color}; border-radius:12px; padding:16px 20px; margin:16px 0 18px 0; box-shadow:0 3px 10px rgba(0,0,0,0.05); font-family:'Plus Jakarta Sans',sans-serif;">
+<div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #E2E8F0; padding-bottom:10px; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
 <div>
-<div style="display:flex; align-items:center; gap:10px; margin-bottom:6px; flex-wrap:wrap;">
-<span style="background:{badge_bg}; color:{border_color}; font-weight:800; font-size:12px; padding:4px 10px; border-radius:12px; border:1px solid {border_color}40; letter-spacing:0.04em; text-transform:uppercase;">
+<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+<span style="background:{badge_bg}; color:{border_color}; font-weight:800; font-size:11px; padding:3px 8px; border-radius:10px; border:1px solid {border_color}40; letter-spacing:0.03em; text-transform:uppercase;">
 ● {r_level} RISK LEVEL — SCORE {comp_score}/100
 </span>
 {busiest_badge}
-<span style="font-size:12px; color:#64748B;">Sensor Node: <b>{loc['id']}</b></span>
-<span style="font-size:12px; color:#64748B;">• Updated: <b>{loc['last_updated']}</b></span>
+<span style="font-size:11px; color:#64748B;">Node: <b>{loc['id']}</b></span>
+<span style="font-size:11px; color:#64748B;">• Updated: <b>{loc['last_updated']}</b></span>
 </div>
-<h2 style="margin:0; font-size:22px; font-weight:800; color:#0F172A;">📍 {loc['name']} — Comprehensive Site Problem & Engineering Diagnostic Report</h2>
-<p style="margin:4px 0 0 0; font-size:13px; color:#64748B;">
-<b>Ward:</b> {loc['ward']} &nbsp;|&nbsp; <b>Zone:</b> {loc['zone']} &nbsp;|&nbsp; <b>Coordinates:</b> {loc['lat']}, {loc['lng']} &nbsp;|&nbsp; <b>Conduit:</b> {loc['drain_type']}
+<h3 style="margin:0; font-size:18px; font-weight:800; color:#0F172A;">📍 {loc['name']} — Site Engineering & Diagnostic Report</h3>
+<p style="margin:2px 0 0 0; font-size:12px; color:#64748B;">
+<b>Ward:</b> {loc['ward']} &nbsp;|&nbsp; <b>Zone:</b> {loc['zone']} &nbsp;|&nbsp; <b>Coords:</b> {loc['lat']}, {loc['lng']} &nbsp;|&nbsp; <b>Conduit:</b> {loc['drain_type']}
 </p>
 </div>
 </div>
 
-<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
+<div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:12px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:12px 14px;">
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Conduit Saturation</div>
-<div style="font-size:22px; font-weight:800; color:{border_color};">{loc['water_level_pct']}%</div>
+<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">Conduit Saturation</div>
+<div style="font-size:20px; font-weight:800; color:{border_color};">{loc['water_level_pct']}%</div>
 <div style="font-size:11px; color:#475569;">Standing Depth: <b>{diag['depth_cm']} cm</b></div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Live Precipitation</div>
-<div style="font-size:22px; font-weight:800; color:#2563EB;">{loc.get('precip_mm', loc['rainfall_3h'])} mm</div>
+<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">Live Precipitation</div>
+<div style="font-size:20px; font-weight:800; color:#2563EB;">{loc.get('precip_mm', loc['rainfall_3h'])} mm</div>
 <div style="font-size:11px; color:#475569;">Rain Probability: <b>{loc.get('rain_chance_pct', 45)}%</b></div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">🚗 TomTom Traffic</div>
-<div style="font-size:22px; font-weight:800; color:{'#DC2626' if t_pct>=75 else '#EA580C'};">{t_pct}%</div>
+<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">🚗 TomTom Traffic</div>
+<div style="font-size:20px; font-weight:800; color:{'#DC2626' if t_pct>=75 else '#EA580C'};">{t_pct}%</div>
 <div style="font-size:11px; color:#475569;">Speed: <b>{t_speed} km/h</b> (Delay: +{t_delay}s)</div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">Debris / Silt Choke</div>
-<div style="font-size:22px; font-weight:800; color:{border_color};">{loc['blockage_pct']}%</div>
+<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">Debris / Silt Choke</div>
+<div style="font-size:20px; font-weight:800; color:{border_color};">{loc['blockage_pct']}%</div>
 <div style="font-size:11px; color:#475569;">Intake Chamber Choke</div>
 </div>
 <div>
-<div style="font-size:11px; color:#64748B; font-weight:600; text-transform:uppercase;">All-Attribute Priority</div>
-<div style="font-size:22px; font-weight:800; color:#7C3AED;">Rank #{loc.get('priority_rank', '-')}</div>
+<div style="font-size:10px; color:#64748B; font-weight:700; text-transform:uppercase;">All-Attribute Priority</div>
+<div style="font-size:20px; font-weight:800; color:#7C3AED;">Rank #{loc.get('priority_rank', '-')}</div>
 <div style="font-size:11px; color:#475569;">Multi-Score: <b>{comp_score}/100</b></div>
 </div>
 </div>
 </div>
 """).strip(), unsafe_allow_html=True)
-    # 3 Detailed Diagnostic Sections
-    col_prob, col_ai, col_action = st.columns([1.2, 1, 1], gap="medium")
 
-    with col_prob:
-        st.markdown("#### 🔍 1. Root Cause & Hydraulic Diagnosis")
-        st.markdown(f"**Primary Issue:** `{diag['problem_title']}`")
-        st.write(diag["failure_mech"])
-        st.markdown(f"**Structural Conduit:** `{loc['drain_type']}`")
-        st.markdown(f"**Recession Velocity:** `{diag['recede_eta']}`")
+    # Action Buttons
+    btn_col, _ = st.columns([1.6, 6.4])
+    with btn_col:
+        if st.button("❌ Close Report", key=f"close_{loc['id']}", use_container_width=True):
+            st.session_state["selected_location_id"] = None
+            st.session_state["last_handled_map_click"] = None
+            if hasattr(st, "query_params") and "inspect" in st.query_params:
+                try:
+                    del st.query_params["inspect"]
+                except Exception:
+                    pass
+            st.rerun()
 
-    with col_ai:
-        st.markdown("#### 🤖 2. Vision AI Inspection (Gemini VLM)")
-        st.write("Identified issues via street camera analysis:")
-        tags_html = " ".join([f"<span class='pill-badge pill-critical' style='margin:2px;'>{t}</span>" for t in diag["ai_tags"]])
-        st.markdown(tags_html, unsafe_allow_html=True)
-        st.markdown(f"**Entrapped Debris Mix:**\n{diag['debris_mix']}")
-        st.caption("🔒 Analyzed under DPDP Privacy Compliance Protocol")
-
-    with col_action:
-        st.markdown("#### 🚜 3. Actionable Directives & SOP")
-        st.markdown(f"**Recommended Action:**\n{diag['action_plan']}")
-        st.markdown(f"**Traffic Advisory:**\n{diag['traffic_adv']}")
-
-        st.write("")
-        btn_col1, btn_col2 = st.columns(2)
-        with btn_col1:
-            if st.button("🚀 Dispatch Pump", key=f"disp_pump_{loc['id']}", type="primary", use_container_width=True):
-                db = SessionLocal()
-                db.add(AuditLog(user="Chief Municipal Officer", action=f"dispatched_mobile_pump_{loc['id']}", entity="location", entity_id=loc['id']))
-                db.commit()
-                db.close()
-                st.success(f"Mobile Pump Unit dispatched to {loc['name']}!")
-        with btn_col2:
-            if st.button("❌ Close Report", key=f"close_{loc['id']}", use_container_width=True):
-                st.session_state["selected_location_id"] = None
-                st.rerun()
-
-    st.markdown("<hr style='border:none; border-top:2px solid #E2E8F0; margin:16px 0 24px 0;'>", unsafe_allow_html=True)
-
+    st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:12px 0 18px 0;'>", unsafe_allow_html=True)
 

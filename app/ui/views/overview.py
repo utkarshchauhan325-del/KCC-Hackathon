@@ -20,6 +20,10 @@ from app.ui.components.location_report import render_location_full_report_box
 def render_overview_dashboard():
     """Render the exact FloodGuard dashboard overview with live WeatherAPI & TomTom Traffic intelligence."""
 
+    # Check if a location was clicked via URL query param (e.g. from score table)
+    if hasattr(st, "query_params") and "inspect" in st.query_params and st.query_params["inspect"]:
+        st.session_state["selected_location_id"] = st.query_params["inspect"]
+
     # Fetch live weather and calculate deterministic multi-attribute priority
     force_refresh = st.session_state.pop("force_weather_refresh", False)
     weather = fetch_live_pune_weather(force_refresh=force_refresh)
@@ -151,10 +155,6 @@ def render_overview_dashboard():
         with m_head2:
             layer_mode = st.radio("Layer", ["Map", "Satellite"], horizontal=True, label_visibility="collapsed", key="overview_layer_mode")
 
-        # Ensure selected location exists
-        if "selected_location_id" not in st.session_state or not st.session_state["selected_location_id"]:
-            st.session_state["selected_location_id"] = zone_filtered_locs[0]["id"] if zone_filtered_locs else locations[0]["id"]
-
         # Create Folium GIS map synchronized with selected municipal zone
         m = create_floodguard_map(
             locations=zone_filtered_locs,
@@ -163,7 +163,27 @@ def render_overview_dashboard():
             selected_location_id=st.session_state.get("selected_location_id"),
             fit_bounds=True
         )
-        render_floodguard_map_component(m, height=440, key=f"overview_map_{selected_zone}_{layer_mode}")
+        map_data = render_floodguard_map_component(
+            m,
+            height=440,
+            key=f"overview_map_{selected_zone}_{layer_mode}"
+        )
+
+        # Detect clicked marker on map
+        if map_data:
+            clicked_pt = map_data.get("last_object_clicked") or map_data.get("last_clicked")
+            if clicked_pt and isinstance(clicked_pt, dict) and "lat" in clicked_pt and "lng" in clicked_pt:
+                c_lat = round(clicked_pt["lat"], 5)
+                c_lng = round(clicked_pt["lng"], 5)
+                click_key = (c_lat, c_lng)
+                if st.session_state.get("last_handled_map_click") != click_key:
+                    st.session_state["last_handled_map_click"] = click_key
+                    closest = min(locations, key=lambda l: (l["lat"] - c_lat)**2 + (l["lng"] - c_lng)**2)
+                    dist_sq = (closest["lat"] - c_lat)**2 + (closest["lng"] - c_lng)**2
+                    if dist_sq < 0.005:
+                        if st.session_state.get("selected_location_id") != closest["id"]:
+                            st.session_state["selected_location_id"] = closest["id"]
+                            st.rerun()
 
         # Map Bottom Legend
         legend_html = textwrap.dedent("""
@@ -179,29 +199,6 @@ def render_overview_dashboard():
         </div>
         """).strip()
         st.markdown(legend_html, unsafe_allow_html=True)
-
-        # Quick location picker dropdown right under the map legend
-        loc_pool = zone_filtered_locs if zone_filtered_locs else locations
-        loc_options = {
-            l["id"]: f"#{l.get('priority_rank', idx)} 📍 {l['name']} (Score: {l.get('composite_score', l['risk_score'])} | 🌧️ {l.get('precip_mm', l['rainfall_3h'])} mm | 🚗 {l.get('traffic_congestion_pct', 50)}% Jam | {l['risk_level'].upper()})"
-            for idx, l in enumerate(loc_pool[:20], 1)
-        }
-        curr_sel = st.session_state.get("selected_location_id") or loc_pool[0]["id"]
-        if curr_sel not in loc_options:
-            c_loc = next((l for l in locations if l["id"] == curr_sel), None)
-            if c_loc:
-                loc_options[curr_sel] = f"#{c_loc.get('priority_rank', '-')} 📍 {c_loc['name']} (Score: {c_loc.get('composite_score', c_loc['risk_score'])} | 🌧️ {c_loc.get('precip_mm', c_loc['rainfall_3h'])} mm | 🚗 {c_loc.get('traffic_congestion_pct', 50)}% Jam | {c_loc['risk_level'].upper()})"
-
-        chosen_id = st.selectbox(
-            "🎯 Inspect Hotspot Engineering & Diagnostic Report:",
-            options=list(loc_options.keys()),
-            index=list(loc_options.keys()).index(curr_sel) if curr_sel in loc_options else 0,
-            format_func=lambda x: loc_options[x],
-            key="overview_hotspot_inspector_select"
-        )
-        if chosen_id != st.session_state.get("selected_location_id"):
-            st.session_state["selected_location_id"] = chosen_id
-            st.rerun()
 
 
     with table_col:
@@ -229,129 +226,184 @@ def render_overview_dashboard():
         # Top key locations to display prominently
         display_locs = filtered_locs[:8]
 
-        # Build custom styled HTML table
+        # Build compact, elegant HTML table with clickable rows
+        active_hotspot_id = st.session_state.get("selected_location_id")
+
         table_rows_html = ""
         for loc in display_locs:
             r_level = loc["risk_level"]
             pill_class = f"pill-{r_level.lower()}"
             fill_class = f"fill-{r_level.lower()}"
-
             p_val = loc.get("precip_mm", loc["rainfall_3h"])
             comp_score = loc.get("composite_score", loc["risk_score"])
+            is_active = (loc["id"] == active_hotspot_id)
+            row_active_cls = " active-corridor-row" if is_active else ""
+            inspect_href = f"?inspect={loc['id']}#diagnostic-report-box"
 
             table_rows_html += f"""
-            <tr>
+            <tr class="ranking-row{row_active_cls}">
                 <td style="font-weight:600; color:#1E293B;">
-                    <span style="display:inline-block; width:22px; font-weight:800; color:#7C3AED; font-size:11px;">#{loc.get('priority_rank', '-')}</span>
-                    {loc['name']}
+                    <a href="{inspect_href}" target="_self" class="cell-link" title="Open diagnostic report for {loc['name']}">
+                        <span style="display:inline-block; width:22px; font-weight:800; color:{'#2563EB' if is_active else '#7C3AED'}; font-size:11px;">
+                            {'📍' if is_active else f"#{loc.get('priority_rank', '-')}"}
+                        </span>
+                        <span style="{'color:#1D4ED8; font-weight:700;' if is_active else ''}">{loc['name']}</span>
+                    </a>
                 </td>
-                <td><span class="pill-badge {pill_class}">{r_level}</span></td>
-                <td style="font-weight:800; color:#0F172A; text-align:center;">{comp_score}</td>
                 <td>
-                    <span style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:11px; padding:2px 8px; border-radius:8px; display:inline-block; white-space:nowrap;">
-                        🌧️ {p_val} mm
-                    </span>
+                    <a href="{inspect_href}" target="_self" class="cell-link">
+                        <span class="pill-badge {pill_class}">{r_level}</span>
+                    </a>
                 </td>
-                <td style="min-width:100px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
-                        <div class="progress-track" style="width:60px;">
-                            <div class="progress-fill {fill_class}" style="width:{loc['water_level_pct']}%;"></div>
+                <td style="text-align:center;">
+                    <a href="{inspect_href}" target="_self" class="cell-link">
+                        <span style="font-weight:800; color:#0F172A; font-size:12px;">{comp_score}</span>
+                    </a>
+                </td>
+                <td>
+                    <a href="{inspect_href}" target="_self" class="cell-link">
+                        <span style="background:#EFF6FF; border:1px solid #BFDBFE; color:#1D4ED8; font-weight:800; font-size:11px; padding:2px 7px; border-radius:6px; display:inline-block; white-space:nowrap;">
+                            🌧️ {p_val} mm
+                        </span>
+                    </a>
+                </td>
+                <td>
+                    <a href="{inspect_href}" target="_self" class="cell-link">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="font-weight:600; font-size:11px; width:28px;">{loc['water_level_pct']}%</span>
+                            <div class="progress-track" style="width:55px; height:7px; display:inline-block;">
+                                <div class="progress-fill {fill_class}" style="width:{loc['water_level_pct']}%;"></div>
+                            </div>
                         </div>
-                    </div>
+                    </a>
                 </td>
-                <td style="font-weight:700; color:#475569; font-size:11px; text-align:center;">{loc['blockage_pct']}%</td>
+                <td style="text-align:center;">
+                    <a href="{inspect_href}" target="_self" class="cell-link">
+                        <span style="font-weight:700; color:#475569; font-size:11px;">{loc['blockage_pct']}%</span>
+                    </a>
+                </td>
             </tr>"""
 
-        full_table_html = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                * {{ box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }}
-                body {{ margin: 0; padding: 0; background: #FFFFFF; color: #1E293B; }}
-                .table-container {{
-                    border: 1px solid #E2E8F0;
-                    border-radius: 10px;
-                    padding: 6px 12px;
-                    background: #FFFFFF;
-                }}
-                table {{
-                    width: 100%;
-                    border-collapse: collapse;
-                    text-align: left;
-                }}
-                th {{
-                    padding: 9px 8px;
-                    font-size: 11px;
-                    color: #64748B;
-                    font-weight: 700;
-                    border-bottom: 1px solid #E2E8F0;
-                    white-space: nowrap;
-                }}
-                td {{
-                    padding: 10px 8px;
-                    border-bottom: 1px solid #F1F5F9;
-                    font-size: 12px;
-                }}
-                tr:last-child td {{
-                    border-bottom: none;
-                }}
-                .pill-badge {{
-                    display: inline-block;
-                    padding: 2px 7px;
-                    border-radius: 10px;
-                    font-size: 10px;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                }}
-                .pill-critical {{ background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }}
-                .pill-high {{ background-color: #FFEDD5; color: #EA580C; border: 1px solid #FED7AA; }}
-                .pill-medium {{ background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }}
-                .pill-low {{ background-color: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }}
-                .progress-track {{
-                    background: #F1F5F9;
-                    border-radius: 6px;
-                    height: 8px;
-                    overflow: hidden;
-                    display: inline-block;
-                }}
-                .progress-fill {{ height: 100%; border-radius: 6px; }}
-                .fill-critical {{ background: #EF4444; }}
-                .fill-high {{ background: #F97316; }}
-                .fill-medium {{ background: #FBBF24; }}
-                .fill-low {{ background: #10B981; }}
-            </style>
-        </head>
-        <body>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Rank & Corridor</th>
-                            <th>Severity</th>
-                            <th style="text-align:center;">Score</th>
-                            <th>Precip</th>
-                            <th>Conduit Saturation</th>
-                            <th style="text-align:center;">Debris Choke</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {table_rows_html}
-                    </tbody>
-                </table>
+        compact_table_html = f"""
+        <style>
+            .ranking-table-card {{
+                background: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 10px;
+                padding: 6px 10px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            }}
+            .ranking-html-table {{
+                width: 100%;
+                border-collapse: collapse;
+                text-align: left;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }}
+            .ranking-html-table th {{
+                padding: 7px 6px;
+                font-size: 11px;
+                color: #64748B;
+                font-weight: 700;
+                border-bottom: 1px solid #E2E8F0;
+                white-space: nowrap;
+            }}
+            .ranking-html-table td {{
+                padding: 6px 6px;
+                border-bottom: 1px solid #F1F5F9;
+                font-size: 12px;
+                vertical-align: middle;
+            }}
+            .ranking-html-table tr:last-child td {{
+                border-bottom: none;
+            }}
+            .ranking-row {{
+                transition: background 0.15s ease;
+            }}
+            .ranking-row:hover {{
+                background: #F8FAFC !important;
+                cursor: pointer;
+            }}
+            .active-corridor-row {{
+                background: #EFF6FF !important;
+                border-left: 3px solid #2563EB;
+            }}
+            .cell-link {{
+                text-decoration: none !important;
+                color: inherit !important;
+                display: block;
+            }}
+            .cell-link:hover {{
+                text-decoration: none !important;
+            }}
+            .pill-badge {{
+                display: inline-block;
+                padding: 2px 7px;
+                border-radius: 8px;
+                font-size: 10px;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.02em;
+            }}
+            .pill-critical {{ background-color: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }}
+            .pill-high {{ background-color: #FFEDD5; color: #EA580C; border: 1px solid #FED7AA; }}
+            .pill-medium {{ background-color: #FEF3C7; color: #D97706; border: 1px solid #FDE68A; }}
+            .pill-low {{ background-color: #DCFCE7; color: #16A34A; border: 1px solid #BBF7D0; }}
+            .progress-track {{
+                background: #F1F5F9;
+                border-radius: 4px;
+                overflow: hidden;
+            }}
+            .progress-fill {{ border-radius: 4px; height: 100%; }}
+            .fill-critical {{ background: #EF4444; }}
+            .fill-high {{ background: #F97316; }}
+            .fill-medium {{ background: #FBBF24; }}
+            .fill-low {{ background: #10B981; }}
+        </style>
+        <div class="ranking-table-card">
+            <table class="ranking-html-table">
+                <thead>
+                    <tr>
+                        <th>Rank & Corridor</th>
+                        <th>Severity</th>
+                        <th style="text-align:center;">Score</th>
+                        <th>Precip</th>
+                        <th>Conduit Saturation</th>
+                        <th style="text-align:center;">Blockage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {table_rows_html}
+                </tbody>
+            </table>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #F1F5F9; padding-top:6px; margin-top:4px; font-size:11px; color:#64748B;">
+                <span>👆 Click any corridor above or map dot to open diagnostic report</span>
+                <span>Top {len(display_locs)} corridors ({selected_zone})</span>
             </div>
-        </body>
-        </html>
+        </div>
         """
-        import streamlit.components.v1 as components
-        components.html(full_table_html, height=440, scrolling=True)
+        st.markdown(compact_table_html, unsafe_allow_html=True)
 
-    # Full-Length Detailed Site Problem & Diagnostic Report Box
-    active_hotspot_id = st.session_state.get("selected_location_id") or (locations[0]["id"] if locations else None)
+    # -------------------------------------------------------------
+    # SITE PROBLEM & DIAGNOSTIC REPORT BOX (COMPACT 5-KPI CARD)
+    # -------------------------------------------------------------
+    active_hotspot_id = st.session_state.get("selected_location_id")
     if active_hotspot_id:
         active_loc = next((l for l in locations if l["id"] == active_hotspot_id), None)
         if active_loc:
+            # Trigger smooth scroll to the diagnostic report box
+            import streamlit.components.v1 as components
+            components.html("""
+            <script>
+            setTimeout(function() {
+                try {
+                    const el = window.parent.document.getElementById('diagnostic-report-box');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } catch(e) {}
+            }, 150);
+            </script>
+            """, height=0)
             render_location_full_report_box(active_loc)
 
     st.markdown("<hr style='border:none; border-top:1px solid #E2E8F0; margin:24px 0;'>", unsafe_allow_html=True)
