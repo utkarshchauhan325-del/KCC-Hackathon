@@ -43,3 +43,40 @@ about 2 metres (none, light, moderate, heavy), whether drain inlet grating is co
 whether the cover is missing/broken, whether it is raining or the road is wet,
 and any visible hazards (open hole, children/vehicles nearby). Return the JSON schema only.
 """
+
+GARBAGE_FRAME_DETECTION_PROMPT = """
+You are a precision urban vision inspector analyzing a street/drain surveillance frame.
+Your task is to detect and locate ONLY ACTUAL PHYSICAL SOLID WASTE / GARBAGE.
+
+CRITICAL DISCRIMINATION RULES (STRICT COMPLIANCE REQUIRED):
+1. OBJECTS THAT ARE ACTUAL GARBAGE:
+   - Discarded plastic bottles, polythene bags, chip wrappers, plastic containers, thermocol/styrofoam
+   - Heaped solid trash piles, paper/cardboard waste, broken plastic crates, household rubbish, discarded fabric rags
+2. OBJECTS THAT ARE NOT GARBAGE (STRICTLY PROHIBITED FROM RECEIVING A GARBAGE BOUNDING BOX):
+   - DRAINS, gutters, open storm water channels, culverts, nullahs, manholes, metal drain grates, concrete drain covers
+   - ROADS, asphalt surfaces, concrete slabs, footpaths, curbs, cobblestone paving
+   - POTHOLES, road craters, cracks, dark asphalt patches
+   - SHADOWS, tree/building shadows, dark crevices under bridges
+   - WATER, murky runoff, stagnant canal water, sewage water, ripples, puddles
+   - SOIL, dirt banks, silt, gravel, rocks, weeds, grass, vegetation
+   - Vehicles, handcarts, pedestrians, or animals
+3. CONTEXTUAL DIFFERENTIATION:
+   - A drain channel itself is civil infrastructure, NEVER garbage. If solid plastic debris is floating inside or sitting at the drain mouth, draw the bounding box TIGHTLY around the PLASTIC/DEBRIS only, NOT around the drain or channel.
+4. CONFIDENCE ESTIMATION:
+   - Only return high-confidence detections. If you are uncertain whether an object is actual discarded trash (e.g., merely dark wet silt or a shadow), DO NOT output it.
+5. If there is NO visible solid waste in the image, return an empty array for objects: {"objects": []}.
+
+Output JSON matching the schema:
+{
+  "objects": [
+    {
+      "class": "garbage",
+      "confidence": float (0.0 to 1.0),
+      "bbox": [x_min, y_min, x_max, y_max] normalized from 0 to 1000,
+      "description": "Short explanation of the specific garbage item (e.g. Discarded plastic bags and bottle accumulation)",
+      "object_id": "optional short visual tag e.g. trash_01"
+    }
+  ]
+}
+"""
+

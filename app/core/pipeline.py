@@ -275,6 +275,7 @@ class CivicEyePipeline:
                 drainage_score=drainage_score,
                 garbage_score=garbage_score,
                 water_depth_cm=water_depth_cm,
+                client=self.client,
             )
 
             # Save annotated video evidence

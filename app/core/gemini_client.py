@@ -7,8 +7,20 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.core.prompts import SYSTEM_CONTEXT, INFRA_PROMPT, VIOLATOR_PROMPT, SEWER_PROMPT
-from app.core.schemas import InfraAnalysisResponse, ViolatorAnalysisResponse, SewerAssessment
+from app.core.prompts import (
+    SYSTEM_CONTEXT,
+    INFRA_PROMPT,
+    VIOLATOR_PROMPT,
+    SEWER_PROMPT,
+    GARBAGE_FRAME_DETECTION_PROMPT,
+)
+from app.core.schemas import (
+    InfraAnalysisResponse,
+    ViolatorAnalysisResponse,
+    SewerAssessment,
+    GarbageDetectionResponse,
+    GarbageObjectDetection,
+)
 
 logger = logging.getLogger("civiceye.gemini_client")
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -16,9 +28,9 @@ logging.basicConfig(level=settings.LOG_LEVEL)
 T = TypeVar("T", bound=BaseModel)
 
 FALLBACK_MODELS = [
+    "gemini-2.5-flash",
     "gemini-3-flash-preview",
-    "gemini-3.7-flash",
-    "gemini-3.8-flash",
+    "gemini-2.5-pro",
     "gemini-flash-latest",
 ]
 
@@ -134,3 +146,57 @@ class GeminiVideoClient:
         prompt = SEWER_PROMPT.format(timestamp=timestamp_str)
         contents = [video_file, prompt]
         return self._call_with_retry_and_fallback(contents, SewerAssessment)
+
+    def detect_garbage_frame(
+        self,
+        frame: Any,
+        confidence_threshold: float = 0.70,
+    ) -> GarbageDetectionResponse:
+        """Frame-level semantic garbage detection distinguishing waste from drains, roads, and background."""
+        import cv2
+        import numpy as np
+
+        if not isinstance(frame, np.ndarray) or frame.size == 0:
+            return GarbageDetectionResponse(objects=[])
+
+        h, w = frame.shape[:2]
+        # Optimize frame size for network latency if larger than 720p
+        max_dim = max(h, w)
+        if max_dim > 720:
+            scale = 720.0 / max_dim
+            proc_frame = cv2.resize(frame, (int(w * scale), int(h * scale)))
+        else:
+            proc_frame = frame
+
+        success, buf = cv2.imencode(".jpg", proc_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not success:
+            logger.warning("Failed to encode frame to JPEG for Gemini.")
+            return GarbageDetectionResponse(objects=[])
+
+        jpg_bytes = buf.tobytes()
+        part = types.Part.from_bytes(data=jpg_bytes, mime_type="image/jpeg")
+        contents = [part, GARBAGE_FRAME_DETECTION_PROMPT]
+
+        try:
+            logger.info("Calling Gemini for frame-level garbage detection & classification...")
+            raw_resp = self._call_with_retry_and_fallback(
+                contents=contents,
+                response_schema=GarbageDetectionResponse,
+                temperature=0.1,
+            )
+            # Filter strictly by confidence threshold and class
+            valid_objects: List[GarbageObjectDetection] = []
+            for obj in raw_resp.objects:
+                c_name = getattr(obj, "class_name", "") or getattr(obj, "class", "")
+                if str(c_name).lower() == "garbage" and obj.confidence >= confidence_threshold:
+                    valid_objects.append(obj)
+                else:
+                    logger.debug(
+                        f"Discarded detection {c_name} (conf={obj.confidence:.2f}) "
+                        f"below threshold {confidence_threshold}"
+                    )
+            return GarbageDetectionResponse(objects=valid_objects)
+        except Exception as e:
+            logger.warning(f"Frame-level Gemini garbage detection failed or skipped: {e}")
+            return GarbageDetectionResponse(objects=[])
+

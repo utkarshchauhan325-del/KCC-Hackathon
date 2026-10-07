@@ -1,4 +1,4 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Union
 from pydantic import BaseModel, Field
 
 class BBox(BaseModel):
@@ -53,3 +53,20 @@ class SewerAssessment(BaseModel):
     wet_conditions: bool
     hazards: List[str] = Field(default_factory=list)
     confidence: float = Field(..., ge=0.0, le=1.0)
+
+
+class GarbageObjectDetection(BaseModel):
+    """Single detected garbage object from frame-level Gemini visual detection."""
+    model_config = {"populate_by_name": True}
+
+    class_name: str = Field(default="garbage", alias="class")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence score 0.0 to 1.0")
+    bbox: List[Union[int, float]] = Field(..., description="[xmin, ymin, xmax, ymax] or [ymin, xmin, ymax, xmax] normalized 0-1000")
+    description: str = Field(default="Discarded solid waste debris", description="Short explanation of why it is physical garbage")
+    object_id: Optional[str] = Field(default=None, description="Visual object ID")
+
+
+class GarbageDetectionResponse(BaseModel):
+    """Structured response container for frame-level Gemini garbage detection."""
+    objects: List[GarbageObjectDetection] = Field(default_factory=list)
+
