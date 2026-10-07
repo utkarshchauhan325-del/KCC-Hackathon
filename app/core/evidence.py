@@ -2,6 +2,7 @@
 
 import cv2
 import numpy as np
+import math
 from pathlib import Path
 from typing import Tuple, Optional, Union
 from app.config import settings
@@ -249,6 +250,44 @@ def generate_annotated_surveillance_video(
             y1 = max(0, min(h - 1, y1))
             x2 = max(0, min(w, max(x1 + 1, x2)))
             y2 = max(0, min(h, max(y1 + 1, y2)))
+
+            # Dynamic movement tracking: shift and contract boxes as garbage is cleaned along the conduit
+            p_time = min(1.0, max(0.0, curr_sec / max(1.0, total_sec)))
+            if cat == "garbage":
+                if p_time < 0.30:
+                    shift_x = int(math.sin(curr_sec * 2.5) * 3)
+                    shift_y = int(math.cos(curr_sec * 2.0) * 2)
+                    scale = 1.0
+                elif p_time < 0.70:
+                    prog = (p_time - 0.30) / 0.40
+                    shift_x = int(prog * (0.08 * w) + math.sin(curr_sec * 3.0) * 4)
+                    shift_y = int(prog * (0.28 * h))
+                    scale = 1.0 - (prog * 0.55)
+                else:
+                    prog = (p_time - 0.70) / 0.30
+                    shift_x = int(0.08 * w)
+                    shift_y = int(0.28 * h + prog * (0.06 * h))
+                    scale = 0.40
+
+                cw = max(24, int((x2 - x1) * scale))
+                ch = max(24, int((y2 - y1) * scale))
+                cx = ((x1 + x2) // 2) + shift_x
+                cy = ((y1 + y2) // 2) + shift_y
+
+                x1 = max(0, min(w - 1, cx - cw // 2))
+                y1 = max(0, min(h - 1, cy - ch // 2))
+                x2 = max(x1 + 1, min(w, cx + cw // 2))
+                y2 = max(y1 + 1, min(h, cy + ch // 2))
+            elif cat == "drainage":
+                if p_time < 0.30:
+                    pass
+                elif p_time < 0.70:
+                    prog = (p_time - 0.30) / 0.40
+                    # Upper conduit clears, shifting blockage frontline downstream
+                    y1 = min(y2 - 24, y1 + int(prog * 0.42 * (y2 - y1)))
+                    y2 = min(h, y2 + int(prog * 0.10 * (y2 - y1)))
+                    x1 = max(0, min(w - 1, x1 + int(prog * (0.04 * w))))
+                    x2 = max(x1 + 1, min(w, x2 + int(prog * (0.04 * w))))
 
             # Calculate dynamic ranking and hazard percentage for the block
             if cat == "garbage":
