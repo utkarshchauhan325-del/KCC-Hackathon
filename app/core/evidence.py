@@ -338,11 +338,10 @@ def generate_annotated_surveillance_video(
         cands_g = detect_frame_objects(frame, "garbage", w, h)
         cands_d = detect_frame_objects(frame, "drainage", w, h)
 
-        # Register trackers for active detections in this temporal slice
+        # Register trackers for active detections in this video
         for d_idx, d in enumerate(detections):
             s = d.get("start_sec", 0.0)
-            e = d.get("end_sec", 9999.0)
-            if s <= curr_sec <= e and d_idx not in trackers:
+            if curr_sec >= s and d_idx not in trackers:
                 box = d.get("box")
                 cat = d.get("category", "garbage")
                 base_label = d.get("label") or d.get("subtype", "Hazard").replace("_", " ").upper()
@@ -365,17 +364,12 @@ def generate_annotated_surveillance_video(
                     severity=sev,
                 )
 
-        # Update and render active trackers
+        # Update and render active trackers (persist across the entire video session)
         for d_idx, tracker in list(trackers.items()):
-            d_info = detections[d_idx] if d_idx < len(detections) else {}
-            if curr_sec > d_info.get("end_sec", 9999.0):
-                tracker.active = False
-                continue
-
-            # Advance Kalman filter prediction
+            # Advance Kalman filter prediction for smooth tracking
             tracker.predict(w, h)
 
-            # Match to actual detected objects in this frame
+            # Match to actual detected objects in this frame if available
             cands = cands_g if tracker.category == "garbage" else cands_d
             if cands:
                 cur_box = tracker.get_box(w, h)
@@ -387,85 +381,85 @@ def generate_annotated_surveillance_video(
                     ccx = (c["box"][0] + c["box"][2]) / 2.0
                     ccy = (c["box"][1] + c["box"][3]) / 2.0
                     dist = math.hypot(tcx - ccx, tcy - ccy)
-                    if dist < min_d and dist < 170:
+                    if dist < min_d and dist < 180:
                         min_d = dist
                         best_c = c
                 if best_c:
                     tracker.update(best_c["box"])
-                elif tracker.time_since_update > 25:
-                    tracker.active = False
-
-            if not tracker.active:
-                continue
 
             # Read tight bounding box coordinates from tracker state
             x1, y1, x2, y2 = tracker.get_box(w, h)
             cat = tracker.category
 
             # Calculate dynamic ranking and hazard percentage for the block
+            # RANK SCALE ALIGNED WITH MUNICIPAL DASHBOARD:
+            # Rank 4 = CRITICAL (Severe / Choked)
+            # Rank 3 = HIGH (Mitigation in progress)
+            # Rank 2 = MODERATE (Receding / Clearing)
+            # Rank 1 = SAFE (Restored / Cleaned)
             if cat == "garbage":
                 target_val = g_val
                 if target_val >= 70.0:
-                    rank_num = 1
+                    rank_num = 4
                     status_lbl = "CRITICAL"
                     box_color = (0, 0, 230)  # Red
                     tag_prefix = "GARBAGE DUMP"
                 elif target_val >= 45.0:
-                    rank_num = 2
-                    status_lbl = "CLEARING"
-                    box_color = (0, 140, 255)  # Orange
-                    tag_prefix = "GARBAGE DESILTING"
-                elif target_val >= 25.0:
                     rank_num = 3
-                    status_lbl = "RESIDUAL"
+                    status_lbl = "HIGH"
+                    box_color = (0, 140, 255)  # Orange
+                    tag_prefix = "GARBAGE CLEARING"
+                elif target_val >= 25.0:
+                    rank_num = 2
+                    status_lbl = "MODERATE"
                     box_color = (0, 215, 255)  # Yellow-Gold
-                    tag_prefix = "GARBAGE RECEDING"
+                    tag_prefix = "RESIDUAL DEBRIS"
                 else:
-                    rank_num = 4
-                    status_lbl = "CLEANED"
+                    rank_num = 1
+                    status_lbl = "SAFE"
                     box_color = (0, 205, 30)  # Bright Green
                     tag_prefix = "GARBAGE CLEARED"
                 tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
             elif cat == "drainage":
                 target_val = d_val
                 if target_val >= 70.0:
-                    rank_num = 1
+                    rank_num = 4
                     status_lbl = "CRITICAL"
                     box_color = (0, 0, 230)  # Red
                     tag_prefix = "BLOCKED DRAIN"
                 elif target_val >= 45.0:
-                    rank_num = 2
-                    status_lbl = "CLEARING"
+                    rank_num = 3
+                    status_lbl = "HIGH"
                     box_color = (0, 140, 255)  # Orange
                     tag_prefix = "FLOW RESTORING"
                 elif target_val >= 25.0:
-                    rank_num = 3
-                    status_lbl = "RESIDUAL"
+                    rank_num = 2
+                    status_lbl = "MODERATE"
                     box_color = (0, 215, 255)  # Yellow-Gold
                     tag_prefix = "SILT RECEDING"
                 else:
-                    rank_num = 4
-                    status_lbl = "CLEANED"
+                    rank_num = 1
+                    status_lbl = "SAFE"
                     box_color = (0, 205, 30)  # Bright Green
                     tag_prefix = "DRAIN RESTORED"
                 tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
             else:
                 target_val = g_val
                 if target_val >= 70.0:
-                    rank_num = 1
+                    rank_num = 4
                     status_lbl = "CRITICAL"
                     box_color = (0, 0, 230)
                 elif target_val >= 45.0:
-                    rank_num = 2
-                    status_lbl = "CLEARING"
+                    rank_num = 3
+                    status_lbl = "HIGH"
                     box_color = (0, 140, 255)
                 elif target_val >= 25.0:
-                    rank_num = 3
-                    status_lbl = "RESIDUAL"
+                    rank_num = 2
+                    status_lbl = "MODERATE"
                     box_color = (0, 215, 255)
                 else:
-                    rank_num = 4
-                    status_lbl = "RESOLVED"
+                    rank_num = 1
+                    status_lbl = "SAFE"
                     box_color = (0, 205, 30)
                 tag_label = f"[TRK-{tracker.id:02d}] {tracker.label}: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
 
