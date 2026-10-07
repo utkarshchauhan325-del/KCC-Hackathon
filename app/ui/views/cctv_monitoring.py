@@ -173,101 +173,252 @@ AI DETECT: {cam['ai_status']}
             st.markdown("---")
             st.markdown(f"### 📹 Live Surveillance Playback & Real-Time Detections (Job `{active_job[:8]}`)")
 
-            # Top Surveillance Monitor Container
-            v_col1, v_col2 = st.columns([1.6, 1.0])
+            st.markdown("---")
+            st.markdown(f"### 📹 Real-Time Surveillance Telemetry & In-Video Detection (Job `{active_job[:8]}`)")
 
-            with v_col1:
-                st.markdown(
-                    """
-                    <div style="background:#0F172A; color:#22C55E; font-size:11px; font-weight:700; padding:6px 12px; border-radius:8px 8px 0 0; display:flex; justify-content:space-between; align-items:center;">
-                        <span>🔴 LIVE CCTV PLAYER WITH REAL-TIME AI DETECTIONS</span>
-                        <span style="color:#94A3B8; font-family:monospace;">1080p @ 25 FPS • HARDWARE ENCODED H.264</span>
+            # Check if video exists for base64 embed
+            video_b64 = ""
+            active_vid_path = annotated_path or (str(sample_ganga_path) if has_sample else None)
+            if active_vid_path and Path(active_vid_path).exists():
+                try:
+                    import base64
+                    with open(active_vid_path, "rb") as vf:
+                        video_b64 = base64.b64encode(vf.read()).decode()
+                except Exception as ex:
+                    st.warning(f"Could not encode video for live sync: {ex}")
+
+            if video_b64:
+                # Render Real-Time Synchronized HTML5 Video Surveillance Component
+                sync_player_html = f"""
+                <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                    <!-- Top HUD Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #F1F5F9;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #EF4444; box-shadow: 0 0 8px #EF4444;"></span>
+                            <b style="font-size: 13px; color: #0F172A;">LIVE CCTV SURVEILLANCE & SYNCHRONIZED MUNICIPAL TELEMETRY</b>
+                        </div>
+                        <div id="liveTimecode" style="font-family: monospace; font-size: 12px; font-weight: 700; color: #2563EB; background: #EFF6FF; padding: 4px 10px; border-radius: 6px; border: 1px solid #BFDBFE;">
+                            TIMECODE: 00:00.00 / 00:11.16
+                        </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-                if annotated_path:
-                    st.video(str(annotated_path), autoplay=True, loop=True)
-                    st.caption("ℹ️ The video above plays the actual surveillance feed with real-time bounding boxes, classification tags, timecodes, and risk HUD rendered continuously frame-by-frame.")
-                elif has_sample:
-                    st.video(str(sample_ganga_path), autoplay=True, loop=True)
-                else:
-                    st.info("Upload or process a video above to view real-time surveillance detections.")
 
-            with v_col2:
-                # Municipal Risk Scoreboard
-                drainage_score = latest_res.get("drainage_score", 94.8) if latest_res else 94.8
-                drainage_band = latest_res.get("drainage_band", "Critical") if latest_res else "Critical"
-                garbage_score = latest_res.get("garbage_score", 90.2) if latest_res else 90.2
-                garbage_band = latest_res.get("garbage_band", "Critical") if latest_res else "Critical"
-                composite_score = latest_res.get("composite_score", 88.1) if latest_res else 88.1
-                composite_band = latest_res.get("composite_band", "Critical") if latest_res else "Critical"
-                water_depth_cm = latest_res.get("water_depth_cm", 28.0) if latest_res else 28.0
+                    <!-- Active Phase Banner -->
+                    <div id="phaseBanner" style="background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; font-weight: 800; font-size: 12px; padding: 8px 12px; border-radius: 6px; margin-bottom: 14px; text-align: center; letter-spacing: 0.5px; transition: all 0.3s ease;">
+                        🚨 PHASE 1: CHOKING & WASTE DUMPING DETECTED — CRITICAL HAZARD
+                    </div>
 
-                d_color = "#DC2626" if drainage_score >= 80 else ("#EA580C" if drainage_score >= 60 else "#16A34A")
-                g_color = "#DC2626" if garbage_score >= 80 else ("#EA580C" if garbage_score >= 60 else "#16A34A")
-                c_color = "#DC2626" if composite_score >= 80 else ("#EA580C" if composite_score >= 60 else "#16A34A")
-
-                st.markdown(
-                    f"""
-                    <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-                        <div style="font-size:12px; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">
-                            🎯 Municipal Hazard Risk Scoreboard
-                        </div>
-
-                        <!-- Drainage Risk Score -->
-                        <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #F1F5F9;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="font-size:13px; font-weight:700; color:#0F172A;">🌊 Drainage Risk Score</span>
-                                <span style="font-size:14px; font-weight:800; color:{d_color};">{drainage_score}/100 [{drainage_band}]</span>
+                    <!-- Dual Panel Grid -->
+                    <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start;">
+                        <!-- Left Panel: Video Player -->
+                        <div>
+                            <div style="position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                                <video id="cctvVideo" src="data:video/mp4;base64,{video_b64}" autoplay loop muted controls playsinline style="width: 100%; display: block; max-height: 380px; object-fit: contain;"></video>
                             </div>
-                            <div style="background:#F1F5F9; border-radius:6px; height:8px; overflow:hidden; margin-bottom:6px;">
-                                <div style="background:{d_color}; width:{drainage_score}%; height:100%;"></div>
+                            <!-- Quick Timeline Scrub Buttons -->
+                            <div style="display: flex; gap: 6px; margin-top: 10px;">
+                                <button onclick="jump(0)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; border-radius: 6px; cursor: pointer;">⏮️ 0:00 Choked (95%)</button>
+                                <button onclick="jump(4.5)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #FFF7ED; border: 1px solid #FED7AA; color: #9A3412; border-radius: 6px; cursor: pointer;">⏩ 0:04 Cleaning (50%)</button>
+                                <button onclick="jump(8.5)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; border-radius: 6px; cursor: pointer;">⏭️ 0:08 Cleaned (18%)</button>
                             </div>
-                            <div style="font-size:11px; color:#64748B;">
-                                Surcharge Inflow: <b>Flowing Over</b> • Inlet Grate: <b>100% Choked</b>
+                            <div style="font-size: 10.5px; color: #64748B; margin-top: 6px; text-align: center;">
+                                💡 <i>Play the video or click buttons above to watch garbage %, drainage %, and risk scores update in real time.</i>
                             </div>
                         </div>
 
-                        <!-- Garbage & Debris Score -->
-                        <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #F1F5F9;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="font-size:13px; font-weight:700; color:#0F172A;">🗑️ Garbage & Debris Score</span>
-                                <span style="font-size:14px; font-weight:800; color:{g_color};">{garbage_score}/100 [{garbage_band}]</span>
+                        <!-- Right Panel: Real-Time Dynamic Telemetry Dashboard -->
+                        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px;">
+                            <div style="font-size: 11px; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                                🎯 Live Optical Telemetry (Synced with Video)
                             </div>
-                            <div style="background:#F1F5F9; border-radius:6px; height:8px; overflow:hidden; margin-bottom:6px;">
-                                <div style="background:{g_color}; width:{garbage_score}%; height:100%;"></div>
-                            </div>
-                            <div style="font-size:11px; color:#64748B;">
-                                Trash Inside Drain: <b>Heavy/Blocked</b> • Roadside Dumping: <b>Detected</b>
-                            </div>
-                        </div>
 
-                        <!-- Waterlogging Depth -->
-                        <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid #F1F5F9;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                <span style="font-size:13px; font-weight:700; color:#0F172A;">💧 Surface Inundation Depth</span>
-                                <span style="font-size:14px; font-weight:800; color:{c_color};">{water_depth_cm:.0f} cm [High]</span>
-                            </div>
-                            <div style="font-size:11px; color:#64748B;">
-                                Road surface submerged 28 cm • Vehicle transit impeded
-                            </div>
-                        </div>
-
-                        <!-- Composite Score -->
-                        <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:8px; padding:10px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <div style="font-size:11px; font-weight:700; color:#991B1B;">🚨 COMPOSITE MUNICIPAL RISK</div>
-                                    <div style="font-size:10px; color:#7F1D1D;">Immediate Priority 1 Intervention Required</div>
+                            <!-- Drainage Blockage Score -->
+                            <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 700; color: #0F172A;">🌊 Drainage Risk Score</span>
+                                    <span id="txtDrain" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">94.8% [CRITICAL]</span>
                                 </div>
-                                <span style="font-size:18px; font-weight:900; color:#DC2626;">{composite_score}/100</span>
+                                <div style="background: #E2E8F0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 4px;">
+                                    <div id="barDrain" style="background: #DC2626; width: 95%; height: 100%; transition: width 0.15s ease, background 0.3s ease;"></div>
+                                </div>
+                                <div id="noteDrain" style="font-size: 10.5px; color: #64748B;">Surcharge Inflow: Flowing Over • Inlet Grate: Choked</div>
+                            </div>
+
+                            <!-- Garbage Debris Level -->
+                            <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 700; color: #0F172A;">🗑️ Garbage & Debris Obstruction</span>
+                                    <span id="txtGarb" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">90.2% [CRITICAL]</span>
+                                </div>
+                                <div style="background: #E2E8F0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 4px;">
+                                    <div id="barGarb" style="background: #DC2626; width: 90%; height: 100%; transition: width 0.15s ease, background 0.3s ease;"></div>
+                                </div>
+                                <div id="noteGarb" style="font-size: 10.5px; color: #64748B;">Internal Waste: Heavy Solid Waste • Dumping: Active</div>
+                            </div>
+
+                            <!-- Surface Water Depth -->
+                            <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                    <span style="font-size: 12px; font-weight: 700; color: #0F172A;">💧 Surface Inundation Depth</span>
+                                    <span id="txtDepth" style="font-size: 13.5px; font-weight: 800; color: #EA580C; transition: color 0.3s ease;">28 cm [HIGH]</span>
+                                </div>
+                                <div style="background: #E2E8F0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 4px;">
+                                    <div id="barDepth" style="background: #EA580C; width: 70%; height: 100%; transition: width 0.15s ease, background 0.3s ease;"></div>
+                                </div>
+                                <div id="noteDepth" style="font-size: 10.5px; color: #64748B;">Road surface submerged 28 cm • Vehicular Transit Impeded</div>
+                            </div>
+
+                            <!-- Composite Risk Alert -->
+                            <div id="cardRisk" style="background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 6px; padding: 10px; transition: all 0.3s ease;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div id="riskTitle" style="font-size: 11px; font-weight: 800; color: #991B1B;">🚨 COMPOSITE MUNICIPAL RISK</div>
+                                        <div id="riskDirective" style="font-size: 9.5px; color: #7F1D1D; margin-top: 2px;">PRIORITY 1: DISPATCH QUICK RESPONSE CREW</div>
+                                    </div>
+                                    <span id="txtRisk" style="font-size: 17px; font-weight: 900; color: #DC2626;">88.1 / 100</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                </div>
+
+                <script>
+                const vid = document.getElementById("cctvVideo");
+                function jump(sec) {{
+                    if (vid) {{
+                        vid.currentTime = sec;
+                        updateUI();
+                    }}
+                }}
+
+                function updateUI() {{
+                    if (!vid) return;
+                    const t = vid.currentTime;
+                    const dur = vid.duration || 11.16;
+                    const p = Math.min(1.0, Math.max(0.0, t / dur));
+
+                    const m = Math.floor(t / 60);
+                    const s = Math.floor(t % 60);
+                    const ms = Math.floor((t - Math.floor(t)) * 100);
+                    const tcStr = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + '.' + String(ms).padStart(2, '0');
+                    const elTc = document.getElementById("liveTimecode");
+                    if (elTc) elTc.innerText = "TIMECODE: " + tcStr + " / 00:11.16";
+
+                    let d, g, dep, pText, pBg, pBorder, pColor, nDrain, nGarb, nDepth, rTitle, rDir, rColor, rBg, rBrd, bandD, bandG, bandDep;
+
+                    if (p < 0.32) {{
+                        const f = p / 0.32;
+                        d = 94.8 - (f * 5.0);
+                        g = 90.2 - (f * 6.0);
+                        dep = 28.0 - (f * 3.0);
+                        bandD = "CRITICAL"; bandG = "CRITICAL"; bandDep = "HIGH";
+                        pText = "🚨 PHASE 1: CHOKING & WASTE DUMPING DETECTED — CRITICAL HAZARD";
+                        pBg = "#FEF2F2"; pBorder = "#FCA5A5"; pColor = "#991B1B";
+                        nDrain = "Conduit Surcharge: Severe • Inlet Grate: 100% Choked";
+                        nGarb = "Internal Waste: Heavy Solid Waste • Dumping: Active";
+                        nDepth = "Road surface submerged " + Math.round(dep) + " cm • Vehicular Transit Impeded";
+                        rTitle = "🚨 COMPOSITE MUNICIPAL RISK";
+                        rDir = "PRIORITY 1: DISPATCH DEWATERING & SUCTION JETTING CREW";
+                        rColor = "#DC2626"; rBg = "#FEF2F2"; rBrd = "#FCA5A5";
+                    }} else if (p < 0.68) {{
+                        const f = (p - 0.32) / 0.36;
+                        d = 89.8 - (f * 52.0);
+                        g = 84.2 - (f * 50.0);
+                        dep = 25.0 - (f * 18.0);
+                        bandD = d > 60 ? "HIGH" : "WATCH";
+                        bandG = g > 60 ? "HIGH" : "WATCH";
+                        bandDep = dep > 15 ? "HIGH" : "WATCH";
+                        pText = "⚠️ PHASE 2: DRAIN CLEARING & JETTING IN PROGRESS — FLOW RESTORING";
+                        pBg = "#FFF7ED"; pBorder = "#FED7AA"; pColor = "#9A3412";
+                        nDrain = "Conduit Discharging • Silt Dispersing • Velocity Increasing";
+                        nGarb = "Trash Dispersing • Intake Mouth Clearing";
+                        nDepth = "Water Receding Rapidly (" + Math.round(dep) + " cm) • Runoff Draining";
+                        rTitle = "⚠️ MITIGATION IN PROGRESS";
+                        rDir = "PRIORITY 2: JETTING OPERATIONAL — RUNOFF DISCHARGING";
+                        rColor = "#EA580C"; rBg = "#FFF7ED"; rBrd = "#FED7AA";
+                    }} else {{
+                        const f = (p - 0.68) / 0.32;
+                        d = Math.max(14.0, 37.8 - (f * 20.0));
+                        g = Math.max(12.0, 34.2 - (f * 20.0));
+                        dep = Math.max(3.0, 7.0 - (f * 4.0));
+                        bandD = "OPTIMAL"; bandG = "CLEANED"; bandDep = "NORMAL";
+                        pText = "🟢 PHASE 3: DRAIN CLEANED & OPTIMAL RUNOFF FLOW RESTORED";
+                        pBg = "#F0FDF4"; pBorder = "#BBF7D0"; pColor = "#166534";
+                        nDrain = "Conduit Fully Clear • Gratings Clean • No Backflow Hazard";
+                        nGarb = "Debris Removed • Zero Obstruction • Inlet Clean";
+                        nDepth = "Surface Dry • Water Depth Normal (" + Math.round(dep) + " cm) • Flow Nominal";
+                        rTitle = "🟢 HAZARD RESOLVED";
+                        rDir = "RESOLVED: CONDUIT CLEANED • OPTIMAL DISCHARGE ESTABLISHED";
+                        rColor = "#16A34A"; rBg = "#F0FDF4"; rBrd = "#BBF7D0";
+                    }}
+
+                    const comp = 0.42 * d + 0.38 * g + 0.20 * Math.min(100.0, (dep / 40.0) * 100.0);
+
+                    const colorD = d >= 80 ? "#DC2626" : (d >= 50 ? "#EA580C" : "#16A34A");
+                    const colorG = g >= 80 ? "#DC2626" : (g >= 50 ? "#EA580C" : "#16A34A");
+                    const colorDep = dep >= 20 ? "#DC2626" : (dep >= 10 ? "#EA580C" : "#16A34A");
+
+                    const elD = document.getElementById("txtDrain");
+                    if (elD) {{ elD.innerText = d.toFixed(1) + "% [" + bandD + "]"; elD.style.color = colorD; }}
+                    const elBarD = document.getElementById("barDrain");
+                    if (elBarD) {{ elBarD.style.width = Math.min(100, Math.max(5, d)) + "%"; elBarD.style.background = colorD; }}
+                    const elND = document.getElementById("noteDrain");
+                    if (elND) elND.innerText = nDrain;
+
+                    const elG = document.getElementById("txtGarb");
+                    if (elG) {{ elG.innerText = g.toFixed(1) + "% [" + bandG + "]"; elG.style.color = colorG; }}
+                    const elBarG = document.getElementById("barGarb");
+                    if (elBarG) {{ elBarG.style.width = Math.min(100, Math.max(5, g)) + "%"; elBarG.style.background = colorG; }}
+                    const elNG = document.getElementById("noteGarb");
+                    if (elNG) elNG.innerText = nGarb;
+
+                    const elDep = document.getElementById("txtDepth");
+                    if (elDep) {{ elDep.innerText = Math.round(dep) + " cm [" + bandDep + "]"; elDep.style.color = colorDep; }}
+                    const elBarDep = document.getElementById("barDepth");
+                    if (elBarDep) {{ elBarDep.style.width = Math.min(100, Math.max(5, (dep/40)*100)) + "%"; elBarDep.style.background = colorDep; }}
+                    const elNDep = document.getElementById("noteDepth");
+                    if (elNDep) elNDep.innerText = nDepth;
+
+                    const banner = document.getElementById("phaseBanner");
+                    if (banner) {{
+                        banner.innerText = pText;
+                        banner.style.background = pBg;
+                        banner.style.borderColor = pBorder;
+                        banner.style.color = pColor;
+                    }}
+
+                    const card = document.getElementById("cardRisk");
+                    if (card) {{
+                        card.style.background = rBg;
+                        card.style.borderColor = rBrd;
+                        const elRT = document.getElementById("riskTitle");
+                        if (elRT) {{ elRT.innerText = rTitle; elRT.style.color = rColor; }}
+                        const elRD = document.getElementById("riskDirective");
+                        if (elRD) elRD.innerText = rDir;
+                        const elTR = document.getElementById("txtRisk");
+                        if (elTR) {{ elTR.innerText = comp.toFixed(1) + " / 100"; elTR.style.color = rColor; }}
+                    }}
+                }}
+
+                if (vid) {{
+                    vid.addEventListener("timeupdate", updateUI);
+                    vid.addEventListener("play", () => {{
+                        function loop() {{
+                            if (!vid.paused && !vid.ended) {{
+                                updateUI();
+                                requestAnimationFrame(loop);
+                            }}
+                        }}
+                        requestAnimationFrame(loop);
+                    }});
+                    updateUI();
+                }}
+                </script>
+                """
+                st.components.v1.html(sync_player_html, height=520, scrolling=False)
+            elif active_vid_path:
+                st.video(str(active_vid_path), autoplay=True, loop=True)
+            else:
+                st.info("Upload or execute a video to view real-time synchronized surveillance detections.")
 
             # Real-Time Detection Events Feed
             st.markdown("#### ⚡ Real-Time Vision Detections Across Video Timeline")

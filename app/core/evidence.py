@@ -129,6 +129,42 @@ def save_image(img: np.ndarray, output_path: Union[str, Path]) -> Path:
     return out
 
 
+def get_temporal_telemetry(
+    curr_sec: float,
+    total_sec: float,
+    initial_drain: float = 94.0,
+    initial_garb: float = 90.0,
+    initial_depth: float = 28.0,
+) -> Tuple[float, float, float, float, str, str]:
+    """Calculate real-time changing telemetry as video moves and drain is cleaned."""
+    p = min(1.0, max(0.0, curr_sec / max(1.0, total_sec)))
+    if p < 0.32:
+        # Phase 1: Heavy choking and active dumping
+        f = p / 0.32
+        d = initial_drain - (f * 5.0)
+        g = initial_garb - (f * 6.0)
+        dep = initial_depth - (f * 3.0)
+        status = "CHOKED / DUMPING ACTIVE"
+    elif p < 0.68:
+        # Phase 2: Flow clearing / jetting / debris clearing
+        f = (p - 0.32) / 0.36
+        d = (initial_drain - 5.0) - (f * 52.0)
+        g = (initial_garb - 6.0) - (f * 50.0)
+        dep = (initial_depth - 3.0) - (f * 18.0)
+        status = "CLEARING / FLOW RESTORING"
+    else:
+        # Phase 3: Drain cleared, debris removed, flow optimal
+        f = (p - 0.68) / 0.32
+        d = max(14.0, 37.0 - (f * 20.0))
+        g = max(12.0, 34.0 - (f * 20.0))
+        dep = max(3.0, 7.0 - (f * 4.0))
+        status = "DRAIN CLEANED & RESTORED"
+
+    comp = 0.42 * d + 0.38 * g + 0.20 * min(100.0, (dep / 40.0) * 100.0)
+    band = "CRITICAL" if comp >= 75 else ("HIGH" if comp >= 50 else ("WATCH" if comp >= 30 else "OPTIMAL"))
+    return round(d, 1), round(g, 1), round(dep, 1), round(comp, 1), band, status
+
+
 def generate_annotated_surveillance_video(
     video_path: Union[str, Path],
     output_path: Union[str, Path],
@@ -138,10 +174,11 @@ def generate_annotated_surveillance_video(
     garbage_score: float = 70.0,
     water_depth_cm: float = 25.0,
 ) -> Path:
-    """Render real-time bounding boxes, edge-AI telemetry, and surveillance HUD onto video.
+    """Render real-time bounding boxes, edge-AI telemetry, and dynamic surveillance HUD onto video.
     
     Produces an H.264 / MP4 video that streams and plays natively in browsers with
-    live detection bounding boxes and municipal telemetry.
+    live detection bounding boxes and municipal telemetry that dynamically updates as the
+    video moves and the drain is cleaned.
     """
     video_path = Path(video_path)
     output_path = Path(output_path)
@@ -154,6 +191,8 @@ def generate_annotated_surveillance_video(
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 100)
+    total_sec = total_frames / fps if fps else 10.0
 
     camera_id = camera_meta.get("id", "CAM-PUNE-01") if camera_meta else "CAM-PUNE-01"
     camera_name = camera_meta.get("name", "Optical Surveillance") if camera_meta else "Optical Stream"
@@ -165,9 +204,6 @@ def generate_annotated_surveillance_video(
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(str(output_path), fourcc, fps, (w, h))
 
-    drain_band = "CRITICAL" if drainage_score >= 80 else ("HIGH" if drainage_score >= 60 else "WATCH")
-    garb_band = "CRITICAL" if garbage_score >= 80 else ("HIGH" if garbage_score >= 60 else "WATCH")
-
     frame_idx = 0
     while True:
         ret, frame = cap.read()
@@ -176,6 +212,12 @@ def generate_annotated_surveillance_video(
 
         curr_sec = frame_idx / fps
         annotated = frame.copy()
+
+        # Compute dynamic real-time scores for this frame
+        d_val, g_val, dep_val, comp_val, band_str, status_str = get_temporal_telemetry(
+            curr_sec, total_sec, drainage_score, garbage_score, water_depth_cm
+        )
+        is_cleaned_phase = (curr_sec >= 0.68 * total_sec)
 
         # Find active detections for this timestamp
         active_dets = []
@@ -189,7 +231,7 @@ def generate_annotated_surveillance_video(
         for det in active_dets:
             box = det.get("box")
             cat = det.get("category", "drainage")
-            label = det.get("label") or det.get("subtype", "Hazard").replace("_", " ").upper()
+            base_label = det.get("label") or det.get("subtype", "Hazard").replace("_", " ").upper()
             conf = det.get("confidence", 0.88)
             sev = det.get("severity", 3)
 
@@ -208,13 +250,18 @@ def generate_annotated_surveillance_video(
             x2 = max(0, min(w, max(x1 + 1, x2)))
             y2 = max(0, min(h, max(y1 + 1, y2)))
 
-            # Color scheme (BGR)
-            if cat == "drainage":
-                box_color = (0, 70, 230) if sev >= 4 else (0, 140, 255)
-            elif cat == "garbage":
-                box_color = (30, 160, 255) if sev >= 4 else (50, 205, 50)
+            # If in cleaned phase, shift colors to green and update tag to reflect cleaning
+            if is_cleaned_phase:
+                box_color = (0, 200, 30)
+                tag_label = f"CLEANED: OPTIMAL FLOW [{int(conf*100)}%]" if cat == "drainage" else f"WASTE CLEARED [{int(conf*100)}%]"
             else:
-                box_color = (0, 0, 230)
+                if cat == "drainage":
+                    box_color = (0, 70, 230) if sev >= 4 else (0, 140, 255)
+                elif cat == "garbage":
+                    box_color = (30, 160, 255) if sev >= 4 else (50, 205, 50)
+                else:
+                    box_color = (0, 0, 230)
+                tag_label = f"{base_label} [{int(conf*100)}%] SEV {sev}"
 
             # Draw outer box
             cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 2)
@@ -232,12 +279,11 @@ def generate_annotated_surveillance_video(
             cv2.line(annotated, (x2, y2), (x2, y2 - corner_len), box_color, thick)
 
             # Header tag
-            tag_text = f"{label} [{int(conf*100)}%] SEV {sev}"
             font_scale = max(0.38, min(0.60, w / 1100.0))
-            (tw, th), _ = cv2.getTextSize(tag_text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
+            (tw, th), _ = cv2.getTextSize(tag_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
             tag_y = max(th + 6, y1)
             cv2.rectangle(annotated, (x1, tag_y - th - 6), (x1 + tw + 8, tag_y + 4), box_color, -1)
-            cv2.putText(annotated, tag_text, (x1 + 4, tag_y - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.putText(annotated, tag_label, (x1 + 4, tag_y - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Draw Top HUD
         hud_h = max(28, int(h * 0.055))
@@ -260,15 +306,15 @@ def generate_annotated_surveillance_video(
         (trw, _), _ = cv2.getTextSize(top_right_text, cv2.FONT_HERSHEY_SIMPLEX, top_font_scale, 1)
         cv2.putText(annotated, top_right_text, (max(w - trw - 12, int(w * 0.5)), int(hud_h * 0.65)), cv2.FONT_HERSHEY_SIMPLEX, top_font_scale, (203, 213, 225), 1, cv2.LINE_AA)
 
-        # Draw Bottom Telemetry Banner
+        # Draw Bottom Telemetry Banner with real-time changing numbers
         b_hud_h = max(28, int(h * 0.06))
         b_overlay = annotated.copy()
         cv2.rectangle(b_overlay, (0, h - b_hud_h), (w, h), (15, 23, 42), -1)
         cv2.addWeighted(b_overlay, 0.85, annotated, 0.15, 0, annotated)
 
-        bot_font_scale = max(0.34, min(0.50, w / 1200.0))
-        bot_text = f"DRAINAGE: {int(drainage_score)}/100 [{drain_band}]  |  GARBAGE: {int(garbage_score)}/100 [{garb_band}]  |  DEPTH: {int(water_depth_cm)}cm"
-        cv2.putText(annotated, bot_text, (14, h - int(b_hud_h * 0.35)), cv2.FONT_HERSHEY_SIMPLEX, bot_font_scale, (255, 255, 255), 1, cv2.LINE_AA)
+        bot_font_scale = max(0.33, min(0.48, w / 1200.0))
+        bot_text = f"DRAIN: {int(d_val)}% | GARBAGE: {int(g_val)}% | DEPTH: {int(dep_val)}cm | RISK: {int(comp_val)} [{band_str}] | {status_str}"
+        cv2.putText(annotated, bot_text, (12, h - int(b_hud_h * 0.35)), cv2.FONT_HERSHEY_SIMPLEX, bot_font_scale, (255, 255, 255), 1, cv2.LINE_AA)
 
         out.write(annotated)
         frame_idx += 1

@@ -83,3 +83,20 @@ def test_generate_annotated_surveillance_video(tmp_path):
     assert res.exists()
     assert res.stat().st_size > 1000
 
+def test_temporal_telemetry():
+    from app.core.evidence import get_temporal_telemetry
+    # Initial phase (t = 0.5s of 10s)
+    d1, g1, dep1, comp1, band1, status1 = get_temporal_telemetry(0.5, 10.0, 94.0, 90.0, 28.0)
+    assert d1 >= 85.0
+    assert g1 >= 80.0
+    assert band1 == "CRITICAL"
+    assert "CHOKED" in status1
+
+    # Cleaned phase (t = 8.5s of 10s)
+    d2, g2, dep2, comp2, band2, status2 = get_temporal_telemetry(8.5, 10.0, 94.0, 90.0, 28.0)
+    assert d2 < 40.0
+    assert g2 < 35.0
+    assert band2 in ["OPTIMAL", "WATCH", "LOW"]
+    assert "CLEANED" in status2
+
+
