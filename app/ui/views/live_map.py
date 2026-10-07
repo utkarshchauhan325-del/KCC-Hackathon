@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 from streamlit_folium import st_folium
 from app.ui.pune_data import PUNE_LOCATIONS, CCTV_CAMERAS, get_weather_adjusted_locations
-from app.ui.components.map_view import create_floodguard_map
+from app.ui.components.map_view import create_floodguard_map, render_floodguard_map_component
 
 import textwrap
 
@@ -85,15 +85,7 @@ def render_live_risk_map():
         fit_bounds=True
     )
 
-    # Render map with dynamic key to ensure Leaflet canvas instantly remounts and re-centers
-    filter_key_str = "-".join(sorted(risk_filter)) if risk_filter else "none"
-    st_folium(
-        m,
-        height=580,
-        use_container_width=True,
-        returned_objects=[],
-        key=f"gis_risk_map_{zone}_{layer_mode}_{filter_key_str}_{show_cameras}"
-    )
+    render_floodguard_map_component(m, height=580)
 
     # Summary metrics below map
     st.markdown("### 📊 Active Filter Spatial Summary")

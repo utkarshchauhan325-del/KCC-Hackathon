@@ -14,7 +14,7 @@ from app.ui.components.charts import (
     render_water_level_trend
 )
 import textwrap
-from app.ui.components.map_view import create_floodguard_map
+from app.ui.components.map_view import create_floodguard_map, render_floodguard_map_component
 
 def render_overview_dashboard():
     """Render the exact FloodGuard dashboard overview with live WeatherAPI & TomTom Traffic intelligence."""
@@ -153,13 +153,7 @@ def render_overview_dashboard():
             zoom_start=12,
             layer_type=layer_mode
         )
-        st_folium(
-            m,
-            height=440,
-            use_container_width=True,
-            returned_objects=[],
-            key="pune_flood_map_overview"
-        )
+        render_floodguard_map_component(m, height=440)
 
         # Map Bottom Legend
         legend_html = textwrap.dedent("""

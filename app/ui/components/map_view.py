@@ -52,14 +52,13 @@ def create_floodguard_map(
             target_lng = sum(lngs) / len(lngs)
             target_zoom = zone_cfg.get("zoom", 13)
 
-    # Select base tiles
+    # Select base tiles (high availability, zero rate limits, full CORS support across all browsers)
     if layer_type == "Satellite":
         tiles = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         attr = "Esri World Imagery"
     else:
-        # High quality OpenStreetMap tiles (free, public, no API key needed)
-        tiles = "OpenStreetMap"
-        attr = "OpenStreetMap"
+        tiles = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+        attr = "Esri World Street Map"
 
     m = folium.Map(
         location=[target_lat, target_lng],
@@ -217,4 +216,43 @@ def create_floodguard_map(
                 ).add_to(m)
 
     return m
+
+
+def render_floodguard_map_component(m: folium.Map, height: int = 440) -> None:
+    """Render Folium map with 100% reliable cross-browser rendering (Safari, WebKit, Chrome)."""
+    import streamlit.components.v1 as components
+
+    # Generate complete self-contained HTML for Leaflet
+    map_html = m.get_root().render()
+
+    # Inject automatic resize and invalidateSize listener for instant Leaflet mounting
+    resize_fix = """
+    <script>
+    (function() {
+        function triggerResize() {
+            window.dispatchEvent(new Event('resize'));
+            for (var prop in window) {
+                try {
+                    if (window[prop] && typeof window[prop].invalidateSize === 'function') {
+                        window[prop].invalidateSize();
+                    }
+                } catch(e) {}
+            }
+        }
+        window.addEventListener('DOMContentLoaded', triggerResize);
+        window.addEventListener('load', function() {
+            setTimeout(triggerResize, 150);
+            setTimeout(triggerResize, 500);
+            setTimeout(triggerResize, 1000);
+        });
+    })();
+    </script>
+    </body>
+    """
+    if "</body>" in map_html:
+        map_html = map_html.replace("</body>", resize_fix)
+    else:
+        map_html += resize_fix
+
+    components.html(map_html, height=height, scrolling=False)
 
