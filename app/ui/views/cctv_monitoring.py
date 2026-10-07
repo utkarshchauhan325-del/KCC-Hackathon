@@ -12,7 +12,7 @@ from app.db.session import SessionLocal
 from app.db.models import Incident, Evidence
 
 def render_cctv_monitoring():
-    """Render 6 CCTV Camera grid & AI video inspection pipeline."""
+    """Render 3 CCTV Camera grid & AI video inspection pipeline."""
 
     st.markdown(textwrap.dedent("""
     <div class="flood-header">
@@ -21,26 +21,23 @@ def render_cctv_monitoring():
             <p>Live municipal optical feeds with automated drain blockage & dumping detection</p>
         </div>
         <div class="header-actions">
-            <div class="date-badge">🔴 6 Cameras Streaming (1080p 30fps)</div>
+            <div class="date-badge">🔴 3 Cameras Streaming (1080p 30fps)</div>
         </div>
     </div>
     """).strip(), unsafe_allow_html=True)
 
-    tab_grid, tab_upload = st.tabs(["📹 Live Camera Grid (6 Feeds)", "🚀 Video Ingestion & AI Inspection"])
+    tab_grid, tab_upload = st.tabs(["📹 Live Camera Grid (3 Feeds)", "🚀 Video Ingestion & AI Inspection"])
 
     with tab_grid:
         st.markdown("### 📡 Municipal Optical Feeds - Pune Central & Transit Corridors")
 
-        # 2x3 Grid for 6 Cameras
-        rows = [CCTV_CAMERAS[0:3], CCTV_CAMERAS[3:6]]
+        # 1x3 Grid for Top 3 Cameras
+        cols = st.columns(3)
+        for col, cam in zip(cols, CCTV_CAMERAS[:3]):
+            with col:
+                r_col = "#DC2626" if cam["risk_level"] == "Critical" else ("#EA580C" if cam["risk_level"] == "High" else "#16A34A")
 
-        for row_cams in rows:
-            cols = st.columns(3)
-            for col, cam in zip(cols, row_cams):
-                with col:
-                    r_col = "#DC2626" if cam["risk_level"] == "Critical" else ("#EA580C" if cam["risk_level"] == "High" else "#16A34A")
-
-                    card_html = textwrap.dedent(f"""
+                card_html = textwrap.dedent(f"""
 <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:14px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
 <div>
@@ -73,7 +70,7 @@ AI DETECT: {cam['ai_status']}
 </div>
 </div>
 """).strip()
-                    st.markdown(card_html, unsafe_allow_html=True)
+                st.html(card_html)
 
     with tab_upload:
         st.markdown("### 🚀 Real-Time CCTV Surveillance & AI Detection Pipeline")
@@ -94,7 +91,7 @@ AI DETECT: {cam['ai_status']}
             else:
                 use_sample = False
 
-            cam_choice = st.selectbox("Assign Camera Stream", [c["name"] + f" ({c['id']})" for c in CCTV_CAMERAS])
+            cam_choice = st.selectbox("Assign Camera Stream", [c["name"] + f" ({c['id']})" for c in CCTV_CAMERAS[:3]])
             custom_gps = st.text_input("Camera GPS Coordinates", value="18.4850, 73.8650")
 
         with col_src2:

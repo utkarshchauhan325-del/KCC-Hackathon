@@ -85,7 +85,7 @@ with st.sidebar:
     nav_options = [
         "📊 Dashboard",
         "📍 Live Risk Map",
-        "📹 CCTV Monitoring (6)",
+        "📹 CCTV Monitoring (3)",
         "⚠️ Priority Queue & Interventions (3)",
         "📈 Flood Analytics"
     ]
@@ -117,7 +117,7 @@ if selected_nav == "📊 Dashboard":
 elif selected_nav == "📍 Live Risk Map":
     render_live_risk_map()
 
-elif selected_nav == "📹 CCTV Monitoring (6)":
+elif "CCTV" in selected_nav:
     render_cctv_monitoring()
 
 elif "Priority Queue" in selected_nav or "Intervention" in selected_nav:
