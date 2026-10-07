@@ -7,20 +7,20 @@ from typing import List, Dict, Any, Optional
 # Centroid and default zoom configuration for Pune Municipal Zones
 ZONE_CENTROIDS = {
     "All Zones": {"lat": 18.5204, "lng": 73.8567, "zoom": 12},
-    "Central":   {"lat": 18.5195, "lng": 73.8553, "zoom": 14},
-    "West":      {"lat": 18.5140, "lng": 73.7980, "zoom": 13},
-    "East":      {"lat": 18.5350, "lng": 73.9250, "zoom": 13},
-    "North":     {"lat": 18.5800, "lng": 73.8450, "zoom": 13},
-    "South":     {"lat": 18.4650, "lng": 73.8550, "zoom": 13},
+    "Central":   {"lat": 18.5210, "lng": 73.8580, "zoom": 14},
+    "West":      {"lat": 18.5220, "lng": 73.7950, "zoom": 13},
+    "East":      {"lat": 18.5300, "lng": 73.9220, "zoom": 13},
+    "North":     {"lat": 18.5850, "lng": 73.8350, "zoom": 13},
+    "South":     {"lat": 18.4650, "lng": 73.8620, "zoom": 13},
 }
 
 # Geographic bounding boxes for Pune Municipal Zones
 ZONE_BOUNDS = {
-    "Central": [[18.498, 73.832], [18.540, 73.888]],
-    "West":    [[18.485, 73.765], [18.558, 73.825]],
-    "East":    [[18.505, 73.885], [18.568, 73.965]],
-    "North":   [[18.545, 73.815], [18.618, 73.880]],
-    "South":   [[18.435, 73.820], [18.495, 73.890]],
+    "Central": [[18.498, 73.835], [18.544, 73.885]],
+    "West":    [[18.485, 73.765], [18.565, 73.825]],
+    "East":    [[18.495, 73.880], [18.568, 73.965]],
+    "North":   [[18.555, 73.795], [18.625, 73.875]],
+    "South":   [[18.435, 73.825], [18.498, 73.895]],
 }
 
 def create_floodguard_map(
@@ -45,9 +45,10 @@ def create_floodguard_map(
         target_lng = zone_cfg["lng"]
         target_zoom = zoom_start if zoom_start is not None else zone_cfg.get("zoom", 13)
         # If locations are provided in this zone, center around their centroid
-        if locations:
-            lats = [loc["lat"] for loc in locations if "lat" in loc]
-            lngs = [loc["lng"] for loc in locations if "lng" in loc]
+        zone_locs = [loc for loc in locations if loc.get("zone") == zone] if locations else []
+        if zone_locs:
+            lats = [loc["lat"] for loc in zone_locs if "lat" in loc]
+            lngs = [loc["lng"] for loc in zone_locs if "lng" in loc]
             if lats and lngs:
                 target_lat = sum(lats) / len(lats)
                 target_lng = sum(lngs) / len(lngs)
@@ -72,16 +73,20 @@ def create_floodguard_map(
         zoom_control=True,
         control_scale=True
     )
+    # Store calculated target center and zoom for st_folium programmatic pan & zoom
+    m.target_center = (round(target_lat, 4), round(target_lng, 4))
+    m.target_zoom = target_zoom
 
     # Highlight Zone Boundary rectangle if a specific zone is selected
     if zone in ZONE_BOUNDS:
-        if locations:
-            lats = [loc["lat"] for loc in locations if "lat" in loc]
-            lngs = [loc["lng"] for loc in locations if "lng" in loc]
+        zone_locs = [loc for loc in locations if loc.get("zone") == zone] if locations else []
+        if zone_locs:
+            lats = [loc["lat"] for loc in zone_locs if "lat" in loc]
+            lngs = [loc["lng"] for loc in zone_locs if "lng" in loc]
             if lats and lngs:
                 b = [
-                    [min(lats) - 0.006, min(lngs) - 0.006],
-                    [max(lats) + 0.006, max(lngs) + 0.006]
+                    [min(lats) - 0.005, min(lngs) - 0.005],
+                    [max(lats) + 0.005, max(lngs) + 0.005]
                 ]
             else:
                 b = ZONE_BOUNDS[zone]
@@ -101,18 +106,20 @@ def create_floodguard_map(
 
     # Automatically fit bounds to enclose all locations in the selected zone or city-wide
     if fit_bounds:
-        if zone != "All Zones" and locations:
-            lats = [loc["lat"] for loc in locations if "lat" in loc]
-            lngs = [loc["lng"] for loc in locations if "lng" in loc]
-            if lats and lngs:
-                pad_lat = max(0.010, (max(lats) - min(lats)) * 0.12)
-                pad_lng = max(0.010, (max(lngs) - min(lngs)) * 0.12)
-                m.fit_bounds([
-                    [min(lats) - pad_lat, min(lngs) - pad_lng],
-                    [max(lats) + pad_lat, max(lngs) + pad_lng]
-                ])
-        elif zone != "All Zones" and zone in ZONE_BOUNDS:
-            m.fit_bounds(ZONE_BOUNDS[zone])
+        if zone != "All Zones":
+            zone_locs = [loc for loc in locations if loc.get("zone") == zone] if locations else []
+            if zone_locs:
+                lats = [loc["lat"] for loc in zone_locs if "lat" in loc]
+                lngs = [loc["lng"] for loc in zone_locs if "lng" in loc]
+                if lats and lngs:
+                    pad_lat = max(0.006, (max(lats) - min(lats)) * 0.12)
+                    pad_lng = max(0.006, (max(lngs) - min(lngs)) * 0.12)
+                    m.fit_bounds([
+                        [min(lats) - pad_lat, min(lngs) - pad_lng],
+                        [max(lats) + pad_lat, max(lngs) + pad_lng]
+                    ])
+            elif zone in ZONE_BOUNDS:
+                m.fit_bounds(ZONE_BOUNDS[zone])
         elif zone == "All Zones":
             if locations:
                 lats = [loc["lat"] for loc in locations if "lat" in loc]
@@ -157,6 +164,8 @@ def create_floodguard_map(
 
     # Add locations with custom circles
     for loc in locations:
+        if zone != "All Zones" and loc.get("zone") != zone:
+            continue
         r_level = loc["risk_level"]
         col = color_map.get(r_level, "#F59E0B")
         is_crit = (r_level == "Critical")
@@ -254,6 +263,8 @@ def create_floodguard_map(
 
 def render_floodguard_map_component(m: folium.Map, height: int = 440, key: Optional[str] = None) -> None:
     """Render Folium map with 100% reliable cross-browser reactivity (Safari, WebKit, Chrome)."""
+    target_center = getattr(m, "target_center", None)
+    target_zoom = getattr(m, "target_zoom", None)
     try:
         from streamlit_folium import st_folium
         if key is None:
@@ -262,6 +273,8 @@ def render_floodguard_map_component(m: folium.Map, height: int = 440, key: Optio
             m,
             key=key,
             height=height,
+            center=target_center,
+            zoom=target_zoom,
             use_container_width=True,
             returned_objects=[]
         )

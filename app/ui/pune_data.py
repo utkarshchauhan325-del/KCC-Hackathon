@@ -305,17 +305,25 @@ for i in range(17, 54):
         tr = "down" if r_level == "Low" else "stable"
         st_text = "Normal" if r_level == "Low" else "Stable"
 
-    # Distribute geographically around Pune
-    lat_offset = ((i * 17) % 100 - 50) * 0.0016
-    lng_offset = ((i * 31) % 100 - 50) * 0.0019
+    # Distribute geographically inside the actual municipal boundaries of the respective zone
+    ZONE_BASES = {
+        "Central": {"lat": 18.5200, "lng": 73.8550, "lat_span": 0.015, "lng_span": 0.018},
+        "West":    {"lat": 18.5250, "lng": 73.7950, "lat_span": 0.025, "lng_span": 0.020},
+        "East":    {"lat": 18.5300, "lng": 73.9250, "lat_span": 0.025, "lng_span": 0.025},
+        "North":   {"lat": 18.5900, "lng": 73.8350, "lat_span": 0.022, "lng_span": 0.025},
+        "South":   {"lat": 18.4650, "lng": 73.8600, "lat_span": 0.020, "lng_span": 0.022},
+    }
+    zb = ZONE_BASES[z]
+    lat_offset = (((i * 17) % 100 - 50) / 50.0) * zb["lat_span"]
+    lng_offset = (((i * 31) % 100 - 50) / 50.0) * zb["lng_span"]
 
     PUNE_LOCATIONS.append({
         "id": f"LOC-{i:02d}",
         "name": f"Sub-Sector {i} ({z} Ward {i % 20 + 1})",
         "zone": z,
         "ward": f"Ward {i % 20 + 1}",
-        "lat": round(18.5204 + lat_offset, 4),
-        "lng": round(73.8567 + lng_offset, 4),
+        "lat": round(zb["lat"] + lat_offset, 4),
+        "lng": round(zb["lng"] + lng_offset, 4),
         "risk_level": r_level,
         "risk_score": r_score,
         "rainfall_3h": rf,
