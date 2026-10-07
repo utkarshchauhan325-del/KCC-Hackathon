@@ -130,36 +130,59 @@ def save_image(img: np.ndarray, output_path: Union[str, Path]) -> Path:
     return out
 
 
+def get_city_rank_and_status(score: float) -> Tuple[int, str, Tuple[int, int, int]]:
+    """Map dynamic telemetry hazard score to city emergency priority rank (#1 to #53) and BGR color.
+    
+    Ranks fall down the city emergency priority ladder at greater speeds as jetting/clearing progresses:
+    - Score >= 80%: Rank #1 to #5 [CRITICAL] (BGR: 0, 0, 230 - Red)
+    - 55% <= Score < 80%: Rank #6 to #15 [HIGH] (BGR: 0, 140, 255 - Orange)
+    - 32% <= Score < 55%: Rank #16 to #30 [WATCHLIST] (BGR: 0, 215, 255 - Gold/Amber)
+    - Score < 32%: Rank #31 to #52 [SAFE] (BGR: 0, 205, 30 - Emerald Green)
+    """
+    if score >= 80.0:
+        rank = max(1, min(5, round(1 + (95.0 - score) * (4.0 / 15.0))))
+        return rank, "CRITICAL", (0, 0, 230)
+    elif score >= 55.0:
+        rank = round(6 + (80.0 - score) * (9.0 / 25.0))
+        return rank, "HIGH", (0, 140, 255)
+    elif score >= 32.0:
+        rank = round(16 + (55.0 - score) * (14.0 / 23.0))
+        return rank, "WATCHLIST", (0, 215, 255)
+    else:
+        rank = min(52, round(31 + (32.0 - score) * (21.0 / 20.0)))
+        return rank, "SAFE", (0, 205, 30)
+
+
 def get_temporal_telemetry(
     curr_sec: float,
     total_sec: float,
-    initial_drain: float = 94.0,
-    initial_garb: float = 90.0,
+    initial_drain: float = 94.8,
+    initial_garb: float = 90.2,
     initial_depth: float = 28.0,
 ) -> Tuple[float, float, float, float, str, str]:
-    """Calculate real-time changing telemetry as video moves and drain is cleaned."""
+    """Calculate real-time changing telemetry as video moves and drain is cleaned at high speed."""
     p = min(1.0, max(0.0, curr_sec / max(1.0, total_sec)))
-    if p < 0.32:
-        # Phase 1: Heavy choking and active dumping
-        f = p / 0.32
-        d = initial_drain - (f * 5.0)
-        g = initial_garb - (f * 6.0)
-        dep = initial_depth - (f * 3.0)
-        status = "CHOKED / DUMPING ACTIVE"
-    elif p < 0.68:
-        # Phase 2: Flow clearing / jetting / debris clearing
-        f = (p - 0.32) / 0.36
-        d = (initial_drain - 5.0) - (f * 52.0)
-        g = (initial_garb - 6.0) - (f * 50.0)
-        dep = (initial_depth - 3.0) - (f * 18.0)
-        status = "CLEARING / FLOW RESTORING"
+    if p < 0.14:
+        # Phase 1: Heavy choking and active surcharge detection
+        f = p / 0.14
+        d = initial_drain - (f * 6.8)
+        g = initial_garb - (f * 8.2)
+        dep = initial_depth - (f * 4.0)
+        status = "CHOKED / CRITICAL EMERGENCY"
+    elif p < 0.58:
+        # Phase 2: High-speed jetting & suction — values and ranks plummet rapidly
+        f = (p - 0.14) / 0.44
+        d = (initial_drain - 6.8) - (f * 64.0)
+        g = (initial_garb - 8.2) - (f * 62.0)
+        dep = (initial_depth - 4.0) - (f * 18.0)
+        status = "RAPID CLEARING / HIGH-SPEED JETTING"
     else:
-        # Phase 3: Drain cleared, debris removed, flow optimal
-        f = (p - 0.68) / 0.32
-        d = max(14.0, 37.0 - (f * 20.0))
-        g = max(12.0, 34.0 - (f * 20.0))
-        dep = max(3.0, 7.0 - (f * 4.0))
-        status = "DRAIN CLEANED & RESTORED"
+        # Phase 3: Drain cleared, debris removed, flow optimal and safe
+        f = (p - 0.58) / 0.42
+        d = max(13.8, 24.0 - (f * 10.2))
+        g = max(11.2, 20.0 - (f * 8.8))
+        dep = max(3.0, 6.0 - (f * 3.0))
+        status = "DRAIN CLEANED & RESTORED / NOMINAL FLOW"
 
     comp = 0.42 * d + 0.38 * g + 0.20 * min(100.0, (dep / 40.0) * 100.0)
     band = "CRITICAL" if comp >= 75 else ("HIGH" if comp >= 50 else ("WATCH" if comp >= 30 else "OPTIMAL"))
@@ -391,77 +414,35 @@ def generate_annotated_surveillance_video(
             x1, y1, x2, y2 = tracker.get_box(w, h)
             cat = tracker.category
 
-            # Calculate dynamic ranking and hazard percentage for the block
-            # RANK SCALE ALIGNED WITH MUNICIPAL DASHBOARD:
-            # Rank 4 = CRITICAL (Severe / Choked)
-            # Rank 3 = HIGH (Mitigation in progress)
-            # Rank 2 = MODERATE (Receding / Clearing)
-            # Rank 1 = SAFE (Restored / Cleaned)
+            # Dynamic City Emergency Priority Ranking (#1 to #52) falling at greater speeds:
             if cat == "garbage":
                 target_val = g_val
-                if target_val >= 70.0:
-                    rank_num = 4
-                    status_lbl = "CRITICAL"
-                    box_color = (0, 0, 230)  # Red
+                rank_num, status_lbl, box_color = get_city_rank_and_status(target_val)
+                if target_val >= 80.0:
                     tag_prefix = "GARBAGE DUMP"
-                elif target_val >= 45.0:
-                    rank_num = 3
-                    status_lbl = "HIGH"
-                    box_color = (0, 140, 255)  # Orange
-                    tag_prefix = "GARBAGE CLEARING"
-                elif target_val >= 25.0:
-                    rank_num = 2
-                    status_lbl = "MODERATE"
-                    box_color = (0, 215, 255)  # Yellow-Gold
+                elif target_val >= 55.0:
+                    tag_prefix = "CLEARING WASTE"
+                elif target_val >= 32.0:
                     tag_prefix = "RESIDUAL DEBRIS"
                 else:
-                    rank_num = 1
-                    status_lbl = "SAFE"
-                    box_color = (0, 205, 30)  # Bright Green
-                    tag_prefix = "GARBAGE CLEARED"
-                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                    tag_prefix = "WASTE CLEARED"
+                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK #{rank_num} [{status_lbl}]"
             elif cat == "drainage":
                 target_val = d_val
-                if target_val >= 70.0:
-                    rank_num = 4
-                    status_lbl = "CRITICAL"
-                    box_color = (0, 0, 230)  # Red
-                    tag_prefix = "BLOCKED DRAIN"
-                elif target_val >= 45.0:
-                    rank_num = 3
-                    status_lbl = "HIGH"
-                    box_color = (0, 140, 255)  # Orange
+                rank_num, status_lbl, box_color = get_city_rank_and_status(target_val)
+                if target_val >= 80.0:
+                    tag_prefix = "CHOKED DRAIN"
+                elif target_val >= 55.0:
+                    tag_prefix = "RAPID JETTING"
+                elif target_val >= 32.0:
                     tag_prefix = "FLOW RESTORING"
-                elif target_val >= 25.0:
-                    rank_num = 2
-                    status_lbl = "MODERATE"
-                    box_color = (0, 215, 255)  # Yellow-Gold
-                    tag_prefix = "SILT RECEDING"
                 else:
-                    rank_num = 1
-                    status_lbl = "SAFE"
-                    box_color = (0, 205, 30)  # Bright Green
                     tag_prefix = "DRAIN RESTORED"
-                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                tag_label = f"[TRK-{tracker.id:02d}] {tag_prefix}: {target_val:.1f}% • RANK #{rank_num} [{status_lbl}]"
             else:
                 target_val = g_val
-                if target_val >= 70.0:
-                    rank_num = 4
-                    status_lbl = "CRITICAL"
-                    box_color = (0, 0, 230)
-                elif target_val >= 45.0:
-                    rank_num = 3
-                    status_lbl = "HIGH"
-                    box_color = (0, 140, 255)
-                elif target_val >= 25.0:
-                    rank_num = 2
-                    status_lbl = "MODERATE"
-                    box_color = (0, 215, 255)
-                else:
-                    rank_num = 1
-                    status_lbl = "SAFE"
-                    box_color = (0, 205, 30)
-                tag_label = f"[TRK-{tracker.id:02d}] {tracker.label}: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                rank_num, status_lbl, box_color = get_city_rank_and_status(target_val)
+                tag_label = f"[TRK-{tracker.id:02d}] {tracker.label}: {target_val:.1f}% • RANK #{rank_num} [{status_lbl}]"
 
             # Draw outer box
             cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 2)
@@ -514,7 +495,8 @@ def generate_annotated_surveillance_video(
         cv2.addWeighted(b_overlay, 0.85, annotated, 0.15, 0, annotated)
 
         bot_font_scale = max(0.33, min(0.48, w / 1200.0))
-        bot_text = f"DRAIN: {int(d_val)}% | GARBAGE: {int(g_val)}% | DEPTH: {int(dep_val)}cm | RISK: {int(comp_val)} [{band_str}] | {status_str}"
+        rank_comp, _, _ = get_city_rank_and_status(comp_val)
+        bot_text = f"DRAIN: {int(d_val)}% | GARBAGE: {int(g_val)}% | DEPTH: {int(dep_val)}cm | PRIORITY: RANK #{rank_comp} [{band_str}] | {status_str}"
         cv2.putText(annotated, bot_text, (12, h - int(b_hud_h * 0.35)), cv2.FONT_HERSHEY_SIMPLEX, bot_font_scale, (255, 255, 255), 1, cv2.LINE_AA)
 
         out.write(annotated)

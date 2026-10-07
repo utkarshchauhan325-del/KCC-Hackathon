@@ -210,9 +210,9 @@ AI DETECT: {cam['ai_status']}
                             </div>
                             <!-- Quick Timeline Scrub Buttons -->
                             <div style="display: flex; gap: 6px; margin-top: 10px;">
-                                <button onclick="jump(0)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; border-radius: 6px; cursor: pointer;">⏮️ 0:00 Choked (95%) • Rank 4</button>
-                                <button onclick="jump(4.5)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #FFF7ED; border: 1px solid #FED7AA; color: #9A3412; border-radius: 6px; cursor: pointer;">⏩ 0:04 Cleaning (50%) • Rank 3</button>
-                                <button onclick="jump(8.5)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; border-radius: 6px; cursor: pointer;">⏭️ 0:08 Restored (18%) • Rank 1</button>
+                                <button onclick="jump(0)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; border-radius: 6px; cursor: pointer;">⏮️ 0:00 Choked (95%) • Rank #1 [Critical]</button>
+                                <button onclick="jump(4.0)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #FFF7ED; border: 1px solid #FED7AA; color: #9A3412; border-radius: 6px; cursor: pointer;">⏩ 0:04 Rapid Jetting (55%) • Rank #19 [Watchlist]</button>
+                                <button onclick="jump(8.0)" style="flex: 1; padding: 6px 4px; font-size: 11px; font-weight: 600; background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; border-radius: 6px; cursor: pointer;">⏭️ 0:08 Restored (20%) • Rank #46 [Safe]</button>
                             </div>
                             <div style="font-size: 10.5px; color: #64748B; margin-top: 6px; text-align: center;">
                                 💡 <i>Play the video or click buttons above to watch garbage %, drainage %, and risk scores update in real time.</i>
@@ -229,7 +229,7 @@ AI DETECT: {cam['ai_status']}
                             <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                     <span style="font-size: 12px; font-weight: 700; color: #0F172A;">🌊 Drainage Risk Score</span>
-                                    <span id="txtDrain" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">94.8% • RANK 4 [CRITICAL]</span>
+                                    <span id="txtDrain" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">94.8% • RANK #1 [CRITICAL]</span>
                                 </div>
                                 <div style="background: #E2E8F0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 4px;">
                                     <div id="barDrain" style="background: #DC2626; width: 95%; height: 100%; transition: width 0.15s ease, background 0.3s ease;"></div>
@@ -241,7 +241,7 @@ AI DETECT: {cam['ai_status']}
                             <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                     <span style="font-size: 12px; font-weight: 700; color: #0F172A;">🗑️ Garbage & Debris Obstruction</span>
-                                    <span id="txtGarb" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">90.2% • RANK 4 [CRITICAL]</span>
+                                    <span id="txtGarb" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">90.2% • RANK #1 [CRITICAL]</span>
                                 </div>
                                 <div style="background: #E2E8F0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 4px;">
                                     <div id="barGarb" style="background: #DC2626; width: 90%; height: 100%; transition: width 0.15s ease, background 0.3s ease;"></div>
@@ -253,7 +253,7 @@ AI DETECT: {cam['ai_status']}
                             <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E2E8F0;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                                     <span style="font-size: 12px; font-weight: 700; color: #0F172A;">💧 Surface Inundation Depth</span>
-                                    <span id="txtDepth" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">28 cm • RANK 4 [CRITICAL]</span>
+                                    <span id="txtDepth" style="font-size: 13.5px; font-weight: 800; color: #DC2626; transition: color 0.3s ease;">28 cm • RANK #1 [CRITICAL]</span>
                                 </div>
                                 <div style="background: #E2E8F0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 4px;">
                                     <div id="barDepth" style="background: #DC2626; width: 70%; height: 100%; transition: width 0.15s ease, background 0.3s ease;"></div>
@@ -299,80 +299,92 @@ AI DETECT: {cam['ai_status']}
 
                     let d, g, dep, pText, pBg, pBorder, pColor, nDrain, nGarb, nDepth, rTitle, rDir, rColor, rBg, rBrd, bandD, bandG, bandDep;
 
-                    if (p < 0.32) {{
-                        const f = p / 0.32;
-                        d = 94.8 - (f * 5.0);
-                        g = 90.2 - (f * 6.0);
-                        dep = 28.0 - (f * 3.0);
+                    if (p < 0.14) {{
+                        const f = p / 0.14;
+                        d = 94.8 - (f * 6.8);
+                        g = 90.2 - (f * 8.2);
+                        dep = 28.0 - (f * 4.0);
                         bandD = "CRITICAL"; bandG = "CRITICAL"; bandDep = "CRITICAL";
                         pText = "🚨 PHASE 1: CHOKING & WASTE DUMPING DETECTED — CRITICAL HAZARD";
                         pBg = "#FEF2F2"; pBorder = "#FCA5A5"; pColor = "#991B1B";
                         nDrain = "Conduit Surcharge: Severe • Inlet Grate: 100% Choked";
                         nGarb = "Internal Waste: Heavy Solid Waste • Dumping: Active";
                         nDepth = "Road surface submerged " + Math.round(dep) + " cm • Vehicular Transit Impeded";
-                        rTitle = "🚨 COMPOSITE MUNICIPAL RISK";
-                        rDir = "PRIORITY 1: DISPATCH DEWATERING & SUCTION JETTING CREW";
+                        rTitle = "🚨 MUNICIPAL PRIORITY: RANK #1 [CRITICAL]";
+                        rDir = "CRITICAL DISPATCH: HEAVY DEWATERING & SUCTION JETTING ACTIVE";
                         rColor = "#DC2626"; rBg = "#FEF2F2"; rBrd = "#FCA5A5";
-                    }} else if (p < 0.68) {{
-                        const f = (p - 0.32) / 0.36;
-                        d = 89.8 - (f * 52.0);
-                        g = 84.2 - (f * 50.0);
-                        dep = 25.0 - (f * 18.0);
-                        bandD = d > 60 ? "HIGH" : "MODERATE";
-                        bandG = g > 60 ? "HIGH" : "MODERATE";
-                        bandDep = dep > 15 ? "HIGH" : "MODERATE";
-                        pText = "⚠️ PHASE 2: DRAIN CLEARING & JETTING IN PROGRESS — FLOW RESTORING";
+                    }} else if (p < 0.58) {{
+                        const f = (p - 0.14) / 0.44;
+                        d = 88.0 - (f * 64.0);
+                        g = 82.0 - (f * 62.0);
+                        dep = 24.0 - (f * 18.0);
+                        bandD = d > 55 ? "HIGH" : (d > 32 ? "WATCHLIST" : "SAFE");
+                        bandG = g > 55 ? "HIGH" : (g > 32 ? "WATCHLIST" : "SAFE");
+                        bandDep = dep > 14 ? "HIGH" : (dep > 7 ? "WATCHLIST" : "SAFE");
+                        pText = "⚡ PHASE 2: HIGH-SPEED SUCTION & JETTING — DRAIN CLEARED RAPIDLY";
                         pBg = "#FFF7ED"; pBorder = "#FED7AA"; pColor = "#9A3412";
-                        nDrain = "Conduit Discharging • Silt Dispersing • Velocity Increasing";
-                        nGarb = "Trash Dispersing • Intake Mouth Clearing";
-                        nDepth = "Water Receding Rapidly (" + Math.round(dep) + " cm) • Runoff Draining";
-                        rTitle = "⚠️ MITIGATION IN PROGRESS";
-                        rDir = "PRIORITY 2: JETTING OPERATIONAL — RUNOFF DISCHARGING";
+                        nDrain = "High-Velocity Suction Active • Conduit Clearing Rapidly • Flow Accelerating";
+                        nGarb = "Debris Suctioned • Obstruction Dispersed • Intake Free";
+                        nDepth = "Water Receding Fast (" + Math.round(dep) + " cm) • Surface Clearing";
+                        rTitle = "⚡ RAPID CLEARANCE IN PROGRESS";
+                        rDir = "HIGH-SPEED PUMPING: RUNOFF PLUMMETING AT HIGH VELOCITY";
                         rColor = "#EA580C"; rBg = "#FFF7ED"; rBrd = "#FED7AA";
                     }} else {{
-                        const f = (p - 0.68) / 0.32;
-                        d = Math.max(14.0, 37.8 - (f * 20.0));
-                        g = Math.max(12.0, 34.2 - (f * 20.0));
-                        dep = Math.max(3.0, 7.0 - (f * 4.0));
+                        const f = (p - 0.58) / 0.42;
+                        d = Math.max(13.8, 24.0 - (f * 10.2));
+                        g = Math.max(11.2, 20.0 - (f * 8.8));
+                        dep = Math.max(3.0, 6.0 - (f * 3.0));
                         bandD = "SAFE"; bandG = "SAFE"; bandDep = "SAFE";
-                        pText = "🟢 PHASE 3: DRAIN CLEANED & OPTIMAL RUNOFF FLOW RESTORED";
+                        pText = "🟢 PHASE 3: DRAIN FULLY RESTORED & SAFE FLOW ESTABLISHED";
                         pBg = "#F0FDF4"; pBorder = "#BBF7D0"; pColor = "#166534";
-                        nDrain = "Conduit Fully Clear • Gratings Clean • No Backflow Hazard";
-                        nGarb = "Debris Removed • Zero Obstruction • Inlet Clean";
+                        nDrain = "Conduit Fully Clear • Gratings Clean • Zero Surcharge";
+                        nGarb = "Debris Removed • Zero Obstruction • Grate Clean";
                         nDepth = "Surface Dry • Water Depth Normal (" + Math.round(dep) + " cm) • Flow Nominal";
                         rTitle = "🟢 HAZARD RESOLVED";
-                        rDir = "RESOLVED: CONDUIT CLEANED • OPTIMAL DISCHARGE ESTABLISHED";
+                        rDir = "SAFE OPERATIONS: CONDUIT CLEANED • NORMAL DISCHARGE RESTORED";
                         rColor = "#16A34A"; rBg = "#F0FDF4"; rBrd = "#BBF7D0";
                     }}
 
                     const comp = 0.42 * d + 0.38 * g + 0.20 * Math.min(100.0, (dep / 40.0) * 100.0);
 
-                    const colorD = d >= 70 ? "#DC2626" : (d >= 45 ? "#EA580C" : (d >= 25 ? "#D97706" : "#16A34A"));
-                    const colorG = g >= 70 ? "#DC2626" : (g >= 45 ? "#EA580C" : (g >= 25 ? "#D97706" : "#16A34A"));
+                    const colorD = d >= 80 ? "#DC2626" : (d >= 55 ? "#EA580C" : (d >= 32 ? "#D97706" : "#16A34A"));
+                    const colorG = g >= 80 ? "#DC2626" : (g >= 55 ? "#EA580C" : (g >= 32 ? "#D97706" : "#16A34A"));
                     const colorDep = dep >= 20 ? "#DC2626" : (dep >= 12 ? "#EA580C" : (dep >= 6 ? "#D97706" : "#16A34A"));
 
-                    // Realistic rank scale aligned with municipal dashboard:
-                    // Rank 4 is Critical, decreasing realistically down to Rank 1 (Safe)
-                    const rankD = d >= 70 ? 4 : (d >= 45 ? 3 : (d >= 25 ? 2 : 1));
-                    const rankG = g >= 70 ? 4 : (g >= 45 ? 3 : (g >= 25 ? 2 : 1));
-                    const rankDep = dep >= 20 ? 4 : (dep >= 12 ? 3 : (dep >= 6 ? 2 : 1));
+                    // Fast-falling city priority rank function (#1 to #52):
+                    function getCityRank(score) {{
+                        if (score >= 80.0) {{
+                            return Math.max(1, Math.min(5, Math.round(1 + (95.0 - score) * (4.0 / 15.0))));
+                        }} else if (score >= 55.0) {{
+                            return Math.round(6 + (80.0 - score) * (9.0 / 25.0));
+                        }} else if (score >= 32.0) {{
+                            return Math.round(16 + (55.0 - score) * (14.0 / 23.0));
+                        }} else {{
+                            return Math.min(52, Math.round(31 + (32.0 - score) * (21.0 / 20.0)));
+                        }}
+                    }}
+
+                    const rankD = getCityRank(d);
+                    const rankG = getCityRank(g);
+                    const rankDep = getCityRank((dep / 28.0) * 94.0);
+                    const rankComp = getCityRank(comp);
 
                     const elD = document.getElementById("txtDrain");
-                    if (elD) {{ elD.innerText = d.toFixed(1) + "% • RANK " + rankD + " [" + bandD + "]"; elD.style.color = colorD; }}
+                    if (elD) {{ elD.innerText = d.toFixed(1) + "% • RANK #" + rankD + " [" + bandD + "]"; elD.style.color = colorD; }}
                     const elBarD = document.getElementById("barDrain");
                     if (elBarD) {{ elBarD.style.width = Math.min(100, Math.max(5, d)) + "%"; elBarD.style.background = colorD; }}
                     const elND = document.getElementById("noteDrain");
                     if (elND) elND.innerText = nDrain;
 
                     const elG = document.getElementById("txtGarb");
-                    if (elG) {{ elG.innerText = g.toFixed(1) + "% • RANK " + rankG + " [" + bandG + "]"; elG.style.color = colorG; }}
+                    if (elG) {{ elG.innerText = g.toFixed(1) + "% • RANK #" + rankG + " [" + bandG + "]"; elG.style.color = colorG; }}
                     const elBarG = document.getElementById("barGarb");
                     if (elBarG) {{ elBarG.style.width = Math.min(100, Math.max(5, g)) + "%"; elBarG.style.background = colorG; }}
                     const elNG = document.getElementById("noteGarb");
                     if (elNG) elNG.innerText = nGarb;
 
                     const elDep = document.getElementById("txtDepth");
-                    if (elDep) {{ elDep.innerText = Math.round(dep) + " cm • RANK " + rankDep + " [" + bandDep + "]"; elDep.style.color = colorDep; }}
+                    if (elDep) {{ elDep.innerText = Math.round(dep) + " cm • RANK #" + rankDep + " [" + bandDep + "]"; elDep.style.color = colorDep; }}
                     const elBarDep = document.getElementById("barDepth");
                     if (elBarDep) {{ elBarDep.style.width = Math.min(100, Math.max(5, (dep/40)*100)) + "%"; elBarDep.style.background = colorDep; }}
                     const elNDep = document.getElementById("noteDepth");
@@ -391,7 +403,16 @@ AI DETECT: {cam['ai_status']}
                         card.style.background = rBg;
                         card.style.borderColor = rBrd;
                         const elRT = document.getElementById("riskTitle");
-                        if (elRT) {{ elRT.innerText = rTitle; elRT.style.color = rColor; }}
+                        if (elRT) {{
+                            if (p < 0.14) {{
+                                elRT.innerText = "🚨 MUNICIPAL PRIORITY: RANK #" + rankComp + " [CRITICAL]";
+                            }} else if (p < 0.58) {{
+                                elRT.innerText = "⚡ MUNICIPAL PRIORITY: RANK #" + rankComp + " [" + (comp > 55 ? "HIGH" : "WATCHLIST") + "]";
+                            }} else {{
+                                elRT.innerText = "🟢 MUNICIPAL PRIORITY: RANK #" + rankComp + " [SAFE]";
+                            }}
+                            elRT.style.color = rColor;
+                        }}
                         const elRD = document.getElementById("riskDirective");
                         if (elRD) elRD.innerText = rDir;
                         const elTR = document.getElementById("txtRisk");
