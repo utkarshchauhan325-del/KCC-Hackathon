@@ -162,95 +162,121 @@ def render_priority_queue_and_interventions():
     </div>
     """).strip(), unsafe_allow_html=True)
 
-    # Auto-dismissing Deployment Toast Notification Overlay (Floats over the screen)
+    # Auto-dismissing Deployment Toast Notification Overlay (Floats over the screen and auto-dismisses)
     if "deploy_success_data" in st.session_state and st.session_state["deploy_success_data"]:
-        toast_data = st.session_state["deploy_success_data"]
-        elapsed = time.time() - toast_data.get("timestamp", 0)
-        if elapsed < 5.0:
+        toast_data = st.session_state.pop("deploy_success_data", None)
+        if toast_data:
             st.toast(f"🚀 Dispatched {toast_data['eq_type']} to {toast_data['target_loc']} (Lead: {toast_data['crew_head']})", icon="✅")
             st.html(f"""
-            <div id="deploy-notification-overlay" style="
-                position: fixed;
-                top: 24px;
-                right: 28px;
-                z-index: 99999999;
-                background: linear-gradient(135deg, #065F46 0%, #047857 100%);
-                border: 1.5px solid #34D399;
-                border-radius: 14px;
-                padding: 18px 24px;
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15);
-                color: #FFFFFF;
-                font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-                min-width: 360px;
-                max-width: 520px;
-                pointer-events: auto;
-                animation: toastSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastFadeOut 0.5s ease-in 4.0s forwards;
-            ">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
-                    <div style="display:flex; align-items:flex-start; gap:14px;">
-                        <span style="font-size:24px; background:#10B98133; border:1px solid #34D39960; width:44px; height:44px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            🚀
-                        </span>
-                        <div>
-                            <div style="font-size:15px; font-weight:800; color:#ECFDF5; letter-spacing:0.01em;">
-                                Deployment Order Dispatched Successfully!
-                            </div>
-                            <div style="font-size:13px; color:#A7F3D0; margin-top:4px; line-height:1.4;">
-                                <b>{toast_data['eq_type']}</b> mobilized to <b>{toast_data['target_loc']}</b>
-                            </div>
-                            <div style="font-size:12px; color:#D1FAE5; margin-top:4px;">
-                                👷 Lead: <b>{toast_data['crew_head']}</b> &bull; 🎯 {toast_data['priority']}
+            <div id="deploy-notification-wrapper">
+                <input type="checkbox" id="close-toast-check" style="display:none;">
+                <div id="deploy-notification-overlay" style="
+                    position: fixed;
+                    top: 24px;
+                    right: 28px;
+                    z-index: 99999999;
+                    background: linear-gradient(135deg, #065F46 0%, #047857 100%);
+                    border: 1.5px solid #34D399;
+                    border-radius: 14px;
+                    padding: 18px 24px;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15);
+                    color: #FFFFFF;
+                    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+                    min-width: 360px;
+                    max-width: 520px;
+                    pointer-events: auto;
+                    animation: autoDismissToast 3.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                ">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+                        <div style="display:flex; align-items:flex-start; gap:14px;">
+                            <span style="font-size:24px; background:#10B98133; border:1px solid #34D39960; width:44px; height:44px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                🚀
+                            </span>
+                            <div>
+                                <div style="font-size:15px; font-weight:800; color:#ECFDF5; letter-spacing:0.01em;">
+                                    Deployment Order Dispatched Successfully!
+                                </div>
+                                <div style="font-size:13px; color:#A7F3D0; margin-top:4px; line-height:1.4;">
+                                    <b>{toast_data['eq_type']}</b> mobilized to <b>{toast_data['target_loc']}</b>
+                                </div>
+                                <div style="font-size:12px; color:#D1FAE5; margin-top:4px;">
+                                    👷 Lead: <b>{toast_data['crew_head']}</b> &bull; 🎯 {toast_data['priority']}
+                                </div>
                             </div>
                         </div>
+                        <label for="close-toast-check" onclick="document.getElementById('deploy-notification-wrapper').remove();" style="
+                            background: rgba(255, 255, 255, 0.18);
+                            border: none;
+                            color: #FFFFFF;
+                            font-size: 14px;
+                            font-weight: 700;
+                            width: 26px;
+                            height: 26px;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 0;
+                            user-select: none;
+                        ">✕</label>
                     </div>
-                    <button onclick="document.getElementById('deploy-notification-overlay').remove();" style="
-                        background: rgba(255, 255, 255, 0.15);
-                        border: none;
-                        color: #FFFFFF;
-                        font-size: 16px;
-                        font-weight: 700;
-                        width: 26px;
-                        height: 26px;
-                        border-radius: 50%;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        padding: 0;
-                    ">✕</button>
+                    <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#A7F3D0;">
+                        <span>⏱️ Auto-dismissing in 3s</span>
+                        <span style="background:#065F46; padding:3px 8px; border-radius:10px; border:1px solid #34D39944;">Alerted via SMS & Radio</span>
+                    </div>
+                    <div style="position:absolute; bottom:0; left:0; height:4px; background:#34D399; width:100%; animation: toastTimer 2.7s linear forwards; border-radius: 0 0 14px 14px;"></div>
                 </div>
-                <div style="margin-top:12px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#A7F3D0;">
-                    <span>⏱️ Auto-dismissing</span>
-                    <span style="background:#065F46; padding:3px 8px; border-radius:10px; border:1px solid #34D39944;">Alerted via SMS & Radio</span>
-                </div>
-                <div style="position:absolute; bottom:0; left:0; height:4px; background:#34D399; width:100%; animation: toastTimer 4.0s linear forwards; border-radius: 0 0 14px 14px;"></div>
             </div>
 
             <style>
-            @keyframes toastSlideDown {{
-                0% {{ opacity: 0; transform: translateY(-20px) scale(0.96); }}
-                100% {{ opacity: 1; transform: translateY(0) scale(1); }}
+            #close-toast-check:checked ~ #deploy-notification-overlay {{
+                display: none !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
+            }}
+            @keyframes autoDismissToast {{
+                0% {{
+                    opacity: 0;
+                    transform: translateY(-24px) scale(0.95);
+                    visibility: visible;
+                }}
+                10% {{
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                    visibility: visible;
+                }}
+                75% {{
+                    opacity: 1;
+                    transform: translateY(0) scale(1);
+                    visibility: visible;
+                }}
+                92% {{
+                    opacity: 0;
+                    transform: translateY(-20px) scale(0.95);
+                    visibility: visible;
+                }}
+                100% {{
+                    opacity: 0;
+                    transform: translateY(-40px) scale(0.9);
+                    visibility: hidden;
+                    pointer-events: none;
+                    display: none !important;
+                    height: 0;
+                    min-height: 0;
+                    max-height: 0;
+                    padding: 0;
+                    margin: 0;
+                    border: none;
+                    overflow: hidden;
+                }}
             }}
             @keyframes toastTimer {{
-                from {{ width: 100%; }}
-                to {{ width: 0%; }}
-            }}
-            @keyframes toastFadeOut {{
-                0% {{ opacity: 1; transform: translateY(0); }}
-                100% {{ opacity: 1; transform: translateY(-15px); pointer-events: none; }}
+                0% {{ width: 100%; }}
+                100% {{ width: 0%; }}
             }}
             </style>
-            <script>
-            setTimeout(function() {{
-                var el = document.getElementById('deploy-notification-overlay');
-                if (el) {{
-                    el.remove();
-                }}
-            }}, 4600);
-            </script>
             """)
-        else:
-            st.session_state["deploy_success_data"] = None
 
     st.markdown("### 🚨 Hotspots Requiring Immediate Attention")
     st.info("🛡️ **Municipal Rapid Response Protocol:** Each critical incident below provides real-time diagnostic telemetry. Configure machinery and assign an open engineer directly to mobilize crews.")
