@@ -250,18 +250,70 @@ def generate_annotated_surveillance_video(
             x2 = max(0, min(w, max(x1 + 1, x2)))
             y2 = max(0, min(h, max(y1 + 1, y2)))
 
-            # If in cleaned phase, shift colors to green and update tag to reflect cleaning
-            if is_cleaned_phase:
-                box_color = (0, 200, 30)
-                tag_label = f"CLEANED: OPTIMAL FLOW [{int(conf*100)}%]" if cat == "drainage" else f"WASTE CLEARED [{int(conf*100)}%]"
-            else:
-                if cat == "drainage":
-                    box_color = (0, 70, 230) if sev >= 4 else (0, 140, 255)
-                elif cat == "garbage":
-                    box_color = (30, 160, 255) if sev >= 4 else (50, 205, 50)
+            # Calculate dynamic ranking and hazard percentage for the block
+            if cat == "garbage":
+                target_val = g_val
+                if target_val >= 70.0:
+                    rank_num = 1
+                    status_lbl = "CRITICAL"
+                    box_color = (0, 0, 230)  # Red
+                    tag_label = f"GARBAGE DUMP: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                elif target_val >= 45.0:
+                    rank_num = 2
+                    status_lbl = "CLEARING"
+                    box_color = (0, 140, 255)  # Orange
+                    tag_label = f"GARBAGE DESILTING: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+                elif target_val >= 25.0:
+                    rank_num = 3
+                    status_lbl = "RESIDUAL"
+                    box_color = (0, 215, 255)  # Yellow-Gold
+                    tag_label = f"GARBAGE RECEDING: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
                 else:
+                    rank_num = 4
+                    status_lbl = "CLEANED"
+                    box_color = (0, 205, 30)  # Bright Green
+                    tag_label = f"GARBAGE CLEARED: {target_val:.1f}% • RANK {rank_num} [{status_lbl}]"
+            elif cat == "drainage":
+                target_val = d_val
+                if target_val >= 70.0:
+                    rank_num = 1
+                    status_lbl = "CRITICAL"
+                    box_color = (0, 0, 230)  # Red
+                    tag_label = f"BLOCKED DRAIN: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                elif target_val >= 45.0:
+                    rank_num = 2
+                    status_lbl = "CLEARING"
+                    box_color = (0, 140, 255)  # Orange
+                    tag_label = f"FLOW RESTORING: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                elif target_val >= 25.0:
+                    rank_num = 3
+                    status_lbl = "RESIDUAL"
+                    box_color = (0, 215, 255)  # Yellow-Gold
+                    tag_label = f"SILT RECEDING: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+                else:
+                    rank_num = 4
+                    status_lbl = "CLEANED"
+                    box_color = (0, 205, 30)  # Bright Green
+                    tag_label = f"DRAIN RESTORED: {target_val:.1f}% [GARB: {g_val:.1f}%] • RANK {rank_num} [{status_lbl}]"
+            else:
+                target_val = g_val
+                if target_val >= 70.0:
+                    rank_num = 1
+                    status_lbl = "CRITICAL"
                     box_color = (0, 0, 230)
-                tag_label = f"{base_label} [{int(conf*100)}%] SEV {sev}"
+                elif target_val >= 45.0:
+                    rank_num = 2
+                    status_lbl = "CLEARING"
+                    box_color = (0, 140, 255)
+                elif target_val >= 25.0:
+                    rank_num = 3
+                    status_lbl = "RESIDUAL"
+                    box_color = (0, 215, 255)
+                else:
+                    rank_num = 4
+                    status_lbl = "RESOLVED"
+                    box_color = (0, 205, 30)
+                tag_label = f"{base_label}: {target_val:.1f}% GARBAGE • RANK {rank_num} [{status_lbl}]"
 
             # Draw outer box
             cv2.rectangle(annotated, (x1, y1), (x2, y2), box_color, 2)
@@ -282,8 +334,9 @@ def generate_annotated_surveillance_video(
             font_scale = max(0.38, min(0.60, w / 1100.0))
             (tw, th), _ = cv2.getTextSize(tag_label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
             tag_y = max(th + 6, y1)
-            cv2.rectangle(annotated, (x1, tag_y - th - 6), (x1 + tw + 8, tag_y + 4), box_color, -1)
-            cv2.putText(annotated, tag_label, (x1 + 4, tag_y - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
+            tag_x = max(0, min(w - tw - 10, x1))
+            cv2.rectangle(annotated, (tag_x, tag_y - th - 6), (tag_x + tw + 8, tag_y + 4), box_color, -1)
+            cv2.putText(annotated, tag_label, (tag_x + 4, tag_y - 2), cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA)
 
         # Draw Top HUD
         hud_h = max(28, int(h * 0.055))

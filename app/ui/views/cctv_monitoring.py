@@ -171,9 +171,6 @@ AI DETECT: {cam['ai_status']}
                 annotated_path = latest_res["annotated_video_path"]
 
             st.markdown("---")
-            st.markdown(f"### 📹 Live Surveillance Playback & Real-Time Detections (Job `{active_job[:8]}`)")
-
-            st.markdown("---")
             st.markdown(f"### 📹 Real-Time Surveillance Telemetry & In-Video Detection (Job `{active_job[:8]}`)")
 
             # Check if video exists for base64 embed
@@ -357,15 +354,18 @@ AI DETECT: {cam['ai_status']}
                     const colorG = g >= 80 ? "#DC2626" : (g >= 50 ? "#EA580C" : "#16A34A");
                     const colorDep = dep >= 20 ? "#DC2626" : (dep >= 10 ? "#EA580C" : "#16A34A");
 
+                    const rankD = d >= 70 ? 1 : (d >= 45 ? 2 : (d >= 25 ? 3 : 4));
+                    const rankG = g >= 70 ? 1 : (g >= 45 ? 2 : (g >= 25 ? 3 : 4));
+
                     const elD = document.getElementById("txtDrain");
-                    if (elD) {{ elD.innerText = d.toFixed(1) + "% [" + bandD + "]"; elD.style.color = colorD; }}
+                    if (elD) {{ elD.innerText = d.toFixed(1) + "% • RANK " + rankD + " [" + bandD + "]"; elD.style.color = colorD; }}
                     const elBarD = document.getElementById("barDrain");
                     if (elBarD) {{ elBarD.style.width = Math.min(100, Math.max(5, d)) + "%"; elBarD.style.background = colorD; }}
                     const elND = document.getElementById("noteDrain");
                     if (elND) elND.innerText = nDrain;
 
                     const elG = document.getElementById("txtGarb");
-                    if (elG) {{ elG.innerText = g.toFixed(1) + "% [" + bandG + "]"; elG.style.color = colorG; }}
+                    if (elG) {{ elG.innerText = g.toFixed(1) + "% • RANK " + rankG + " [" + bandG + "]"; elG.style.color = colorG; }}
                     const elBarG = document.getElementById("barGarb");
                     if (elBarG) {{ elBarG.style.width = Math.min(100, Math.max(5, g)) + "%"; elBarG.style.background = colorG; }}
                     const elNG = document.getElementById("noteGarb");
