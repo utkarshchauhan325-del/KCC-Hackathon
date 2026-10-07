@@ -135,23 +135,27 @@ def render_overview_dashboard():
     st.write("")
 
     # Middle Section: Map on Left (45%), Table on Right (55%)
+    # Synchronize selected zone between Emergency Ranking and Geospatial Map
+    selected_zone = st.session_state.get("dashboard_zone_filter", "All Zones")
+    zone_filtered_locs = locations if selected_zone == "All Zones" else [l for l in locations if l.get("zone") == selected_zone]
+
     map_col, table_col = st.columns([1, 1.25], gap="medium")
 
     with map_col:
         # Map control header
         m_head1, m_head2 = st.columns([2, 1])
         with m_head1:
-            st.markdown("### 📍 Pune Geospatial Surveillance")
+            zone_badge = f" <span style='font-size:12px; color:#0284C7; font-weight:700;'>({selected_zone})</span>" if selected_zone != "All Zones" else ""
+            st.markdown(f"### 📍 Pune Geospatial Surveillance{zone_badge}", unsafe_allow_html=True)
         with m_head2:
-            layer_mode = st.radio("Layer", ["Map", "Satellite"], horizontal=True, label_visibility="collapsed")
+            layer_mode = st.radio("Layer", ["Map", "Satellite"], horizontal=True, label_visibility="collapsed", key="overview_layer_mode")
 
-        # Create and render map
+        # Create Folium GIS map synchronized with selected municipal zone
         m = create_floodguard_map(
-            locations=locations,
-            center_lat=18.5240,
-            center_lng=73.8550,
-            zoom_start=12,
-            layer_type=layer_mode
+            locations=zone_filtered_locs,
+            zone=selected_zone,
+            layer_type=layer_mode,
+            fit_bounds=True
         )
         render_floodguard_map_component(m, height=440)
 
@@ -184,13 +188,14 @@ def render_overview_dashboard():
             zone_filter = st.selectbox(
                 "Filter Zone",
                 ["All Zones", "Central", "West", "East", "North", "South"],
+                key="dashboard_zone_filter",
                 label_visibility="collapsed"
             )
 
         # Filter locations
         filtered_locs = locations
         if zone_filter != "All Zones":
-            filtered_locs = [l for l in locations if l["zone"] == zone_filter]
+            filtered_locs = [l for l in locations if l.get("zone") == zone_filter]
 
         # Top key locations to display prominently
         display_locs = filtered_locs[:8]

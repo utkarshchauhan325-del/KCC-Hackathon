@@ -26,13 +26,13 @@ def render_live_risk_map():
     # Filter toolbar
     c1, c2, c3, c4 = st.columns([1.5, 1.5, 1.5, 1.5])
     with c1:
-        zone = st.selectbox("Municipal Zone", ["All Zones", "Central", "West", "East", "North", "South"])
+        zone = st.selectbox("Municipal Zone", ["All Zones", "Central", "West", "East", "North", "South"], key="live_risk_map_zone")
     with c2:
-        risk_filter = st.multiselect("Severity Filter", ["Critical", "High", "Medium", "Low"], default=["Critical", "High", "Medium", "Low"])
+        risk_filter = st.multiselect("Severity Filter", ["Critical", "High", "Medium", "Low"], default=["Critical", "High", "Medium", "Low"], key="live_risk_map_risk")
     with c3:
-        layer_mode = st.radio("Basemap Layer", ["Map", "Satellite"], horizontal=True)
+        layer_mode = st.radio("Basemap Layer", ["Map", "Satellite"], horizontal=True, key="live_risk_map_layer")
     with c4:
-        show_cameras = st.checkbox("Overlay CCTV Cameras (6)", value=True)
+        show_cameras = st.checkbox("Overlay CCTV Cameras (6)", value=True, key="live_risk_map_cctv")
 
     # Filter data with real-time weather adjusted priority
     all_locations = get_weather_adjusted_locations()

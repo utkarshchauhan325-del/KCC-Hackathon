@@ -39,18 +39,22 @@ def create_floodguard_map(
 
     # Resolve center and zoom based on selected municipal zone
     zone_cfg = ZONE_CENTROIDS.get(zone, ZONE_CENTROIDS["All Zones"])
-    target_lat = center_lat if center_lat is not None else zone_cfg["lat"]
-    target_lng = center_lng if center_lng is not None else zone_cfg["lng"]
-    target_zoom = zoom_start if zoom_start is not None else zone_cfg["zoom"]
 
-    # If zone is specific and locations are provided, center around their centroid
-    if zone != "All Zones" and locations:
-        lats = [loc["lat"] for loc in locations if "lat" in loc]
-        lngs = [loc["lng"] for loc in locations if "lng" in loc]
-        if lats and lngs:
-            target_lat = sum(lats) / len(lats)
-            target_lng = sum(lngs) / len(lngs)
-            target_zoom = zone_cfg.get("zoom", 13)
+    if zone != "All Zones":
+        target_lat = zone_cfg["lat"]
+        target_lng = zone_cfg["lng"]
+        target_zoom = zoom_start if zoom_start is not None else zone_cfg.get("zoom", 13)
+        # If locations are provided in this zone, center around their centroid
+        if locations:
+            lats = [loc["lat"] for loc in locations if "lat" in loc]
+            lngs = [loc["lng"] for loc in locations if "lng" in loc]
+            if lats and lngs:
+                target_lat = sum(lats) / len(lats)
+                target_lng = sum(lngs) / len(lngs)
+    else:
+        target_lat = center_lat if center_lat is not None else zone_cfg["lat"]
+        target_lng = center_lng if center_lng is not None else zone_cfg["lng"]
+        target_zoom = zoom_start if zoom_start is not None else zone_cfg["zoom"]
 
     # Select base tiles (high availability, zero rate limits, full CORS support across all browsers)
     if layer_type == "Satellite":
@@ -71,7 +75,19 @@ def create_floodguard_map(
 
     # Highlight Zone Boundary rectangle if a specific zone is selected
     if zone in ZONE_BOUNDS:
-        b = ZONE_BOUNDS[zone]
+        if locations:
+            lats = [loc["lat"] for loc in locations if "lat" in loc]
+            lngs = [loc["lng"] for loc in locations if "lng" in loc]
+            if lats and lngs:
+                b = [
+                    [min(lats) - 0.006, min(lngs) - 0.006],
+                    [max(lats) + 0.006, max(lngs) + 0.006]
+                ]
+            else:
+                b = ZONE_BOUNDS[zone]
+        else:
+            b = ZONE_BOUNDS[zone]
+
         folium.Rectangle(
             bounds=b,
             color="#0284C7",
@@ -83,15 +99,33 @@ def create_floodguard_map(
             tooltip=f"🏛️ Municipal Boundary: {zone} Zone"
         ).add_to(m)
 
-    # Automatically fit bounds to enclose all locations in the selected zone
-    if fit_bounds and zone != "All Zones" and locations:
-        lats = [loc["lat"] for loc in locations if "lat" in loc]
-        lngs = [loc["lng"] for loc in locations if "lng" in loc]
-        if lats and lngs:
-            m.fit_bounds([
-                [min(lats) - 0.008, min(lngs) - 0.008],
-                [max(lats) + 0.008, max(lngs) + 0.008]
-            ])
+    # Automatically fit bounds to enclose all locations in the selected zone or city-wide
+    if fit_bounds:
+        if zone != "All Zones" and locations:
+            lats = [loc["lat"] for loc in locations if "lat" in loc]
+            lngs = [loc["lng"] for loc in locations if "lng" in loc]
+            if lats and lngs:
+                pad_lat = max(0.010, (max(lats) - min(lats)) * 0.12)
+                pad_lng = max(0.010, (max(lngs) - min(lngs)) * 0.12)
+                m.fit_bounds([
+                    [min(lats) - pad_lat, min(lngs) - pad_lng],
+                    [max(lats) + pad_lat, max(lngs) + pad_lng]
+                ])
+        elif zone != "All Zones" and zone in ZONE_BOUNDS:
+            m.fit_bounds(ZONE_BOUNDS[zone])
+        elif zone == "All Zones":
+            if locations:
+                lats = [loc["lat"] for loc in locations if "lat" in loc]
+                lngs = [loc["lng"] for loc in locations if "lng" in loc]
+                if lats and lngs:
+                    pad_lat = max(0.015, (max(lats) - min(lats)) * 0.08)
+                    pad_lng = max(0.015, (max(lngs) - min(lngs)) * 0.08)
+                    m.fit_bounds([
+                        [min(lats) - pad_lat, min(lngs) - pad_lng],
+                        [max(lats) + pad_lat, max(lngs) + pad_lng]
+                    ])
+            else:
+                m.fit_bounds([[18.420, 73.740], [18.630, 73.970]])
 
     # Add Mula-Mutha River polyline path through Pune
     mula_mutha_river = [
@@ -230,7 +264,9 @@ def render_floodguard_map_component(m: folium.Map, height: int = 440) -> None:
     <script>
     (function() {
         function triggerResize() {
-            window.dispatchEvent(new Event('resize'));
+            try {
+                window.dispatchEvent(new Event('resize'));
+            } catch(e) {}
             for (var prop in window) {
                 try {
                     if (window[prop] && typeof window[prop].invalidateSize === 'function') {
@@ -239,18 +275,24 @@ def render_floodguard_map_component(m: folium.Map, height: int = 440) -> None:
                 } catch(e) {}
             }
         }
-        window.addEventListener('DOMContentLoaded', triggerResize);
-        window.addEventListener('load', function() {
-            setTimeout(triggerResize, 150);
-            setTimeout(triggerResize, 500);
-            setTimeout(triggerResize, 1000);
-        });
+        // Fire immediately to handle ready iframes
+        triggerResize();
+        setTimeout(triggerResize, 50);
+        setTimeout(triggerResize, 150);
+        setTimeout(triggerResize, 400);
+        setTimeout(triggerResize, 800);
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', triggerResize);
+        }
+        window.addEventListener('load', triggerResize);
     })();
     </script>
-    </body>
     """
-    if "</body>" in map_html:
-        map_html = map_html.replace("</body>", resize_fix)
+    if "</html>" in map_html:
+        map_html = map_html.replace("</html>", resize_fix + "\n</html>")
+    elif "</body>" in map_html:
+        map_html = map_html.replace("</body>", resize_fix + "\n</body>")
     else:
         map_html += resize_fix
 
