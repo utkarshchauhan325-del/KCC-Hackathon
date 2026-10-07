@@ -12,6 +12,9 @@ from app.db.models import Job, Incident, Evidence, SewerScore, Violation
 from app.core.gemini_client import GeminiVideoClient
 from app.core.evidence import (
     extract_frame_at_timestamp,
+    scale_bbox_to_pixels,
+    select_keyframes,
+    encode_jpeg,
     annotate_frame,
     crop_bbox,
     blur_bystander_faces,
@@ -23,7 +26,7 @@ from app.core.dedupe import deduplicate_infra_issues
 from app.core.plates import is_valid_indian_plate
 from app.notify.alerts import send_incident_alert
 from app.core.scoring import compute_sewer_score, compute_observed_hazard_scores
-from app.core.detector import CivicObjectDetector
+from app.core.detector import CivicObjectDetector, GarbageExemplar
 
 logger = logging.getLogger("civiceye.pipeline")
 
@@ -38,6 +41,38 @@ class CivicEyePipeline:
         if self.detector is None and settings.DETECTOR_ENABLED:
             self.detector = CivicObjectDetector()
         return self.detector
+
+    def _teach_garbage(self, detector: CivicObjectDetector, video_path: Path, issues: list, log_progress) -> None:
+        """Have Gemini box garbage on a few frames; the detector uses them as visual prompts.
+
+        Without examples the detector falls back to its text prompts, which miss most
+        real-world garbage, so a failure here is reported but not fatal.
+        """
+        frames = select_keyframes(video_path, issues, settings.DETECTOR_EXEMPLAR_FRAMES)
+        if not frames:
+            return
+        log_progress(f"🧭 Asking Gemini to mark garbage on {len(frames)} frames to teach the local detector...")
+        try:
+            resp = self.client.locate_garbage([encode_jpeg(f, max_side=1024) for _, f in frames])
+        except Exception as e:
+            logger.warning(f"Garbage exemplar request failed: {e}")
+            log_progress(f"⚠️ Could not get garbage examples from Gemini ({e}); detector will use text prompts only.")
+            detector.set_exemplars([])
+            return
+
+        exemplars = []
+        for marked in resp.frames:
+            if not 1 <= marked.image_index <= len(frames) or not marked.regions:
+                continue
+            frame = frames[marked.image_index - 1][1]
+            h, w = frame.shape[:2]
+            boxes = [scale_bbox_to_pixels(r.box, w, h) for r in marked.regions]
+            valid = [(b, r.waste_type) for b, r in zip(boxes, marked.regions) if b[2] - b[0] >= 8 and b[3] - b[1] >= 8]
+            if valid:
+                exemplars.append(GarbageExemplar(frame, [b for b, _ in valid], [t for _, t in valid]))
+        detector.set_exemplars(exemplars)
+        regions = sum(len(e.boxes) for e in exemplars)
+        log_progress(f"Gemini marked {regions} garbage region(s) on {len(exemplars)} frame(s).")
 
     def process_video(
         self,
@@ -231,6 +266,7 @@ class CivicEyePipeline:
             detector = self._get_detector()
             object_summary = None
             if detector:
+                self._teach_garbage(detector, video_path, deduped_issues, log_progress)
                 log_progress("🎯 Segmenting and tracking objects frame by frame (local YOLOE)...")
                 try:
                     _, object_summary = generate_annotated_surveillance_video(
@@ -254,7 +290,7 @@ class CivicEyePipeline:
             scores = compute_observed_hazard_scores(
                 sewer_assessments=sewer_assessments,
                 dumping_detected=dumping_events > 0,
-                garbage_coverage=object_summary["max_garbage_coverage"] if object_summary else None,
+                garbage_coverage=object_summary["garbage_coverage"] if object_summary else None,
                 vlm_garbage_severity=max(garbage_severities) if garbage_severities else None,
             )
 

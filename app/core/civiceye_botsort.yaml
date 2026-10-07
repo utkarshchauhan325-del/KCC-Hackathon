@@ -1,0 +1,15 @@
+# BoT-SORT settings for CivicEye. Detections are already filtered per class before
+# tracking (text classes >= DETECTOR_CONF, exemplar garbage classes >= DETECTOR_VP_CONF),
+# so the tracker thresholds are low enough to accept low-scoring garbage regions.
+tracker_type: botsort
+track_high_thresh: 0.1
+track_low_thresh: 0.05
+new_track_thresh: 0.1
+track_buffer: 40          # analysed frames to keep a lost track (~4 s at 10 fps): survives brief misses
+match_thresh: 0.8
+fuse_score: True
+gmc_method: sparseOptFlow # compensate camera motion (handheld / phone footage)
+proximity_thresh: 0.5
+appearance_thresh: 0.8
+with_reid: False
+model: auto

@@ -53,3 +53,18 @@ class SewerAssessment(BaseModel):
     wet_conditions: bool
     hazards: List[str] = Field(default_factory=list)
     confidence: float = Field(..., ge=0.0, le=1.0)
+
+WasteType = Literal["dry_plastic", "dry_paper", "wet_organic", "construction", "e_waste", "mixed"]
+
+class GarbageRegion(BaseModel):
+    """One garbage region on a still frame, used as a visual prompt for the local detector."""
+    box: BBox
+    waste_type: WasteType
+
+class GarbageExemplarFrame(BaseModel):
+    image_index: int = Field(..., ge=1, description="1-based index of the image in the request")
+    regions: List[GarbageRegion] = Field(default_factory=list)
+
+class GarbageExemplarResponse(BaseModel):
+    """Garbage regions Gemini located on sampled frames."""
+    frames: List[GarbageExemplarFrame] = Field(default_factory=list)

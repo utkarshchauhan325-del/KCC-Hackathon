@@ -7,19 +7,25 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.core.prompts import SYSTEM_CONTEXT, INFRA_PROMPT, VIOLATOR_PROMPT, SEWER_PROMPT
-from app.core.schemas import InfraAnalysisResponse, ViolatorAnalysisResponse, SewerAssessment
+from app.core.prompts import SYSTEM_CONTEXT, INFRA_PROMPT, VIOLATOR_PROMPT, SEWER_PROMPT, GARBAGE_EXEMPLAR_PROMPT
+from app.core.schemas import InfraAnalysisResponse, ViolatorAnalysisResponse, SewerAssessment, GarbageExemplarResponse
 
 logger = logging.getLogger("civiceye.gemini_client")
 logging.basicConfig(level=settings.LOG_LEVEL)
 
 T = TypeVar("T", bound=BaseModel)
 
+# Tried in order after GEMINI_MODEL. Free-tier quota is per model (20 requests/day), so a
+# 429 on one model moves straight to the next.
 FALLBACK_MODELS = [
-    "gemini-3-flash-preview",
-    "gemini-3.7-flash",
     "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3-flash-preview",
     "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
 ]
 
 class GeminiVideoClient:
@@ -134,3 +140,13 @@ class GeminiVideoClient:
         prompt = SEWER_PROMPT.format(timestamp=timestamp_str)
         contents = [video_file, prompt]
         return self._call_with_retry_and_fallback(contents, SewerAssessment)
+
+    def locate_garbage(self, jpeg_frames: List[bytes]) -> GarbageExemplarResponse:
+        """Box garbage regions on still frames; the boxes become visual prompts for the local detector."""
+        logger.info(f"Locating garbage exemplars on {len(jpeg_frames)} frames...")
+        contents: list = []
+        for i, jpeg in enumerate(jpeg_frames, start=1):
+            contents.append(f"Image {i}:")
+            contents.append(types.Part.from_bytes(data=jpeg, mime_type="image/jpeg"))
+        contents.append(GARBAGE_EXEMPLAR_PROMPT.format(n=len(jpeg_frames)))
+        return self._call_with_retry_and_fallback(contents, GarbageExemplarResponse)

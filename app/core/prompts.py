@@ -43,3 +43,20 @@ about 2 metres (none, light, moderate, heavy), whether drain inlet grating is co
 whether the cover is missing/broken, whether it is raining or the road is wet,
 and any visible hazards (open hole, children/vehicles nearby). Return the JSON schema only.
 """
+
+GARBAGE_EXEMPLAR_PROMPT = """
+You are given {n} still frames from one street video, labelled "Image 1" to "Image {n}".
+For each image, draw a tight bounding box around every distinct region of garbage or
+litter: heaps, scattered waste, bags, bottles, debris dumped in or beside drains.
+Boxes must contain garbage only; do not box people, clean water, vegetation, walls or
+vehicles. Split large mixed areas into several boxes where the waste type changes.
+Label each box with its dominant waste stream:
+- dry_plastic: plastic bags, wrappers, bottles, thermocol
+- dry_paper: paper, cardboard, cartons
+- wet_organic: food, vegetable/fruit waste, rotting organic matter
+- construction: rubble, bricks, sand, concrete, tiles
+- e_waste: electronics, wires, batteries
+- mixed: unsegregated heaps where no single stream dominates
+Use at most 8 boxes per image, largest regions first. If an image has no garbage,
+return it with an empty list of regions.
+"""

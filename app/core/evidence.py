@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 from pathlib import Path
-from typing import Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union
 from app.config import settings
 from app.core.schemas import BBox
 
@@ -121,6 +121,44 @@ def blur_bystander_faces(frame: np.ndarray, primary_box: Optional[BBox] = None) 
 
     return blurred
 
+def select_keyframes(video_path: Union[str, Path], issues: list, max_frames: int) -> List[Tuple[float, np.ndarray]]:
+    """Pick up to max_frames frames: Gemini's best frames for garbage/drainage issues first,
+    then evenly spaced frames, skipping any within 1 s of one already chosen."""
+    cap = cv2.VideoCapture(str(video_path))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    duration = (cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0) / fps
+    cap.release()
+    if duration <= 0 or max_frames <= 0:
+        return []
+    candidates = [
+        timestamp_to_seconds(i.best_frame_ts) for i in issues if i.category in ("garbage", "drainage")
+    ]
+    candidates += [duration * (k + 0.5) / max_frames for k in range(max_frames)]
+    chosen: List[float] = []
+    for t in candidates:
+        t = min(max(0.0, t), max(0.0, duration - 0.05))
+        if len(chosen) < max_frames and all(abs(t - c) >= 1.0 for c in chosen):
+            chosen.append(t)
+    frames = []
+    for t in sorted(chosen):
+        frame = extract_frame_at_timestamp(video_path, t)
+        if frame is not None:
+            frames.append((t, frame))
+    return frames
+
+
+def encode_jpeg(frame: np.ndarray, max_side: int = 1024, quality: int = 85) -> bytes:
+    """JPEG-encode a frame, downscaled so its longer side is at most max_side."""
+    h, w = frame.shape[:2]
+    scale = min(1.0, max_side / max(h, w))
+    if scale < 1.0:
+        frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+    ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
+    if not ok:
+        raise ValueError("JPEG encoding failed")
+    return buf.tobytes()
+
+
 def save_image(img: np.ndarray, output_path: Union[str, Path]) -> Path:
     """Save OpenCV BGR image to disk."""
     out = Path(output_path)
@@ -171,8 +209,8 @@ def draw_detections(frame: np.ndarray, detections: list) -> np.ndarray:
     w = frame.shape[1]
     scale = max(0.35, min(0.55, w / 1300.0))
     for det in detections:
-        if det.polygon is not None:
-            cv2.fillPoly(overlay, [det.polygon], _det_color(det))
+        if det.contours:
+            cv2.fillPoly(overlay, det.contours, _det_color(det))
         else:
             x1, y1, x2, y2 = det.box
             cv2.rectangle(overlay, (x1, y1), (x2, y2), _det_color(det), -1)
@@ -181,8 +219,8 @@ def draw_detections(frame: np.ndarray, detections: list) -> np.ndarray:
     for det in detections:
         color = _det_color(det)
         x1, y1, x2, y2 = det.box
-        if det.polygon is not None:
-            cv2.polylines(out, [det.polygon], True, color, 2, cv2.LINE_AA)
+        if det.contours:
+            cv2.polylines(out, det.contours, True, color, 2, cv2.LINE_AA)
         else:
             cv2.rectangle(out, (x1, y1), (x2, y2), color, 2)
         tid = f"#{det.track_id} " if det.track_id is not None else ""
@@ -252,7 +290,7 @@ def generate_annotated_surveillance_video(
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         out = cv2.VideoWriter(str(output_path), fourcc, fps, (w, h))
 
-    summary = VideoObjectSummary(w, h) if detector else None
+    summary = VideoObjectSummary(w, h, min_frames=max(2, round(settings.DETECTOR_FPS * 0.5))) if detector else None
     stride = max(1, round(fps / settings.DETECTOR_FPS)) if detector else 1
     if detector:
         detector.start_video()
@@ -314,7 +352,10 @@ def generate_annotated_surveillance_video(
     out.release()
     if fourcc != cv2.VideoWriter_fourcc(*"avc1"):
         _transcode_to_h264(output_path)
-    return output_path, (summary.to_dict(detector.model_name) if detector else None)
+    if not detector:
+        return output_path, None
+    exemplars = len(getattr(detector, "exemplars", []))
+    return output_path, summary.to_dict(detector.model_name, exemplar_frames=exemplars, garbage_measured=exemplars > 0)
 
 
 def _transcode_to_h264(path: Path) -> None:

@@ -22,8 +22,10 @@ class Settings(BaseSettings):
     DETECTOR_ENABLED: bool = True
     DETECTOR_MODEL: str = Field(default="yoloe-26s-seg.pt", description="Ultralytics YOLOE segmentation weights")
     DETECTOR_CONF: float = 0.25
+    DETECTOR_VP_CONF: float = Field(default=0.1, description="Threshold for garbage classes learned from Gemini examples")
+    DETECTOR_EXEMPLAR_FRAMES: int = Field(default=4, description="Frames Gemini marks garbage on to teach the detector")
     DETECTOR_IMGSZ: int = 640
-    DETECTOR_FPS: float = Field(default=6.0, description="Frames per second of video to run the detector on")
+    DETECTOR_FPS: float = Field(default=10.0, description="Frames per second of video to run the detector on")
 
     # Storage Paths
     DATA_DIR: Path = Field(default=BASE_DIR / "data")

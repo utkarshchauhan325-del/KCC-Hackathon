@@ -13,6 +13,7 @@ from app.core import pipeline as pipeline_mod
 from app.core.plates import is_valid_indian_plate
 from app.core.schemas import (
     BBox, InfraIssue, InfraAnalysisResponse, ViolatorEvent, ViolatorAnalysisResponse,
+    GarbageExemplarResponse, GarbageExemplarFrame, GarbageRegion,
 )
 from app.db.models import Base, Incident, Evidence, Violation, AlertLog
 from app.notify import alerts
@@ -37,6 +38,9 @@ def _fake_client(issues, events):
     client.analyze_infrastructure.return_value = InfraAnalysisResponse(issues=issues)
     client.analyze_violators.return_value = ViolatorAnalysisResponse(events=events)
     client.assess_sewer_point.side_effect = RuntimeError("not needed")
+    client.locate_garbage.return_value = GarbageExemplarResponse(frames=[
+        GarbageExemplarFrame(image_index=1, regions=[GarbageRegion(box=BBox(ymin=500, xmin=0, ymax=1000, xmax=500), waste_type="dry_plastic")]),
+    ])
     return client
 
 
@@ -149,7 +153,8 @@ def test_detector_objects_are_saved_and_drive_garbage_score(session_factory, mon
     result = pipeline_mod.CivicEyePipeline(client=_fake_client([], []), detector=FakeDetector()).process_video(
         SAMPLE_VIDEO, run_pass_b=False
     )
-    assert result["objects"]["counts_by_category"] == {"garbage": 1, "person": 1}
+    assert result["objects"]["counts_by_category"] == {"person": 1}
+    assert result["objects"]["garbage_exemplar_frames"] == 1
     assert (settings.EVIDENCE_DIR / result["job_id"] / "result.json").is_file()
     assert result["drainage_score"] is None
     assert result["garbage_breakdown"]["factors"]["debris_volume"]["val"] == "massive"

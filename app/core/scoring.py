@@ -342,7 +342,7 @@ def compute_observed_hazard_scores(
     trash_near = _worst([a.trash_near for a in sewer_assessments])
     if garbage_coverage is not None:
         debris_volume = _coverage_level(garbage_coverage)
-        sources["debris_volume"] = f"local detector mask coverage ({garbage_coverage:.1%} of frame)"
+        sources["debris_volume"] = f"local detector: garbage covers {garbage_coverage:.0%} of frame (90th percentile)"
     elif vlm_garbage_severity:
         debris_volume = _SEVERITY_VOLUME.get(vlm_garbage_severity, "moderate")
         sources["debris_volume"] = f"Gemini garbage severity {vlm_garbage_severity}/5"

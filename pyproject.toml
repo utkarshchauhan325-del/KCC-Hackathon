@@ -39,3 +39,6 @@ python_files = ["test_*.py"]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.core" = ["*.yaml"]
