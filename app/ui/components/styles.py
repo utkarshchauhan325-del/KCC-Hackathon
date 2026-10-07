@@ -591,47 +591,89 @@ def get_floodguard_css() -> str:
         box-shadow: 0 -2px 6px rgba(2, 132, 199, 0.08) !important;
     }
 
-    /* Top Navigation Button Styling */
-    div.stButton > button[kind="primary"] {
-        background-color: #0284C7 !important;
-        color: #FFFFFF !important;
-        font-weight: 700 !important;
-        border: 1px solid #0284C7 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28) !important;
-    }
-    div.stButton > button[kind="secondary"] {
-        background-color: #FFFFFF !important;
-        color: #334155 !important;
-        font-weight: 600 !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 8px !important;
-        transition: all 0.15s ease !important;
-    }
-    div.stButton > button[kind="secondary"]:hover {
-        background-color: #F8FAFC !important;
-        color: #0284C7 !important;
-        border-color: #0284C7 !important;
-    }
-
-    /* Keep Streamlit sidebar toggle accessible while hiding menu clutter */
+    /* Hide standard Streamlit header clutter */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header[data-testid="stHeader"] {
-        background: transparent !important;
+    header {visibility: hidden;}
+
+    /* Completely remove the << sidebar collapse option so it never goes inside */
+    [data-testid="stSidebarCollapseButton"],
+    button[data-testid="stSidebarCollapseButton"],
+    div[data-testid="stSidebarCollapseButton"],
+    header[data-testid="stSidebarHeader"],
+    div[data-testid="stSidebarHeader"] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
     }
-    header [data-testid="stToolbar"] {
-        visibility: hidden;
+
+    /* Hide any collapsed control / expand toggle */
+    [data-testid="collapsedControl"],
+    [data-testid="stExpandSidebarButton"],
+    button[data-testid="stExpandSidebarButton"] {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
-    div[data-testid="collapsedControl"] {
+
+    /* Keep sidebar permanently visible with clean fixed width */
+    section[data-testid="stSidebar"] {
+        display: flex !important;
         visibility: visible !important;
-        display: block !important;
-        background: #FFFFFF !important;
-        border: 1px solid #CBD5E1 !important;
-        border-radius: 8px !important;
-        padding: 4px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
-        margin: 6px !important;
+        transform: none !important;
+        min-width: 290px !important;
+        max-width: 320px !important;
+        width: 300px !important;
+    }
+
+    /* Prevent iframe script containers from taking visual space */
+    iframe[height="0"] {
+        position: absolute !important;
+        width: 0 !important;
+        height: 0 !important;
+        border: none !important;
+        pointer-events: none !important;
+    }
+
+    /* Clean, compact corridor buttons in Emergency Ranking table */
+    div[data-testid="stColumn"] div.stButton > button {
+        border-radius: 6px !important;
+        font-size: 11px !important;
+        padding: 3px 8px !important;
+        min-height: 28px !important;
+        height: 28px !important;
+        line-height: 1.15 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+    div[data-testid="stColumn"] div.stButton > button[kind="secondary"] {
+        background-color: transparent !important;
+        border: 1px solid transparent !important;
+        color: #1E293B !important;
+        font-weight: 700 !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        box-shadow: none !important;
+    }
+    div[data-testid="stColumn"] div.stButton > button[kind="secondary"]:hover {
+        background-color: #F1F5F9 !important;
+        border-color: #E2E8F0 !important;
+        color: #0284C7 !important;
+    }
+    div[data-testid="stColumn"] div.stButton > button[kind="primary"] {
+        background-color: #E0F2FE !important;
+        border: 1px solid #BAE6FD !important;
+        color: #0284C7 !important;
+        font-weight: 800 !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+        box-shadow: none !important;
     }
 </style>
 """

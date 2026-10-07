@@ -35,6 +35,33 @@ st.set_page_config(
 # Inject custom FloodGuard CSS theme
 st.markdown(get_floodguard_css(), unsafe_allow_html=True)
 
+# Ensure sidebar remains permanently expanded even if previously collapsed in browser session
+import streamlit.components.v1 as components
+components.html(
+    """
+    <script>
+    (function() {
+        function expandSidebar() {
+            try {
+                const parentDoc = window.parent.document;
+                const expandBtn = parentDoc.querySelector('[data-testid="stExpandSidebarButton"]') || 
+                                  parentDoc.querySelector('[data-testid="collapsedControl"] button') ||
+                                  parentDoc.querySelector('[data-testid="collapsedControl"]');
+                if (expandBtn) {
+                    expandBtn.click();
+                }
+            } catch(e) {}
+        }
+        expandSidebar();
+        setTimeout(expandSidebar, 100);
+        setTimeout(expandSidebar, 300);
+    })();
+    </script>
+    """,
+    height=0,
+    width=0,
+)
+
 # -------------------------------------------------------------
 # SIDEBAR NAVIGATION - MATCHING SCREENSHOT PRECISELY
 # -------------------------------------------------------------
@@ -54,30 +81,20 @@ with st.sidebar:
     </div>
     """).strip(), unsafe_allow_html=True)
 
-    # Navigation options
+    # Navigation options (Merged Priority Queue & Interventions)
     nav_options = [
         "📊 Dashboard",
         "📍 Live Risk Map",
-        "📹 CCTV Surveillance (6)",
+        "📹 CCTV Monitoring (6)",
         "⚠️ Priority Queue & Interventions (3)",
         "📈 Flood Analytics"
     ]
 
-    if "nav_selection" not in st.session_state or st.session_state["nav_selection"] not in nav_options:
-        st.session_state["nav_selection"] = "📊 Dashboard"
-
-    def on_sidebar_nav_change():
-        st.session_state["nav_selection"] = st.session_state["sidebar_nav_radio"]
-
-    curr_idx = nav_options.index(st.session_state["nav_selection"]) if st.session_state["nav_selection"] in nav_options else 0
-
-    st.radio(
+    selected_nav = st.radio(
         "Navigation Menu",
         nav_options,
-        index=curr_idx,
-        label_visibility="collapsed",
-        key="sidebar_nav_radio",
-        on_change=on_sidebar_nav_change
+        index=0,
+        label_visibility="collapsed"
     )
 
     # Bottom Municipal Organization Tag
@@ -92,48 +109,19 @@ with st.sidebar:
     """).strip(), unsafe_allow_html=True)
 
 # -------------------------------------------------------------
-# TOP NAVIGATION STRIP (Always visible even if sidebar is collapsed)
-# -------------------------------------------------------------
-st.markdown(textwrap.dedent("""
-<div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:12px; padding:10px 16px; margin-bottom:14px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; justify-content:space-between; align-items:center;">
-    <div style="display:flex; align-items:center; gap:10px;">
-        <span style="background:#0284C7; color:white; font-size:14px; width:26px; height:26px; border-radius:6px; display:inline-flex; align-items:center; justify-content:center;">🌊</span>
-        <span style="font-weight:800; font-size:14px; color:#0F172A; letter-spacing:-0.01em;">FloodGuard Intelligence Portal</span>
-        <span style="background:#E0F2FE; color:#0284C7; font-size:10px; font-weight:700; padding:2px 8px; border-radius:12px; border:1px solid #BAE6FD;">LIVE MUNICIPAL FEED</span>
-    </div>
-    <div style="display:flex; align-items:center; gap:14px; font-size:12px; color:#64748B;">
-        <span>🏛️ <b>PMC</b> Pune Central Command</span>
-        <span>🟢 <b>Online</b></span>
-    </div>
-</div>
-""").strip(), unsafe_allow_html=True)
-
-nav_cols = st.columns([1.1, 1.25, 1.6, 2.0, 1.25])
-for i, opt in enumerate(nav_options):
-    with nav_cols[i]:
-        is_active = (st.session_state["nav_selection"] == opt)
-        btn_type = "primary" if is_active else "secondary"
-        if st.button(opt, key=f"top_nav_{i}", type=btn_type, use_container_width=True):
-            st.session_state["nav_selection"] = opt
-            st.rerun()
-
-current_view = st.session_state["nav_selection"]
-
-# -------------------------------------------------------------
 # VIEW ROUTING
 # -------------------------------------------------------------
-if current_view == "📊 Dashboard":
+if selected_nav == "📊 Dashboard":
     render_overview_dashboard()
 
-elif current_view == "📍 Live Risk Map":
+elif selected_nav == "📍 Live Risk Map":
     render_live_risk_map()
 
-elif "CCTV" in current_view:
+elif selected_nav == "📹 CCTV Monitoring (6)":
     render_cctv_monitoring()
 
-elif "Priority Queue" in current_view or "Intervention" in current_view:
+elif "Priority Queue" in selected_nav or "Intervention" in selected_nav:
     render_priority_queue_and_interventions()
 
-elif "Flood Analytics" in current_view or "Analytics" in current_view:
+elif selected_nav == "📈 Flood Analytics":
     render_flood_analytics()
-

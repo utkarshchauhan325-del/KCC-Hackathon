@@ -261,26 +261,27 @@ def create_floodguard_map(
     return m
 
 
-def render_floodguard_map_component(m: folium.Map, height: int = 440, key: Optional[str] = None) -> None:
-    """Render Folium map with 100% reliable cross-browser reactivity (Safari, WebKit, Chrome)."""
+def render_floodguard_map_component(m: folium.Map, height: int = 440, key: Optional[str] = None) -> Any:
+    """Render Folium map with 100% reliable cross-browser reactivity and click event capture."""
     target_center = getattr(m, "target_center", None)
     target_zoom = getattr(m, "target_zoom", None)
     try:
         from streamlit_folium import st_folium
         if key is None:
             key = getattr(m, "get_name", lambda: "folium_map")()
-        st_folium(
+        return st_folium(
             m,
             key=key,
             height=height,
             center=target_center,
             zoom=target_zoom,
             use_container_width=True,
-            returned_objects=[]
+            returned_objects=["last_object_clicked", "last_clicked"]
         )
     except Exception:
         import streamlit.components.v1 as components
         map_html = m.get_root().render()
         components.html(map_html, height=height, scrolling=False)
+        return None
 
 
