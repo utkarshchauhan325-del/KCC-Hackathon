@@ -252,49 +252,22 @@ def create_floodguard_map(
     return m
 
 
-def render_floodguard_map_component(m: folium.Map, height: int = 440) -> None:
-    """Render Folium map with 100% reliable cross-browser rendering (Safari, WebKit, Chrome)."""
-    import streamlit.components.v1 as components
+def render_floodguard_map_component(m: folium.Map, height: int = 440, key: Optional[str] = None) -> None:
+    """Render Folium map with 100% reliable cross-browser reactivity (Safari, WebKit, Chrome)."""
+    try:
+        from streamlit_folium import st_folium
+        if key is None:
+            key = getattr(m, "get_name", lambda: "folium_map")()
+        st_folium(
+            m,
+            key=key,
+            height=height,
+            use_container_width=True,
+            returned_objects=[]
+        )
+    except Exception:
+        import streamlit.components.v1 as components
+        map_html = m.get_root().render()
+        components.html(map_html, height=height, scrolling=False)
 
-    # Generate complete self-contained HTML for Leaflet
-    map_html = m.get_root().render()
-
-    # Inject automatic resize and invalidateSize listener for instant Leaflet mounting
-    resize_fix = """
-    <script>
-    (function() {
-        function triggerResize() {
-            try {
-                window.dispatchEvent(new Event('resize'));
-            } catch(e) {}
-            for (var prop in window) {
-                try {
-                    if (window[prop] && typeof window[prop].invalidateSize === 'function') {
-                        window[prop].invalidateSize();
-                    }
-                } catch(e) {}
-            }
-        }
-        // Fire immediately to handle ready iframes
-        triggerResize();
-        setTimeout(triggerResize, 50);
-        setTimeout(triggerResize, 150);
-        setTimeout(triggerResize, 400);
-        setTimeout(triggerResize, 800);
-
-        if (document.readyState === 'loading') {
-            window.addEventListener('DOMContentLoaded', triggerResize);
-        }
-        window.addEventListener('load', triggerResize);
-    })();
-    </script>
-    """
-    if "</html>" in map_html:
-        map_html = map_html.replace("</html>", resize_fix + "\n</html>")
-    elif "</body>" in map_html:
-        map_html = map_html.replace("</body>", resize_fix + "\n</body>")
-    else:
-        map_html += resize_fix
-
-    components.html(map_html, height=height, scrolling=False)
 

@@ -145,8 +145,8 @@ def render_overview_dashboard():
         # Map control header
         m_head1, m_head2 = st.columns([2, 1])
         with m_head1:
-            zone_badge = f" <span style='font-size:12px; color:#0284C7; font-weight:700;'>({selected_zone})</span>" if selected_zone != "All Zones" else ""
-            st.markdown(f"### 📍 Pune Geospatial Surveillance{zone_badge}", unsafe_allow_html=True)
+            zone_badge = f"<span style='font-size:12px; color:#0284C7; font-weight:700; background:#E0F2FE; padding:2px 8px; border-radius:6px; border:1px solid #BAE6FD;'>{selected_zone}</span>" if selected_zone != "All Zones" else ""
+            st.markdown(f"<div style='display:flex; align-items:center; gap:8px;'><h3 style='margin:0; font-size:18px; font-weight:800; color:#0F172A;'>📍 Pune Geospatial Surveillance</h3>{zone_badge}</div>", unsafe_allow_html=True)
         with m_head2:
             layer_mode = st.radio("Layer", ["Map", "Satellite"], horizontal=True, label_visibility="collapsed", key="overview_layer_mode")
 
@@ -157,7 +157,7 @@ def render_overview_dashboard():
             layer_type=layer_mode,
             fit_bounds=True
         )
-        render_floodguard_map_component(m, height=440)
+        render_floodguard_map_component(m, height=440, key=f"overview_map_{selected_zone}_{layer_mode}")
 
         # Map Bottom Legend
         legend_html = textwrap.dedent("""

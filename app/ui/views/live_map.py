@@ -85,7 +85,7 @@ def render_live_risk_map():
         fit_bounds=True
     )
 
-    render_floodguard_map_component(m, height=580)
+    render_floodguard_map_component(m, height=580, key=f"live_risk_map_{zone}_{layer_mode}_{show_cameras}_{len(filtered)}")
 
     # Summary metrics below map
     st.markdown("### 📊 Active Filter Spatial Summary")

@@ -79,24 +79,17 @@ def test_create_floodguard_map_zones():
         if zone != "All Zones":
             assert f"Municipal Boundary: {zone} Zone" in html
 
-def test_render_floodguard_map_html_resizing():
-    """Verify Leaflet map html includes invalidateSize listener."""
-    from app.ui.components.map_view import create_floodguard_map
-    import folium
-
-    m = create_floodguard_map(PUNE_LOCATIONS[:5], zone="West")
-    html = m.get_root().render()
-    assert "invalidateSize" not in html # Raw folium doesn't have it
-
-    # Check that our injection logic works
-    from app.ui.components.map_view import render_floodguard_map_component
+def test_render_floodguard_map_component_rendering():
+    """Verify Leaflet map renders via st_folium with dynamic remount keys."""
+    from app.ui.components.map_view import create_floodguard_map, render_floodguard_map_component
     import unittest.mock as mock
 
-    with mock.patch("streamlit.components.v1.html") as mock_html:
-        render_floodguard_map_component(m, height=440)
-        assert mock_html.called
-        rendered_content = mock_html.call_args[0][0]
-        assert "invalidateSize" in rendered_content
-        assert "triggerResize" in rendered_content
+    m = create_floodguard_map(PUNE_LOCATIONS[:5], zone="West")
+
+    with mock.patch("streamlit_folium._component_func") as mock_comp:
+        render_floodguard_map_component(m, height=440, key="overview_map_West_Map")
+        assert mock_comp.called
+        assert "key" in mock_comp.call_args[1]
+
 
 
