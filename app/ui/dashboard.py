@@ -57,7 +57,7 @@ current_slug = next((s for s, p in pages.items() if p.url_path == current.url_pa
 # Top bar: brand, inline links (wide screens) and pop-up menu
 # -------------------------------------------------------------
 with st.container(key="fg_topbar", horizontal=True, vertical_alignment="center", gap="small"):
-    with st.container(key="fg_brand", width="content"):
+    with st.container(key="fg_brand"):
         st.markdown(
             f'<div class="fg-brand">{BRAND_MARK}<div>'
             f'<div class="fg-brand-name">FloodGuard</div>'
@@ -66,15 +66,15 @@ with st.container(key="fg_topbar", horizontal=True, vertical_alignment="center",
             unsafe_allow_html=True,
         )
 
-    with st.container(key="fg_links", horizontal=True, vertical_alignment="center", gap=None, width="content"):
+    with st.container(key="fg_links", horizontal=True, vertical_alignment="center", gap=None):
         for slug, _title, short, _ico, _desc, _fn, _badge in PAGE_SPECS:
             state = "on" if slug == current_slug else "off"
-            with st.container(key=f"nav{state}_{slug.replace('-', '_')}", width="content"):
+            with st.container(key=f"nav{state}_{slug.replace('-', '_')}"):
                 st.page_link(pages[slug], label=short)
 
     st.html(f'<div class="fg-clock">{datetime.now():%d %b %Y &middot; %H:%M}</div>')
 
-    menu = st.popover("Menu", icon=":material/menu:", key=f"fg_menu_{current_slug.replace('-', '_')}")
+    menu = st.popover("Menu", icon=":material/menu:")
     with menu:
         st.html(
             '<div class="fg-pal-head"><span class="fg-pal-title">Go to</span>'
