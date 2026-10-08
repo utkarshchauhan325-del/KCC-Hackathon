@@ -277,9 +277,20 @@ def render_flood_analytics():
             with st.container(border=True):
                 st.markdown(section_title("Location data (CSV)", "All 53 locations with rainfall, capacity and risk scores."), unsafe_allow_html=True)
                 df_export = pd.DataFrame(PUNE_LOCATIONS)
+                try:
+                    csv_data = df_export.to_csv(index=False).encode('utf-8')
+                except Exception:
+                    import csv
+                    import io
+                    buf = io.StringIO()
+                    if PUNE_LOCATIONS:
+                        writer = csv.DictWriter(buf, fieldnames=list(PUNE_LOCATIONS[0].keys()))
+                        writer.writeheader()
+                        writer.writerows(PUNE_LOCATIONS)
+                    csv_data = buf.getvalue().encode('utf-8')
                 st.download_button(
                     label="Download CSV",
-                    data=df_export.to_csv(index=False).encode('utf-8'),
+                    data=csv_data,
                     file_name=f"pune_flood_telemetry_{datetime.now().strftime('%Y%m%d')}.csv",
                     mime="text/csv",
                     use_container_width=True
