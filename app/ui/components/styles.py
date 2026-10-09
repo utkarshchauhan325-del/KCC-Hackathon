@@ -136,6 +136,7 @@ def get_floodguard_css() -> str:
     return """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block');
 
 :root {
   --fg-bg: #F8FAFC;
@@ -281,12 +282,22 @@ section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] {
   border: 1px solid transparent !important;
   transition: all 0.15s ease !important;
 }
-section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] p,
-section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] span {
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] p {
   font-family: var(--fg-font-head) !important;
   font-size: 13.5px !important;
   font-weight: 500 !important;
   color: #94A3B8 !important;
+  margin: 0 !important;
+}
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] [data-testid="stIconMaterial"],
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] .material-symbols-rounded,
+section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"] .material-symbols-outlined {
+  font-family: "Material Symbols Rounded", "Material Symbols Outlined", sans-serif !important;
+  font-size: 19px !important;
+  color: #38BDF8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 section[data-testid="stSidebar"] [data-testid="stPageLink-NavLink"]:hover {
   background: #1C2541 !important;
