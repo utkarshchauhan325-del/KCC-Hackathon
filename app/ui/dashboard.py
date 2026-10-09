@@ -88,55 +88,7 @@ with st.sidebar:
             use_container_width=True
         )
 
-    st.markdown('<div class="fg-sb-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="fg-sb-nav-label">OPERATIONS TELEMETRY</div>', unsafe_allow_html=True)
 
-    # Live operational context card
-    try:
-        weather = fetch_live_pune_weather()
-        temp_str = f"{weather.temp_c:.0f}&deg;C"
-        precip_str = f"{weather.precip_mm:.1f} mm/h"
-        cond_str = weather.condition_text
-    except Exception:
-        temp_str = "24&deg;C"
-        precip_str = "0.0 mm/h"
-        cond_str = "Telemetry Active"
-
-    st.markdown(
-        f"""
-        <div class="fg-sb-card">
-            <div class="fg-sb-card-row">
-                <span class="fg-sb-card-k">Monsoon Advisory</span>
-                <span class="fg-sb-card-v fg-sb-alert">LEVEL 2 SURVEILLANCE</span>
-            </div>
-            <div class="fg-sb-card-row">
-                <span class="fg-sb-card-k">Precipitation</span>
-                <span class="fg-sb-card-v font-mono">{precip_str}</span>
-            </div>
-            <div class="fg-sb-card-row">
-                <span class="fg-sb-card-k">Pune Weather</span>
-                <span class="fg-sb-card-v">{temp_str} &middot; {cond_str}</span>
-            </div>
-            <div class="fg-sb-card-row">
-                <span class="fg-sb-card-k">Mutha River Basin</span>
-                <span class="fg-sb-card-v font-mono">Discharge Normal</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Emergency Desk Contacts
-    st.markdown(
-        """
-        <div class="fg-sb-footer">
-            <div class="fg-sb-desk">PMC EMERGENCY OPERATIONS</div>
-            <div class="fg-sb-phone">Control Room: 020-25501269</div>
-            <div class="fg-sb-tollfree">Disaster Helpline: 1077</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 # -------------------------------------------------------------
 # Top Operational Strip (Main Area)

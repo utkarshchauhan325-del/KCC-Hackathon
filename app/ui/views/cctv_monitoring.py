@@ -292,20 +292,7 @@ def _render_upload() -> None:
             unsafe_allow_html=True,
         )
 
-        steps = [
-            ("Gemini A", "Drains, manholes, garbage, potholes, road hazards"),
-            ("Gemini C", "Water level and blockage at each drain"),
-            ("YOLOE", "Outlines and tracks objects, measures garbage area"),
-            ("Gemini B", "People dumping waste, vehicle and plate"),
-        ]
-        rows = "".join(
-            f'<div style="display:flex;gap:10px;padding:6px 0;border-top:1px solid #F1F5F9;font-size:12.5px;">'
-            f'<span class="fg-mono" style="color:#0A7C8F;font-weight:600;width:72px;flex-shrink:0;">{t}</span>'
-            f'<span style="color:#64708A;">{d}</span></div>'
-            for t, d in steps
-        )
-        st.markdown(f'<div class="fg-card" style="padding:12px 16px;"><div class="fg-k" style="margin-bottom:4px;">What runs on the video</div>{rows}</div>',
-                    unsafe_allow_html=True)
+
         run_pass_b = st.checkbox("Look for people dumping waste (Gemini B)", value=True)
 
         if st.button("Run analysis", type="primary", use_container_width=True, disabled=target is None):
