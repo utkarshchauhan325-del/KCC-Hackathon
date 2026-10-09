@@ -1,5 +1,7 @@
 # CivicEye: AI Civic Issue Detection from Video
 
+> **Historical document.** This is the original build brief written before the project was built. The system as built differs in places (local YOLOE detector, garbage measured as area, Streamlit only, no FastAPI yet). For the current design see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); for status and next steps see [docs/PLAN.md](docs/PLAN.md).
+
 > Hand this file to Antigravity as the project brief. Build phase by phase (Section 12). Do not skip ahead.
 
 ## 1. Goal
