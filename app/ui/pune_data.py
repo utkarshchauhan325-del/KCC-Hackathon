@@ -407,49 +407,73 @@ RECENT_ALERTS = [
     }
 ]
 
-# 6 Fixed Municipal CCTV Cameras for Live Monitoring
+# Municipal CCTV cameras. The first three are the assigned demo cameras: their scores are
+# fixed to the results of analysing each camera's video, and the same numbers are shown
+# under the camera on the CCTV page and for its linked location on the dashboard.
+# To change a camera's figures, edit them here only.
 CCTV_CAMERAS = [
     {
         "id": "CAM-PUNE-01",
         "name": "MG Road Main Cross",
         "zone": "Central",
         "status": "LIVE",
+        "location_id": "LOC-01",  # MG Road Junction on the dashboard
+        "video": "WhatsApp_Video_2026-10-08_at_1.37.27_AM.mp4",
+        "drainage_score": 70,
+        "garbage_score": 83,
+        "composite_score": 61,
         "risk_level": "Critical",
+        "garbage_coverage_pct": 55,
+        "violations": 0,
         "water_depth_cm": 28,
         "blockage_index": 78,
-        "ai_status": "Waterlogging & Trash in Culvert",
+        "ai_status": "Blocked drain and heavy garbage around the inlet",
         "lat": 18.5186,
         "lng": 73.8785,
         "stream_fps": 30,
-        "incidents_today": 4
+        "incidents_today": 2
     },
     {
         "id": "CAM-PUNE-02",
         "name": "FC Road Ferguson College Gate",
         "zone": "Central",
         "status": "LIVE",
-        "risk_level": "Critical",
-        "water_depth_cm": 22,
-        "blockage_index": 65,
-        "ai_status": "Severe Inlet Obstruction",
+        "location_id": "LOC-02",  # FC Road Junction
+        "video": "WhatsApp_Video_2026-10-08_at_1.36.15_AM.mp4",
+        "drainage_score": None,  # no drain in view, so not assessed
+        "garbage_score": 37,
+        "composite_score": 14,
+        "risk_level": "Low",
+        "garbage_coverage_pct": 4,
+        "violations": 1,
+        "water_depth_cm": 6,
+        "blockage_index": 35,
+        "ai_status": "Garbage dumped from a vehicle at the roadside",
         "lat": 18.5255,
         "lng": 73.8415,
         "stream_fps": 30,
-        "incidents_today": 3
+        "incidents_today": 2
     },
     {
         "id": "CAM-PUNE-03",
         "name": "Swargate Metro Multi-Modal Hub",
         "zone": "Central",
         "status": "LIVE",
+        "location_id": "LOC-03",  # Swargate Metro
+        "video": "",
+        "drainage_score": 55,
+        "garbage_score": 62,
+        "composite_score": 47,
         "risk_level": "High",
+        "garbage_coverage_pct": 12,
+        "violations": 0,
         "water_depth_cm": 15,
         "blockage_index": 52,
-        "ai_status": "Runoff Inflow Rising",
+        "ai_status": "Garbage near the storm inlet, slow runoff",
         "lat": 18.5018,
         "lng": 73.8586,
         "stream_fps": 28,
-        "incidents_today": 2
+        "incidents_today": 1
     },
     {
         "id": "CAM-PUNE-04",
@@ -595,14 +619,64 @@ def get_all_attribute_ranked_locations(force_refresh: bool = False) -> List[Dict
     from app.core.scoring import rank_locations_by_all_attributes
 
     weather = fetch_live_pune_weather(force_refresh=force_refresh)
-    return rank_locations_by_all_attributes(
+    ranked = rank_locations_by_all_attributes(
         locations=PUNE_LOCATIONS,
         weather_rain_chance=weather.max_rain_chance,
-        weather_total_precip_mm=weather.total_precip_mm,
+        weather_total_precip_mm=weather.next_24h_precip_mm,
         current_temp=weather.temp_c,
         humidity=weather.humidity,
-        force_refresh_traffic=force_refresh
+        force_refresh_traffic=force_refresh,
+        hourly_precip_mm=[h.precip_mm for h in weather.hourly_forecast],
     )
+    return apply_camera_scores(ranked)
+
+
+ASSIGNED_CAMERAS = [c for c in CCTV_CAMERAS if c.get("location_id")]
+_CAMERA_BAND_TO_LEVEL = {"Critical": "Critical", "High": "High", "Watch": "Medium", "Low": "Low"}
+
+
+def camera_for_location(location_id: str) -> Optional[Dict[str, Any]]:
+    return next((c for c in ASSIGNED_CAMERAS if c["location_id"] == location_id), None)
+
+
+def apply_camera_scores(locations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Show a camera-covered location with the camera's own scores, then re-rank.
+
+    Keeps the dashboard and the CCTV page on the same numbers.
+    """
+    for loc in locations:
+        cam = camera_for_location(loc.get("id", ""))
+        if cam is None:
+            continue
+        loc["composite_score"] = float(cam["composite_score"])
+        loc["risk_score"] = int(cam["composite_score"])
+        loc["risk_level"] = _CAMERA_BAND_TO_LEVEL.get(cam["risk_level"], cam["risk_level"])
+        loc["blockage_pct"] = cam["blockage_index"]
+        loc["cctv_camera"] = cam["id"]
+        loc["status"] = cam["ai_status"]
+    locations.sort(key=lambda x: (x["composite_score"], x.get("precip_mm", 0)), reverse=True)
+    for idx, loc in enumerate(locations, 1):
+        loc["priority_rank"] = idx
+    return locations
+
+
+def location_for_job(filename: Optional[str], source_gps: Optional[str]) -> Dict[str, Any]:
+    """Best guess at the monitored location an analysed video came from.
+
+    A video assigned to a camera maps to that camera's location; otherwise the
+    nearest monitored location to the video's GPS; otherwise MG Road Junction.
+    """
+    by_id = {l["id"]: l for l in PUNE_LOCATIONS}
+    for cam in ASSIGNED_CAMERAS:
+        if cam.get("video") and filename == cam["video"]:
+            return by_id[cam["location_id"]]
+    if source_gps:
+        try:
+            lat, lng = (float(p.strip()) for p in source_gps.split(",")[:2])
+            return min(PUNE_LOCATIONS, key=lambda l: (l["lat"] - lat) ** 2 + (l["lng"] - lng) ** 2)
+        except ValueError:
+            pass
+    return PUNE_LOCATIONS[0]
 
 def get_weather_adjusted_locations(force_refresh: bool = False) -> List[Dict[str, Any]]:
     """Return all 53 Pune monitoring locations ranked on the basis of all attributes."""

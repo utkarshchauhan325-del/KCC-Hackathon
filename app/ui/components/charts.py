@@ -57,10 +57,11 @@ def _style(fig: go.Figure, height: int, margin: dict, legend: dict = None) -> go
     return fig
 
 
-def render_risk_distribution_donut() -> go.Figure:
-    """Donut chart showing risk distribution with direct count & percentage labels."""
-    labels = ["Critical (>80)", "High (60-80)", "Watch (40-60)", "Normal (<40)"]
-    values = [5, 17, 23, 8]
+def render_risk_distribution_donut(locations) -> go.Figure:
+    """Donut chart of monitored locations by severity, with count and percentage labels."""
+    levels = ["Critical", "High", "Medium", "Low"]
+    labels = levels
+    values = [sum(1 for l in locations if l.get("risk_level") == lv) for lv in levels]
     colors = [C_CRIT, C_HIGH, C_WATCH, C_OK]
 
     fig = go.Figure(data=[go.Pie(
@@ -80,118 +81,92 @@ def render_risk_distribution_donut() -> go.Figure:
         orientation="v", yanchor="middle", y=0.5, xanchor="left", x=1.02,
         font=dict(size=11.5, color=MUTED), itemsizing="constant", bgcolor="rgba(0,0,0,0)"))
     fig.update_layout(annotations=[dict(
-        text=f"<span style='font-family:{MONO};font-size:26px;font-weight:700;color:{INK}'>53</span><br>"
+        text=f"<span style='font-family:{MONO};font-size:26px;font-weight:700;color:{INK}'>{len(locations)}</span><br>"
              f"<span style='font-size:11px;color:{MUTED};font-weight:500'>MONITORED SITES</span>",
         x=0.5, y=0.5, showarrow=False)])
     return fig
 
 
-def render_rainfall_forecast_bars() -> go.Figure:
-    """24h rainfall forecast bar chart with critical flood threshold guidelines."""
-    hours = ["Current", "+3 Hours", "+6 Hours", "+12 Hours", "+24 Hours"]
-    rainfall = [12, 34, 52, 74, 32]
-    # Color-coded by rainfall threat
-    bar_colors = [
-        ACCENT if r < 30 else (C_WATCH if r < 60 else C_CRIT)
-        for r in rainfall
-    ]
+def render_rainfall_forecast_bars(hourly) -> go.Figure:
+    """Next-24 h hourly rain forecast (bars, mm) with chance of rain (line, %).
+
+    `hourly` is a list of weather_client.HourlyForecast. Bars are coloured on the IMD
+    hourly intensity bands: light < 2.5 mm/h, moderate 2.5-7.5, heavy > 7.5.
+    """
+    times = [h.time for h in hourly]
+    rain = [round(h.precip_mm, 1) for h in hourly]
+    chance = [h.chance_of_rain for h in hourly]
+    colors = [C_RAIN if r < 2.5 else (C_WATCH if r < 7.5 else C_CRIT) for r in rain]
 
     fig = go.Figure()
-
-    # Bar trace with value labels
     fig.add_trace(go.Bar(
-        x=hours,
-        y=rainfall,
-        marker=dict(color=bar_colors, line=dict(width=0), cornerradius=6),
-        text=[f"<b>{r} mm</b>" for r in rainfall],
-        textposition="outside",
-        textfont=dict(family=MONO, size=11, color=INK),
-        hovertemplate="<b>%{x}</b><br>Precipitation: %{y} mm<br>Threat: %{marker.color}<extra></extra>",
-        name="Precipitation"
+        x=times, y=rain, name="Rain (mm/h)",
+        marker=dict(color=colors, line=dict(width=0), cornerradius=4),
+        hovertemplate="<b>%{x}</b><br>Rain: %{y} mm<extra></extra>",
     ))
+    fig.add_trace(go.Scatter(
+        x=times, y=chance, name="Chance of rain (%)", yaxis="y2", mode="lines",
+        line=dict(color=ACCENT, width=2, shape="spline", dash="dot"),
+        hovertemplate="<b>%{x}</b><br>Chance of rain: %{y}%<extra></extra>",
+    ))
+    peak = max(rain, default=0.0)
+    top = max(10.0, peak * 1.3)
+    if peak >= 2.5:
+        fig.add_hline(y=7.5, line_dash="dash", line_color=C_CRIT, line_width=1.2,
+                      annotation_text="Heavy (7.5 mm/h)", annotation_position="top left",
+                      annotation_font=dict(size=10.5, color=C_CRIT, family=FONT))
+    fig.add_hline(y=2.5, line_dash="dot", line_color=C_WATCH, line_width=1.2,
+                  annotation_text="Moderate (2.5 mm/h)", annotation_position="top left",
+                  annotation_font=dict(size=10.5, color=C_WATCH, family=FONT))
+    if peak == 0:
+        fig.add_annotation(text="No rain forecast in the next 24 hours", x=0.5, y=0.55, xref="paper", yref="paper",
+                           showarrow=False, font=dict(size=13, color=MUTED, family=FONT))
 
-    # Reference threshold lines for clear explanation
-    fig.add_hline(
-        y=70, line_dash="dash", line_color=C_CRIT, line_width=1.5,
-        annotation_text="Red Alert (70 mm) - Flash Flood Risk",
-        annotation_position="top left",
-        annotation_font=dict(size=10.5, color=C_CRIT, family=FONT)
+    _style(fig, 260, dict(t=30, b=30, l=45, r=45))
+    fig.update_layout(
+        bargap=0.25,
+        yaxis2=dict(overlaying="y", side="right", range=[0, 100], showgrid=False, ticksuffix="%",
+                    tickfont=dict(family=MONO, size=10, color=MUTED), zeroline=False),
     )
-    fig.add_hline(
-        y=45, line_dash="dot", line_color=C_WATCH, line_width=1.5,
-        annotation_text="Orange Advisory (45 mm) - Inflow Surcharge",
-        annotation_position="top left",
-        annotation_font=dict(size=10.5, color=C_WATCH, family=FONT)
-    )
-
-    _style(fig, 240, dict(t=25, b=25, l=45, r=15))
-    fig.update_yaxes(range=[0, 92], tickvals=[0, 30, 60, 90], ticktext=["0 mm", "30 mm", "60 mm", "90 mm"])
+    fig.update_xaxes(tickangle=0, nticks=8)
+    fig.update_layout(yaxis=dict(range=[0, top], ticksuffix=" mm"))
     return fig
 
 
-def render_water_level_trend() -> go.Figure:
-    """Water level & conduit saturation trend with danger mark lines and projections."""
-    times = ["Now", "+3h", "+6h", "+12h", "+24h"]
-    mg_road = [38, 52, 54, 78, 90]
-    fc_road = [28, 36, 40, 60, 58]
+def render_water_level_trend(series, times) -> go.Figure:
+    """Projected conduit saturation over the next 24 h from the rain forecast.
 
+    `series` is a list of (name, current_pct, hourly_forecast_pct); `times` labels each hour.
+    """
     fig = go.Figure()
+    fig.add_hrect(y0=80, y1=105, fillcolor="rgba(220,38,38,0.05)", line_width=0)
+    fig.add_hline(y=80, line_dash="dash", line_color=C_CRIT, line_width=1.5,
+                  annotation_text="Overflow danger mark (80%)", annotation_position="top right",
+                  annotation_font=dict(size=10.5, color=C_CRIT, family=FONT))
+    fig.add_hline(y=50, line_dash="dot", line_color=C_WATCH, line_width=1.2,
+                  annotation_text="Dewatering trigger (50%)", annotation_position="bottom right",
+                  annotation_font=dict(size=10.5, color=C_WATCH, family=FONT))
 
-    # Danger overflow reference line
-    fig.add_hline(
-        y=80, line_dash="dash", line_color=C_CRIT, line_width=1.5,
-        annotation_text="Danger Mark: 80% Capacity (Spill Warning)",
-        annotation_position="top left",
-        annotation_font=dict(size=10.5, color=C_CRIT, family=FONT)
-    )
-    fig.add_hline(
-        y=50, line_dash="dot", line_color=C_WATCH, line_width=1.2,
-        annotation_text="Advisory Mark: 50% (Dewatering Trigger)",
-        annotation_position="top left",
-        annotation_font=dict(size=10.5, color=C_WATCH, family=FONT)
-    )
+    palette = [C_CRIT, ACCENT, C_HIGH]
+    x = ["Now"] + list(times)
+    for i, (name, now_pct, forecast) in enumerate(series):
+        color = palette[i % len(palette)]
+        y = [now_pct] + list(forecast)
+        fig.add_trace(go.Scatter(
+            x=x, y=y, mode="lines", name=name,
+            line=dict(color=color, width=2.5, shape="spline"),
+            hovertemplate=f"{name}<br>%{{x}}: <b>%{{y:.0f}}%</b> full<extra></extra>",
+        ))
+        fig.add_trace(go.Scatter(
+            x=["Now"], y=[now_pct], mode="markers", showlegend=False, hoverinfo="skip",
+            marker=dict(size=8, color=color, line=dict(color="#FFFFFF", width=2)),
+        ))
 
-    # Shaded MG Road area
-    fig.add_trace(go.Scatter(
-        x=times, y=mg_road, mode="lines+markers", name="MG Road Culvert",
-        line=dict(color=C_CRIT, width=2.5, shape="spline"),
-        marker=dict(size=7, color=C_CRIT, symbol="circle"),
-        fill="tozeroy",
-        fillcolor="rgba(220, 38, 38, 0.08)",
-        hovertemplate="MG Road: <b>%{y}%</b> conduit saturation<extra></extra>"
-    ))
-
-    # FC Road
-    fig.add_trace(go.Scatter(
-        x=times, y=fc_road, mode="lines+markers", name="FC Road Drain",
-        line=dict(color=ACCENT, width=2.5, shape="spline"),
-        marker=dict(size=7, color=ACCENT, symbol="diamond"),
-        fill="tozeroy",
-        fillcolor="rgba(10, 124, 143, 0.06)",
-        hovertemplate="FC Road: <b>%{y}%</b> conduit saturation<extra></extra>"
-    ))
-
-    # Projected Trend Trace
-    fig.add_trace(go.Scatter(
-        x=["+6h", "+12h", "+24h"], y=[54, 78, 90], mode="lines", name="Projected",
-        line=dict(color=C_CRIT, width=2, dash="dot"),
-        hovertemplate="Projected Trajectory: <b>%{y}%</b><extra></extra>"
-    ))
-
-    # Callout on projected peak
-    fig.add_annotation(
-        x="+24h", y=90,
-        text="<b>Projected Peak: 90%</b><br>Emergency Spill",
-        showarrow=True, arrowhead=2, arrowsize=1, arrowcolor=C_CRIT,
-        ax=-60, ay=-35,
-        bgcolor="#FFF5F5", bordercolor=C_CRIT, borderwidth=1,
-        font=dict(size=10, color=C_CRIT, family=FONT)
-    )
-
-    _style(fig, 240, dict(t=25, b=25, l=45, r=15), legend=dict(
+    _style(fig, 260, dict(t=30, b=30, l=45, r=15), legend=dict(
         orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
         font=dict(size=11, color=MUTED), bgcolor="rgba(0,0,0,0)"))
-    fig.update_yaxes(range=[0, 105], tickvals=[0, 25, 50, 75, 100], ticktext=["0%", "25%", "50%", "75%", "100%"])
+    fig.update_xaxes(nticks=8, tickangle=0)
+    fig.update_yaxes(range=[0, 105], tickvals=[0, 25, 50, 75, 100], ticksuffix="%")
     return fig
 
 

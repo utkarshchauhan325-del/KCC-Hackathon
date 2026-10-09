@@ -11,12 +11,11 @@ sys.path.insert(0, str(BASE_DIR))
 import streamlit as st
 from app.db.session import init_db
 from app.ui.components.styles import BRAND_MARK, get_floodguard_css
-from app.ui.pune_data import PRIORITY_QUEUE
 from app.core.weather_client import fetch_live_pune_weather
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
-from app.ui.views.priority_queue import render_priority_queue_and_interventions
+from app.ui.views.priority_queue import open_incident_count, render_priority_queue_and_interventions
 from app.ui.views.flood_analytics import render_flood_analytics
 
 # Initialize SQLite/PostgreSQL Database
@@ -79,8 +78,9 @@ with st.sidebar:
     st.markdown('<div class="fg-sb-nav-label">COMMAND CONSOLE</div>', unsafe_allow_html=True)
 
     # Navigation Links with Material Icons and Badge
+    queue_open = open_incident_count()
     for slug, title, ico, _desc, _fn in PAGE_SPECS:
-        badge_text = f" ({len(PRIORITY_QUEUE)} open)" if slug == "queue" and len(PRIORITY_QUEUE) > 0 else ""
+        badge_text = f" ({queue_open} open)" if slug == "queue" and queue_open > 0 else ""
         st.page_link(
             pages[slug],
             label=f"{title}{badge_text}",

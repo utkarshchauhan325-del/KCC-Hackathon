@@ -23,16 +23,20 @@ def test_pune_dataset_metrics():
 
 def test_charts_generation():
     """Verify all Plotly figures initialize with valid traces."""
-    donut = render_risk_distribution_donut()
+    from app.core.weather_client import _get_fallback_weather
+
+    donut = render_risk_distribution_donut(PUNE_LOCATIONS)
     assert len(donut.data) == 1
     assert donut.data[0].type == "pie"
+    assert sum(donut.data[0].values) == len(PUNE_LOCATIONS)
 
-    bars = render_rainfall_forecast_bars()
-    assert len(bars.data) == 1
-    assert bars.data[0].type == "bar"
+    hourly = _get_fallback_weather("test").hourly_forecast
+    bars = render_rainfall_forecast_bars(hourly)
+    assert [t.type for t in bars.data] == ["bar", "scatter"]  # rain bars + chance-of-rain line
+    assert len(bars.data[0].y) == 24
 
-    lines = render_water_level_trend()
-    assert len(lines.data) == 3  # MG Road, FC Road, Projected
+    lines = render_water_level_trend([("MG Road", 90, [88] * 24), ("FC Road", 80, [70] * 24)], [h.time for h in hourly])
+    assert len(lines.data) == 4  # a line and a "now" marker per location
 
     corr = render_7day_rainfall_water_correlation()
     assert len(corr.data) == 2

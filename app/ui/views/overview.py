@@ -141,7 +141,7 @@ def render_overview_dashboard():
         with t_head1:
             st.markdown(section_title(
                 "Corridor ranking",
-                "Composite of rainfall (mm), traffic congestion (%), conduit saturation (%) and blockage (%)",
+                "Composite of forecast rain, traffic, conduit saturation and blockage. Locations marked CCTV use their camera's analysed score.",
             ), unsafe_allow_html=True)
         with t_head2:
             zone_filter = st.selectbox(
@@ -160,7 +160,7 @@ def render_overview_dashboard():
 
         with st.container(key="ranking_table_box"):
             h = st.columns(widths, vertical_alignment="center")
-            for col, label, center in zip(h, ["Corridor", "Severity", "Score", "Rain", "Saturation", "Blockage"],
+            for col, label, center in zip(h, ["Corridor", "Severity", "Score", "Rain 24h", "Saturation", "Blockage"],
                                           [False, False, True, False, False, True]):
                 align = "center" if center else "left"
                 col.markdown(f"<div class='fg-th' style='text-align:{align}'>{label}</div>", unsafe_allow_html=True)
@@ -174,7 +174,7 @@ def render_overview_dashboard():
 
                 r_c1, r_c2, r_c3, r_c4, r_c5, r_c6 = st.columns(widths, vertical_alignment="center")
                 if r_c1.button(
-                    f"{loc.get('priority_rank', '-')}. {loc['name']}",
+                    f"{loc.get('priority_rank', '-')}. {loc['name']}" + (" · CCTV" if loc.get("cctv_camera") else ""),
                     key=f"corridor_btn_{loc['id']}",
                     type="primary" if is_active else "secondary",
                     use_container_width=True,
@@ -222,21 +222,40 @@ def render_overview_dashboard():
 
     st.markdown("<hr class='fg-rule'>", unsafe_allow_html=True)
 
-    c1, c2 = st.columns([1, 1], gap="medium")
+    c1, c2 = st.columns([1, 1.4], gap="medium")
     with c1:
         with st.container(border=True):
             st.markdown(section_title("Risk distribution", "Share of monitored locations by severity"), unsafe_allow_html=True)
-            st.plotly_chart(render_risk_distribution_donut(), use_container_width=True, config=_CHART_CONFIG)
+            st.plotly_chart(render_risk_distribution_donut(locations), use_container_width=True, config=_CHART_CONFIG)
     with c2:
         with st.container(border=True):
-            st.markdown(section_title("Rainfall forecast, next 24 hours", "IMD radar and gauge projection"), unsafe_allow_html=True)
-            st.plotly_chart(render_rainfall_forecast_bars(), use_container_width=True, config=_CHART_CONFIG)
+            st.markdown(section_title(
+                "Rainfall forecast, next 24 hours",
+                f"{weather.source} hourly forecast &middot; {weather.next_24h_precip_mm:.1f} mm expected, "
+                f"peak chance of rain {weather.max_rain_chance}%",
+            ), unsafe_allow_html=True)
+            st.plotly_chart(render_rainfall_forecast_bars(weather.hourly_forecast), use_container_width=True, config=_CHART_CONFIG)
 
-    b1, b2 = st.columns([1.2, 1], gap="medium")
+    b1, b2 = st.columns([1.4, 1], gap="medium")
     with b1:
         with st.container(border=True):
-            st.markdown(section_title("Water level trend", "Conduit saturation at the two highest-risk corridors"), unsafe_allow_html=True)
-            st.plotly_chart(render_water_level_trend(), use_container_width=True, config=_CHART_CONFIG)
+            watch = sorted(
+                [l for l in locations if l.get("saturation_forecast")],
+                key=lambda l: (l.get("projected_peak_pct", 0), l.get("water_level_pct", 0)),
+                reverse=True,
+            )[:3]
+            outlook = " &middot; ".join(f"{l['name']}: {l['overflow_outlook'].lower()}" for l in watch)
+            st.markdown(section_title(
+                "Overflow forecast",
+                f"Drain fill projected from the rain forecast, blockage and conduit size. {outlook}",
+            ), unsafe_allow_html=True)
+            st.plotly_chart(
+                render_water_level_trend(
+                    [(l["name"], l["water_level_pct"], l["saturation_forecast"]) for l in watch],
+                    [h.time for h in weather.hourly_forecast],
+                ),
+                use_container_width=True, config=_CHART_CONFIG,
+            )
     with b2:
         with st.container(border=True):
             st.markdown(section_title("Recent alerts", "Warnings and sensor threshold crossings"), unsafe_allow_html=True)

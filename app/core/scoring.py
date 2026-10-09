@@ -415,7 +415,6 @@ def compute_location_weather_risk(
     Guarantees every location receives a distinct precipitation amount in mm based on its
     watershed intensity, orographic zone factor, coordinates, and WeatherAPI rain dynamics.
     """
-    base_rf = float(loc.get("rainfall_3h", 20))
     zone = loc.get("zone", "Central")
     drain_type = loc.get("drain_type", "Stormwater Drain 900mm")
     water_pct = float(loc.get("water_level_pct", 50))
@@ -428,17 +427,16 @@ def compute_location_weather_risk(
     # Local rain likelihood
     local_rain_chance = min(99, max(5, int(round(weather_rain_chance * zone_factor))))
 
-    # Deterministic distinct precipitation in mm for this location
+    # Forecast rain (next 24 h) at this location: the city forecast scaled by the zone's
+    # orographic factor and a fixed +/-15% spatial spread, so no rain forecast means no rain here.
     if assigned_precip_mm is not None:
         local_precip_mm = assigned_precip_mm
     else:
-        weather_multiplier = max(0.65, (weather_rain_chance / 45.0) * (0.85 + min(1.2, weather_total_precip_mm / 2.5)))
         lat_val = float(loc.get("lat", 18.5))
         lng_val = float(loc.get("lng", 73.8))
-        geo_var = (((lat_val * 1000) % 11) - 5) * 0.31 + (((lng_val * 1000) % 13) - 6) * 0.19
-        index_fine_tune = ((loc_index * 13) % 47) * 0.09
-        calc_precip = (base_rf * zone_factor * 0.90 * weather_multiplier) + geo_var + index_fine_tune
-        local_precip_mm = round(max(1.0, min(80.0, calc_precip)), 1)
+        spatial = 1.0 + ((((lat_val * 1000) % 11) - 5) * 0.018 + (((lng_val * 1000) % 13) - 6) * 0.010)
+        calc_precip = max(0.0, weather_total_precip_mm) * zone_factor * spatial
+        local_precip_mm = round(max(0.0, min(150.0, calc_precip)), 2)
 
     # Precipitation Inflow Stress (0 - 100) scaled to stormwater conduit design baseline
     precip_stress = min(100.0, (local_precip_mm / 36.0) * 100.0)
@@ -479,6 +477,49 @@ def compute_location_weather_risk(
         "rain_stress_score": round(precip_stress, 1),
     }
 
+OVERFLOW_DANGER_PCT = 80.0      # conduit saturation at which a drain starts to spill
+RAIN_TO_SATURATION = 3.0        # % saturation added per mm of rain on a clear conduit
+BASE_RECESSION_PCT_PER_H = 2.0  # % saturation drained per dry hour on a clear conduit
+
+
+def project_overflow(
+    water_level_pct: float,
+    blockage_pct: float,
+    drain_type: str,
+    hourly_precip_mm: List[float],
+) -> Dict[str, Any]:
+    """Project hourly conduit saturation from the rain forecast and say when it overflows.
+
+    A simple bucket model: each mm of rain adds saturation (more through narrow conduits
+    and blocked inlets), and the conduit drains a little each hour (less when blocked).
+    """
+    block = max(0.0, min(100.0, blockage_pct)) / 100.0
+    conduit_mult = CONDUIT_SURCHARGE_MULTIPLIERS.get(drain_type, 1.04)
+    sat = max(0.0, min(100.0, water_level_pct))
+    forecast: List[float] = []
+    eta: Optional[int] = 0 if sat >= OVERFLOW_DANGER_PCT else None
+    for hour, rain in enumerate(hourly_precip_mm, 1):
+        inflow = max(0.0, rain) * RAIN_TO_SATURATION * conduit_mult * (1.0 + 0.6 * block)
+        outflow = BASE_RECESSION_PCT_PER_H * (1.0 - 0.7 * block)
+        sat = max(0.0, min(100.0, sat + inflow - outflow))
+        forecast.append(round(sat, 1))
+        if eta is None and sat >= OVERFLOW_DANGER_PCT:
+            eta = hour
+
+    if eta == 0:
+        outlook = "Above danger mark now"
+    elif eta is not None:
+        outlook = f"Overflow in ~{eta} h"
+    else:
+        outlook = "No overflow forecast"
+    return {
+        "saturation_forecast": forecast,
+        "projected_peak_pct": max(forecast) if forecast else round(sat, 1),
+        "overflow_eta_h": eta,
+        "overflow_outlook": outlook,
+    }
+
+
 def rank_locations_by_all_attributes(
     locations: List[Dict[str, Any]],
     weather_rain_chance: int,
@@ -487,6 +528,7 @@ def rank_locations_by_all_attributes(
     humidity: int = 75,
     traffic_map: Optional[Dict[str, Any]] = None,
     force_refresh_traffic: bool = False,
+    hourly_precip_mm: Optional[List[float]] = None,
 ) -> List[Dict[str, Any]]:
     """Enrich and rank all municipal monitoring locations on the basis of ALL attributes:
     1. Precipitation intensity (mm) from WeatherAPI
@@ -518,9 +560,10 @@ def rank_locations_by_all_attributes(
             loc_index=idx
         )
         
+        # Nudge ties apart so every location ranks distinctly; dry forecasts stay at 0 mm
         p_val = metrics_preview["precip_mm"]
-        while p_val in seen_precips:
-            p_val = round(p_val + 0.1, 1)
+        while p_val > 0 and p_val in seen_precips:
+            p_val = round(p_val + 0.01, 2)
         seen_precips.add(p_val)
 
         metrics = compute_location_weather_risk(
@@ -571,6 +614,16 @@ def rank_locations_by_all_attributes(
         loc_copy["rainfall_3h"] = int(round(metrics["precip_mm"]))
         loc_copy["rain_chance_pct"] = metrics["local_rain_chance"]
         loc_copy["flood_probability_pct"] = metrics["flood_probability_pct"]
+
+        if hourly_precip_mm is not None:
+            city_total = sum(hourly_precip_mm)
+            local_scale = (metrics["precip_mm"] / city_total) if city_total > 0 else 1.0
+            loc_copy.update(project_overflow(
+                water_level_pct=float(loc_copy.get("water_level_pct", 50)),
+                blockage_pct=float(loc_copy.get("blockage_pct", 50)),
+                drain_type=loc_copy.get("drain_type", ""),
+                hourly_precip_mm=[p * local_scale for p in hourly_precip_mm],
+            ))
 
         enriched.append(loc_copy)
 

@@ -19,3 +19,4 @@ toolbarMode = "minimal"
 headless = true
 enableCORS = false
 enableXsrfProtection = false
+maxUploadSize = 500  # MB, matches MAX_UPLOAD_SIZE_MB for CCTV footage

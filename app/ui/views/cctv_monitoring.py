@@ -1,135 +1,335 @@
-"""CCTV view: camera list and video analysis (Gemini findings + local detector)."""
+"""CCTV view: assigned cameras and video analysis (Gemini findings + local detector).
+
+Layout: video on the right, everything about that video on the left.
+"""
 
 import json
+from html import escape
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import plotly.graph_objects as go
 import streamlit as st
 
 from app.config import settings
-from app.ui.pune_data import CCTV_CAMERAS
-from app.core.pipeline import CivicEyePipeline
-from app.db.session import SessionLocal
-from app.db.models import Incident, Job
 from app.core.detector import CATEGORY_LABELS, WASTE_TYPE_LABELS
+from app.core.pipeline import CivicEyePipeline
+from app.db.models import Incident, Job
+from app.db.session import SessionLocal
 from app.ui.components.charts import _style
 from app.ui.components.crew_dispatch import render_crew_dispatch_widget
-from app.ui.components.styles import ACCENT, chip, icon, page_header, section_title, status_pill
+from app.ui.components.evidence_frames import job_key_frames, latest_job_for_video, render_frame_gallery
+from app.ui.components.styles import icon, page_header, section_title, status_color, status_pill
+from app.ui.pune_data import ASSIGNED_CAMERAS, CCTV_CAMERAS, PUNE_LOCATIONS, get_weather_adjusted_locations, location_for_job
 
 _CHART_CONFIG = {"displayModeBar": False}
 
+# Formats OpenCV can decode. Browsers only preview mp4 / webm / mov / m4v directly.
+VIDEO_TYPES = ["mp4", "mov", "webm", "m4v", "avi", "mkv", "mpeg", "mpg", "3gp", "wmv", "flv", "ts"]
+BROWSER_PLAYABLE = {".mp4", ".webm", ".mov", ".m4v"}
 
+WASTE_STREAM_COLORS = {
+    "dry_plastic": "#0284C7",
+    "dry_paper": "#6366F1",
+    "wet_organic": "#059669",
+    "construction": "#D97706",
+    "e_waste": "#8B5CF6",
+    "mixed": "#64748B",
+}
+CATEGORY_COLORS = {
+    "garbage": "#C2410C",
+    "person": "#059669",
+    "vehicle": "#6366F1",
+    "drainage": "#0A7C8F",
+    "road": "#D97706",
+    "bin": "#8B5CF6",
+    "plate": "#DB2777",
+}
+_BAND_LEVEL = {"Critical": "Critical", "High": "High", "Watch": "Medium", "Medium": "Medium", "Low": "Low"}
+
+
+# ---------------------------------------------------------------------------
+# Areas the footage can be tagged with
+# ---------------------------------------------------------------------------
+def _all_areas() -> List[Dict[str, Any]]:
+    """Assigned cameras first, then every monitored location and the remaining cameras."""
+    areas: List[Dict[str, Any]] = []
+    by_id = {l["id"]: l for l in PUNE_LOCATIONS}
+    for cam in ASSIGNED_CAMERAS:
+        loc = by_id.get(cam["location_id"], {})
+        areas.append({
+            "label": f"{cam['name']} ({cam['id']})",
+            "name": loc.get("name", cam["name"]),
+            "ward": loc.get("ward", f"{cam['zone']} corridor"),
+            "zone": cam["zone"],
+            "lat": cam["lat"],
+            "lng": cam["lng"],
+            "drain_type": loc.get("drain_type", "Stormwater drain"),
+            "risk_level": _BAND_LEVEL.get(cam["risk_level"], "Medium"),
+            "source": "Assigned camera",
+        })
+    for loc in sorted(PUNE_LOCATIONS, key=lambda l: (l["zone"], l["name"])):
+        areas.append({
+            "label": f"{loc['name']} · {loc['ward']}",
+            "name": loc["name"],
+            "ward": loc["ward"],
+            "zone": loc["zone"],
+            "lat": loc["lat"],
+            "lng": loc["lng"],
+            "drain_type": loc["drain_type"],
+            "risk_level": loc["risk_level"],
+            "source": "Monitored location",
+        })
+    for cam in CCTV_CAMERAS:
+        if cam in ASSIGNED_CAMERAS:
+            continue
+        areas.append({
+            "label": f"{cam['name']} ({cam['id']})",
+            "name": cam["name"],
+            "ward": f"{cam['zone']} corridor",
+            "zone": cam["zone"],
+            "lat": cam["lat"],
+            "lng": cam["lng"],
+            "drain_type": "Fixed CCTV view",
+            "risk_level": cam["risk_level"],
+            "source": "City camera",
+        })
+    return areas
+
+
+def _video_info(path: Path) -> Dict[str, Any]:
+    """Duration, resolution and frame rate, or {} if OpenCV cannot read the file."""
+    try:
+        import cv2
+
+        cap = cv2.VideoCapture(str(path))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 0.0
+        frames = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0.0
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        cap.release()
+        if not (w and h):
+            return {}
+        return {"duration": frames / fps if fps else None, "width": w, "height": h, "fps": fps}
+    except Exception:
+        return {}
+
+
+def _fmt_duration(sec: Optional[float]) -> str:
+    if not sec:
+        return "n/a"
+    return f"{int(sec // 60)}:{int(sec % 60):02d}"
+
+
+def _video_panel(path: Path, title: str, note: str, key: str) -> None:
+    """Dark title bar + player, sized so portrait and landscape clips both fit."""
+    st.markdown(
+        f'<div class="fg-video-bar"><span class="fg-rec"><i></i><b>{escape(title)}</b></span><span>{escape(note)}</span></div>',
+        unsafe_allow_html=True,
+    )
+    with st.container(key=f"fgvideo_{key}"):
+        st.video(str(path))
+
+
+# ---------------------------------------------------------------------------
+# Page
+# ---------------------------------------------------------------------------
 def render_cctv_monitoring():
     """Render the camera list and the video analysis workflow."""
-
     st.markdown(page_header(
         "CCTV analysis",
-        "Run recorded camera footage through drain, garbage and dumping detection. Findings go to the priority queue.",
+        "Run camera footage through drain, garbage and dumping detection. Key frames and findings go to the priority queue automatically.",
         eyebrow="Cameras",
-        meta=[f"<b>{len(CCTV_CAMERAS[:3])}</b> cameras assigned", "Video upload and review"],
+        meta=[f"<b>{len(ASSIGNED_CAMERAS)}</b> cameras assigned", f"<b>{len(_all_areas())}</b> areas", "Video upload and review"],
     ), unsafe_allow_html=True)
 
     tab_upload, tab_grid = st.tabs(["Analyse video", "Cameras"])
-
     with tab_grid:
-        st.markdown(section_title("Assigned cameras", "Central and transit corridors. Figures are from the most recent analysis of each camera."), unsafe_allow_html=True)
-        cols = st.columns(3)
-        for col, cam in zip(cols, CCTV_CAMERAS[:3]):
-            with col:
-                st.markdown(
-                    f'<div class="fg-card" style="padding:14px;">'
-                    f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">'
-                    f'<div style="min-width:0;"><div style="font-size:13.5px;font-weight:600;color:#0B1220;">{cam["name"]}</div>'
-                    f'<div class="fg-mono" style="font-size:11px;color:#64708A;">{cam["id"]} &middot; {cam["zone"]}</div></div>'
-                    f'{status_pill(cam["risk_level"])}</div>'
-                    f'<div style="height:150px;border-radius:10px;background:linear-gradient(180deg,#F1F4F8,#E8EDF3);border:1px solid #E3E8EF;'
-                    f'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:#94A0B4;">'
-                    f'{icon("camera", 22)}<span style="font-size:11.5px;">No stream connected</span>'
-                    f'<span class="fg-mono" style="font-size:10.5px;">{cam["lat"]}, {cam["lng"]}</span></div>'
-                    f'<div class="fg-kv" style="margin-top:12px;border-top:none;padding-top:0;">'
-                    f'<div><span class="fg-k">Water depth</span><span class="fg-v mono">{cam["water_depth_cm"]} cm</span></div>'
-                    f'<div><span class="fg-k">Blockage</span><span class="fg-v mono">{cam["blockage_index"]}%</span></div>'
-                    f'<div><span class="fg-k">Incidents today</span><span class="fg-v mono">{cam["incidents_today"]}</span></div>'
-                    f'<div><span class="fg-k">Last finding</span><span class="fg-v" style="font-size:12px;">{cam["ai_status"]}</span></div>'
-                    f"</div></div>",
-                    unsafe_allow_html=True,
-                )
-
+        _render_camera_grid()
     with tab_upload:
-        st.markdown(section_title(
-            "Analyse a video",
-            "Gemini finds drainage, garbage and road problems and anyone dumping waste. A local YOLOE model outlines "
-            "and tracks objects frame by frame and measures how much of the frame garbage covers.",
-        ), unsafe_allow_html=True)
-
-        sample_ganga_path = settings.UPLOADS_DIR / "ganga.mp4"
-        has_sample = sample_ganga_path.exists()
-
-        col_src1, col_src2 = st.columns([1.5, 1], gap="large")
-        with col_src1:
-            uploaded_file = st.file_uploader("Video file (.mp4, .mov, .webm)", type=["mp4", "mov", "webm"])
-            if has_sample:
-                use_sample = st.checkbox("Use the sample clip (Ganga Dham conduit)", value=True if not uploaded_file else False)
-            else:
-                use_sample = False
-
-            cam_choice = st.selectbox("Camera", [c["name"] + f" ({c['id']})" for c in CCTV_CAMERAS[:3]])
-            custom_gps = st.text_input("Camera GPS coordinates", value="18.4850, 73.8650")
-
-        with col_src2:
-            steps = [
-                ("Gemini, pass A", "Drains, manholes, garbage, potholes and other road hazards"),
-                ("Gemini, pass C", "Water level and blockage at each drain found"),
-                ("Local YOLOE", "Object masks and tracking; garbage coverage by waste stream"),
-                ("Gemini, pass B", "People dumping garbage, vehicle and number plate"),
-            ]
-            rows = "".join(
-                f'<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid #EEF1F5;">'
-                f'<span class="fg-mono" style="font-size:11px;color:#0A7C8F;width:18px;">{i}</span>'
-                f'<div><div style="font-size:12.5px;font-weight:600;color:#0B1220;">{t}</div>'
-                f'<div style="font-size:12px;color:#64708A;">{d}</div></div></div>'
-                for i, (t, d) in enumerate(steps, 1)
-            )
-            st.markdown(f'<div class="fg-card"><div class="fg-k" style="margin-bottom:4px;">What runs on the video</div>{rows}</div>', unsafe_allow_html=True)
-            run_violator_pass = st.checkbox("Run pass B (dumping violations)", value=True)
-
-        execute_clicked = st.button("Run analysis", type="primary", use_container_width=True)
-
-        if execute_clicked:
-            target_video_path = None
-            if uploaded_file:
-                clean_name = uploaded_file.name.replace("\\", "").replace(" ", "_")
-                save_path = settings.UPLOADS_DIR / clean_name
-                with open(save_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                target_video_path = save_path
-            elif use_sample and has_sample:
-                target_video_path = sample_ganga_path
-
-            if target_video_path:
-                with st.status("Analysing video", expanded=True) as status:
-                    status.write(f"Source: `{target_video_path.name}` ({target_video_path.stat().st_size / (1024*1024):.2f} MB)")
-                    try:
-                        pipeline = CivicEyePipeline()
-                        result = pipeline.process_video(
-                            video_path=target_video_path,
-                            source_gps=custom_gps,
-                            run_pass_b=run_violator_pass,
-                            progress_cb=lambda msg: status.write(msg),
-                        )
-                        status.update(label="Analysis complete", state="complete", expanded=False)
-                        st.success(f"Analysis complete for job `{result['job_id'][:8]}`.")
-                        st.session_state["active_job_id"] = result["job_id"]
-                    except Exception as e:
-                        status.update(label="Analysis failed", state="error")
-                        st.error(f"Video analysis failed: {e}")
-            else:
-                st.warning("Upload a video file or select the sample clip.")
-
+        _render_upload()
         render_job_results()
 
 
+def _render_camera_grid() -> None:
+    st.markdown(section_title(
+        "Assigned cameras",
+        "Scores from the analysed video of each camera. The dashboard shows the same scores for these locations.",
+    ), unsafe_allow_html=True)
+    locations = {l["id"]: l for l in get_weather_adjusted_locations()}
+    db = SessionLocal()
+    try:
+        cols = st.columns(len(ASSIGNED_CAMERAS), gap="medium")
+        for col, cam in zip(cols, ASSIGNED_CAMERAS):
+            loc = locations.get(cam["location_id"], {})
+            job = latest_job_for_video(db, cam.get("video", ""))
+            frames = job_key_frames(job) if job else []
+            with col:
+                level = _BAND_LEVEL.get(cam["risk_level"], "Medium")
+                st.markdown(
+                    f'<div class="fg-card" style="padding:14px 14px 4px 14px;margin-bottom:8px;">'
+                    f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+                    f'<div style="min-width:0;"><div style="font-size:14px;font-weight:600;color:#0B1220;">{cam["name"]}</div>'
+                    f'<div class="fg-mono" style="font-size:11px;color:#64708A;">{cam["id"]} &middot; {loc.get("name", "")}</div></div>'
+                    f'{status_pill(level, cam["risk_level"])}</div></div>',
+                    unsafe_allow_html=True,
+                )
+                if frames:
+                    with st.container(key=f"fgframe_cam_{cam['id']}"):
+                        st.image(frames[0][0], use_container_width=True)
+                else:
+                    st.markdown(
+                        f'<div class="fg-noframe">{icon("camera", 22)}<span>No analysed video yet</span>'
+                        f'<span class="fg-mono" style="font-size:10.5px;">{cam["lat"]}, {cam["lng"]}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+                drainage = "Not assessed" if cam["drainage_score"] is None else f"{cam['drainage_score']}/100"
+                outlook = loc.get("overflow_outlook", "n/a")
+                st.markdown(
+                    f'<div class="fg-card" style="padding:12px 14px;margin-top:8px;">'
+                    f'{_score_tile_inner("Composite risk", cam["composite_score"], cam["risk_level"])}'
+                    f'<div class="fg-kv" style="margin-top:12px;grid-template-columns:1fr 1fr;">'
+                    f'<div><span class="fg-k">Drainage</span><span class="fg-v mono">{drainage}</span></div>'
+                    f'<div><span class="fg-k">Garbage</span><span class="fg-v mono">{cam["garbage_score"]}/100</span></div>'
+                    f'<div><span class="fg-k">Garbage cover</span><span class="fg-v mono">{cam["garbage_coverage_pct"]}%</span></div>'
+                    f'<div><span class="fg-k">Drain blockage</span><span class="fg-v mono">{cam["blockage_index"]}%</span></div>'
+                    f'<div><span class="fg-k">Dumping violations</span><span class="fg-v mono">{cam["violations"]}</span></div>'
+                    f'<div><span class="fg-k">Overflow (24 h)</span><span class="fg-v" style="font-size:12px;">{outlook}</span></div>'
+                    f'</div>'
+                    f'<div style="font-size:12px;color:#334155;margin-top:10px;padding-top:8px;border-top:1px solid #F1F5F9;">'
+                    f'<span class="fg-k">Last finding</span><br>{cam["ai_status"]}</div></div>',
+                    unsafe_allow_html=True,
+                )
+    finally:
+        db.close()
+
+
+def _render_upload() -> None:
+    areas = _all_areas()
+    zones = ["All zones"] + sorted({a["zone"] for a in areas})
+
+    col_details, col_video = st.columns([1, 1.25], gap="large")
+
+    # Right: drag and drop + preview
+    with col_video:
+        st.markdown(section_title("Footage", "Drag a video in, or pick one already uploaded."), unsafe_allow_html=True)
+        uploaded = st.file_uploader(
+            "Video file",
+            type=VIDEO_TYPES,
+            help="MP4, MOV, WEBM, M4V, AVI, MKV, MPEG, 3GP, WMV, FLV or TS, up to "
+                 f"{settings.MAX_UPLOAD_SIZE_MB} MB.",
+            label_visibility="collapsed",
+        )
+        saved = sorted(
+            (p for p in settings.UPLOADS_DIR.iterdir() if p.suffix.lower().lstrip(".") in VIDEO_TYPES),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        target: Optional[Path] = None
+        if uploaded:
+            target = settings.UPLOADS_DIR / Path(uploaded.name.replace(" ", "_")).name
+            if not target.exists() or target.stat().st_size != uploaded.size:
+                target.write_bytes(uploaded.getbuffer())
+        elif saved:
+            pick = st.selectbox("Or choose an uploaded video", [p.name for p in saved])
+            target = settings.UPLOADS_DIR / pick
+
+        if target and target.is_file():
+            size_mb = target.stat().st_size / (1024 * 1024)
+            if target.suffix.lower() in BROWSER_PLAYABLE:
+                _video_panel(target, target.name, f"{size_mb:.1f} MB", "preview")
+            else:
+                st.markdown(
+                    f'<div class="fg-dropzone-empty">{icon("camera", 28)}<b style="color:#334155;">{escape(target.name)}</b>'
+                    f'<span style="font-size:12px;">Browsers cannot preview {target.suffix.upper()} files. '
+                    f'The analysis still runs, and the evidence video is converted to MP4.</span></div>',
+                    unsafe_allow_html=True,
+                )
+        else:
+            st.markdown(
+                f'<div class="fg-dropzone-empty">{icon("camera", 30)}<b style="color:#334155;">No footage selected</b>'
+                f'<span style="font-size:12px;">Drop a video above to preview it here.</span></div>',
+                unsafe_allow_html=True,
+            )
+
+    # Left: where the video is from, what it is, what will run
+    with col_details:
+        st.markdown(section_title("Video details", "Tag the footage with its camera or area."), unsafe_allow_html=True)
+        z_col, a_col = st.columns([1, 2.2])
+        zone = z_col.selectbox("Zone", zones)
+        options = [a for a in areas if zone == "All zones" or a["zone"] == zone]
+        # A camera's own footage defaults to that camera
+        own_cam = next((c for c in ASSIGNED_CAMERAS if target and c.get("video") == target.name), None)
+        default = next((i for i, a in enumerate(options) if own_cam and a["label"].endswith(f"({own_cam['id']})")), 0)
+        area = a_col.selectbox(
+            f"Camera or area ({len(options)})",
+            options,
+            index=default,
+            format_func=lambda a: a["label"],
+            key=f"area_{zone}_{target.name if target else ''}",
+        )
+        gps = st.text_input("Camera GPS", value=f"{area['lat']:.4f}, {area['lng']:.4f}", key=f"gps_{area['label']}")
+
+        info = _video_info(target) if target and target.is_file() else {}
+        fps_note = f" @ {info['fps']:.0f} fps" if info.get("fps") else ""
+        file_rows = '<div><span class="fg-k">File</span><span class="fg-v">None selected</span></div>'
+        if target and target.is_file():
+            file_rows = (
+                f'<div><span class="fg-k">File</span><span class="fg-v mono" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;">{escape(target.name)}</span></div>'
+                f'<div><span class="fg-k">Size</span><span class="fg-v mono">{target.stat().st_size / (1024 * 1024):.1f} MB</span></div>'
+                f'<div><span class="fg-k">Duration</span><span class="fg-v mono">{_fmt_duration(info.get("duration"))}</span></div>'
+                f'<div><span class="fg-k">Resolution</span><span class="fg-v mono">{info.get("width", "?")} x {info.get("height", "?")}'
+                f'{fps_note}</span></div>'
+            )
+        st.markdown(
+            f'<div class="fg-card" style="padding:14px 16px;">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">'
+            f'<span style="font-size:14px;font-weight:600;color:#0B1220;">{escape(area["name"])}</span>{status_pill(area["risk_level"])}</div>'
+            f'<div style="font-size:12px;color:#64708A;margin-bottom:10px;">{escape(area["ward"])} &middot; {area["zone"]} zone &middot; '
+            f'{escape(area["drain_type"])} &middot; {area["source"]}</div>'
+            f'<div class="fg-kv" style="grid-template-columns:1fr 1fr;">{file_rows}</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+        steps = [
+            ("Gemini A", "Drains, manholes, garbage, potholes, road hazards"),
+            ("Gemini C", "Water level and blockage at each drain"),
+            ("YOLOE", "Outlines and tracks objects, measures garbage area"),
+            ("Gemini B", "People dumping waste, vehicle and plate"),
+        ]
+        rows = "".join(
+            f'<div style="display:flex;gap:10px;padding:6px 0;border-top:1px solid #F1F5F9;font-size:12.5px;">'
+            f'<span class="fg-mono" style="color:#0A7C8F;font-weight:600;width:72px;flex-shrink:0;">{t}</span>'
+            f'<span style="color:#64708A;">{d}</span></div>'
+            for t, d in steps
+        )
+        st.markdown(f'<div class="fg-card" style="padding:12px 16px;"><div class="fg-k" style="margin-bottom:4px;">What runs on the video</div>{rows}</div>',
+                    unsafe_allow_html=True)
+        run_pass_b = st.checkbox("Look for people dumping waste (Gemini B)", value=True)
+
+        if st.button("Run analysis", type="primary", use_container_width=True, disabled=target is None):
+            with st.status("Analysing video", expanded=True) as status:
+                status.write(f"Source: `{target.name}` ({target.stat().st_size / (1024 * 1024):.1f} MB) · {area['name']}")
+                try:
+                    result = CivicEyePipeline().process_video(
+                        video_path=target,
+                        source_gps=gps,
+                        run_pass_b=run_pass_b,
+                        progress_cb=lambda msg: status.write(msg),
+                    )
+                    status.update(label="Analysis complete", state="complete", expanded=False)
+                    st.session_state["active_job_id"] = result["job_id"]
+                    st.toast("Analysis complete. Key frames were added to the priority queue.")
+                    st.rerun()
+                except Exception as e:
+                    status.update(label="Analysis failed", state="error")
+                    st.error(f"Video analysis failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Results
+# ---------------------------------------------------------------------------
 def _load_job_result(job_id: str) -> Optional[Dict[str, Any]]:
     path = settings.EVIDENCE_DIR / job_id / "result.json"
     if not path.is_file():
@@ -140,60 +340,38 @@ def _load_job_result(job_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _video_aspect(path: Path) -> Optional[float]:
-    """Width / height of a video file, or None if it cannot be read."""
-    try:
-        import cv2
-
-        cap = cv2.VideoCapture(str(path))
-        w = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        cap.release()
-        return (w / h) if w and h else None
-    except Exception:
-        return None
-
-
-def _show_evidence_video(path: Path) -> None:
-    """Show the evidence video so the whole frame fits on screen, portrait or landscape.
-
-    A centre column sized from the aspect ratio keeps portrait clips narrow; the
-    .fg-evidence CSS (max-height 70vh, object-fit contain) guarantees it fits any viewport.
-    """
-    aspect = _video_aspect(path) or 16 / 9
-    # Column share that gives roughly 640px of height on a ~1270px wide content area.
-    share = min(1.0, max(0.25, aspect * 0.5))
-    with st.container(key="fg_evidence_video"):
-        if share >= 0.98:
-            st.video(str(path))
-        else:
-            side = (1 - share) / 2
-            _, mid, _ = st.columns([side, share, side])
-            with mid:
-                st.video(str(path))
-
-
-def _score_metric(col, label: str, score, band: str) -> None:
-    if score is None:
-        col.metric(label, "Not assessed")
-    else:
-        col.metric(label, f"{score:.0f} / 100", band, delta_color="off")
-
-
 def _pct(x: Optional[float]) -> str:
     return "n/a" if x is None else f"{x * 100:.0f}%"
 
 
-def _stat(label: str, value: str, note: str = "") -> str:
+def _score_tile_inner(label: str, score: Optional[float], band: str) -> str:
+    level = _BAND_LEVEL.get(band, "Medium")
+    color = status_color(level) if score is not None else "#94A3B8"
+    value = "Not assessed" if score is None else f'{score:.0f}<small> / 100</small>'
+    pill = status_pill(level, band) if score is not None else ""
+    width = 0 if score is None else max(2, min(100, score))
     return (
-        f'<div class="fg-kpi" style="padding:12px 14px;"><div class="fg-kpi-label">{label}</div>'
-        f'<div class="fg-kpi-row" style="margin-top:6px;"><span class="fg-kpi-value" style="font-size:22px;">{value}</span></div>'
-        f'<div style="font-size:11.5px;color:#64708A;margin-top:4px;">{note}</div></div>'
+        f'<div class="fg-score-top"><span class="fg-score-label">{label}</span>{pill}</div>'
+        f'<div class="fg-score-val" style="{"font-size:16px;color:#94A3B8;" if score is None else ""}">{value}</div>'
+        f'<div class="fg-bar"><span style="width:{width}%;background:{color};"></span></div>'
+    )
+
+
+def _score_tile(label: str, score: Optional[float], band: str, note: str = "") -> str:
+    note_html = f'<div class="fg-score-note">{note}</div>' if note else ""
+    return f'<div class="fg-score">{_score_tile_inner(label, score, band)}{note_html}</div>'
+
+
+def _stat_tile(label: str, value: str, note: str = "") -> str:
+    return (
+        f'<div class="fg-score"><div class="fg-score-label">{label}</div>'
+        f'<div class="fg-score-val" style="font-size:20px;margin-bottom:2px;">{value}</div>'
+        f'<div class="fg-score-note" style="margin-top:0;">{note}</div></div>'
     )
 
 
 def _waste_shares(waste: Dict[str, float]) -> Dict[str, float]:
-    """Return waste-stream shares (0-1). New results store area fractions; older ones store counts."""
+    """Waste-stream shares (0-1). New results store area fractions; older ones store counts."""
     waste = {k: v for k, v in waste.items() if v is not None}
     total = sum(float(v) for v in waste.values())
     if total <= 0:
@@ -209,13 +387,14 @@ def _waste_chart(shares: Dict[str, float]) -> go.Figure:
     vals = [v * 100 for _, v in items]
     fig = go.Figure(go.Bar(
         x=vals, y=labels, orientation="h",
-        marker=dict(color=ACCENT, cornerradius=3),
-        text=[f"{v:.0f}%" for v in vals], textposition="outside", cliponaxis=False,
+        marker=dict(color=[WASTE_STREAM_COLORS.get(k, "#64748B") for k, _ in items], cornerradius=5),
+        text=[f"<b>{v:.0f}%</b>" for v in vals], textposition="outside", cliponaxis=False,
         textfont=dict(family="JetBrains Mono", size=11, color="#334155"),
-        hovertemplate="%{y}: %{x:.1f}%<extra></extra>",
+        hovertemplate="%{y}: %{x:.1f}% of garbage area<extra></extra>",
     ))
-    _style(fig, max(140, 46 * len(labels) + 40), dict(t=6, b=24, l=10, r=40))
-    fig.update_xaxes(range=[0, 110], ticksuffix="%", showgrid=True, gridcolor="#EEF1F5")
+    _style(fig, max(150, 40 * len(labels) + 40), dict(t=6, b=20, l=10, r=44))
+    fig.update_layout(bargap=0.38, showlegend=False)
+    fig.update_xaxes(range=[0, 115], showticklabels=False, showgrid=False)
     fig.update_yaxes(tickfont=dict(family="Inter", size=12, color="#334155"), showgrid=False)
     return fig
 
@@ -223,34 +402,43 @@ def _waste_chart(shares: Dict[str, float]) -> go.Figure:
 def _timeline_charts(timeline):
     secs = [row.get("sec", i) for i, row in enumerate(timeline)]
     cats = sorted({k for row in timeline for k in row if k not in ("sec", "garbage_coverage")})
-    palette = ["#0A7C8F", "#0B1220", "#C25A06", "#7C8BA1", "#14784F", "#9A7200", "#C8281C"]
     counts = None
     if cats:
         counts = go.Figure()
-        for i, c in enumerate(cats):
+        for c in cats:
+            color = CATEGORY_COLORS.get(c, "#64748B")
             counts.add_trace(go.Scatter(
                 x=secs, y=[row.get(c, 0) for row in timeline], name=CATEGORY_LABELS.get(c, c), mode="lines",
-                line=dict(color=palette[i % len(palette)], width=1.8, shape="hv"),
-                hovertemplate=f"{CATEGORY_LABELS.get(c, c)}: %{{y}}<extra></extra>",
+                line=dict(color=color, width=2, shape="hv"),
+                hovertemplate=f"{CATEGORY_LABELS.get(c, c)}: %{{y}} at %{{x}}s<extra></extra>",
             ))
-        _style(counts, 220, dict(t=24, b=30, l=36, r=10))
-        counts.update_xaxes(title="Seconds into video")
+        _style(counts, 230, dict(t=34, b=34, l=36, r=10))
+        counts.update_layout(hovermode="x unified")
+        counts.update_xaxes(title="Seconds into video", showgrid=True, gridcolor="#F1F5F9")
         counts.update_yaxes(title="In view", rangemode="tozero")
     coverage = None
     if any("garbage_coverage" in row for row in timeline):
+        y = [(row.get("garbage_coverage") or 0) * 100 for row in timeline]
         coverage = go.Figure(go.Scatter(
-            x=secs, y=[(row.get("garbage_coverage") or 0) * 100 for row in timeline], mode="lines",
-            line=dict(color="#C25A06", width=1.8), fill="tozeroy", fillcolor="rgba(194,90,6,0.10)",
+            x=secs, y=y, mode="lines",
+            line=dict(color="#C2410C", width=2, shape="spline", smoothing=0.6),
+            fill="tozeroy", fillcolor="rgba(194,65,12,0.12)",
             hovertemplate="%{x}s: %{y:.1f}% of frame<extra></extra>", name="Garbage coverage",
         ))
-        _style(coverage, 200, dict(t=10, b=30, l=40, r=10))
-        coverage.update_xaxes(title="Seconds into video")
+        peak = max(y, default=0)
+        if peak > 0:
+            i = y.index(peak)
+            coverage.add_annotation(x=secs[i], y=peak, text=f"peak {peak:.0f}%", showarrow=True, arrowhead=0, ax=0, ay=-22,
+                                    font=dict(size=10.5, color="#C2410C", family="JetBrains Mono"))
+        _style(coverage, 200, dict(t=24, b=34, l=40, r=10))
+        coverage.update_layout(showlegend=False)
+        coverage.update_xaxes(title="Seconds into video", showgrid=True, gridcolor="#F1F5F9")
         coverage.update_yaxes(title="% of frame", ticksuffix="%", rangemode="tozero")
     return counts, coverage
 
 
 def render_job_results():
-    """Show the real outputs of an analysed video: evidence video, objects, garbage coverage, scores."""
+    """Show an analysed video: evidence video and key frames on the right, scores and findings on the left."""
     db = SessionLocal()
     try:
         jobs = db.query(Job).filter(Job.status == "completed").order_by(Job.created_at.desc()).limit(20).all()
@@ -260,209 +448,189 @@ def render_job_results():
             return
 
         st.markdown("<hr class='fg-rule'>", unsafe_allow_html=True)
-        st.markdown(section_title("Results", "Choose an analysed video to review its evidence and scores."), unsafe_allow_html=True)
+        head, pick = st.columns([1.3, 1], vertical_alignment="bottom")
+        head.markdown(section_title("Results", "Scores, findings and key frames for an analysed video."), unsafe_allow_html=True)
         active = st.session_state.get("active_job_id")
-        ids = [j.id for j in jobs]
-        idx = ids.index(active) if active in ids else 0
-        job = st.selectbox(
+        by_id = {j.id: j for j in jobs}
+        ids = list(by_id)
+        job_id = pick.selectbox(
             "Analysed video",
-            jobs,
-            index=idx,
-            format_func=lambda j: f"{j.filename} · {j.created_at:%d %b %H:%M} · job {j.id[:8]}",
+            ids,
+            index=ids.index(active) if active in ids else 0,
+            format_func=lambda i: f"{by_id[i].filename} · {by_id[i].created_at:%d %b %H:%M}",
+            label_visibility="collapsed",
         )
+        job = by_id[job_id]
         result = _load_job_result(job.id)
         objects = result.get("objects")
-
-        video_path = Path(result["annotated_video_path"])
-        if video_path.is_file():
-            _show_evidence_video(video_path)
-        st.caption(
-            "Coloured outlines are per-object segmentation masks from the local detector, each with a track ID "
-            "that follows the object across frames. White boxes marked VLM are Gemini's findings, shown around "
-            "the frame Gemini picked."
-        )
-
-        # Scores (deterministic, from observed evidence only)
-        c1, c2, c3, c4 = st.columns(4)
-        _score_metric(c1, "Drainage risk", result.get("drainage_score"), result.get("drainage_band", ""))
-        _score_metric(c2, "Garbage risk", result.get("garbage_score"), result.get("garbage_band", ""))
-        _score_metric(c3, "Composite risk", result.get("composite_score"), result.get("composite_band", ""))
-        c4.metric("Dumping violations", result.get("violations_count", 0), "sent to officer review", delta_color="off")
-        sources = result.get("score_sources") or {}
-        if sources:
-            st.caption("Score inputs: " + " · ".join(f"{k.replace('_', ' ')}: {v}" for k, v in sources.items()))
-        if result.get("drainage_score") is None:
-            st.caption("Drainage is only scored when Gemini finds a drain or manhole and assesses it (Pass C).")
-
-        # Local detector output
-        st.markdown(section_title("Local detector"), unsafe_allow_html=True)
-        if objects is None:
-            st.warning("The local detector did not run for this video, so only Gemini's findings are available.")
-        else:
-            frames = objects.get("frames_analyzed", 0)
-            min_frames = objects.get("min_frames", 2)
-            peak = objects.get("peak_in_frame")
-            counts = objects.get("counts_by_category") or {}
-
-            garbage_measured = objects.get("garbage_measured", True) is not False
-            tiles = []
-            if garbage_measured:
-                cov = objects.get("garbage_coverage")
-                cov_note = "90th percentile of frame area covered"
-                if cov is None and objects.get("max_garbage_coverage") is not None:
-                    cov, cov_note = objects.get("max_garbage_coverage"), "peak frame area covered"
-                tiles.append(_stat("Garbage coverage", _pct(cov), cov_note))
-            if garbage_measured and objects.get("garbage_frame_fraction") is not None:
-                tiles.append(_stat("Frames with garbage", _pct(objects.get("garbage_frame_fraction")), f"of {frames} analysed frames"))
-            for cat in ("person", "vehicle", "drainage"):
-                label = CATEGORY_LABELS.get(cat, cat)
-                if peak is not None:
-                    tiles.append(_stat(label, f"{peak.get(cat, 0)}", "most in view in one frame"))
-                elif cat in counts:
-                    tiles.append(_stat(label, f"{counts.get(cat, 0)}", "tracks (may overcount)"))
-            if tiles:
-                cols = st.columns(len(tiles))
-                for col, html in zip(cols, tiles):
-                    col.markdown(html, unsafe_allow_html=True)
-            if not garbage_measured:
-                st.info(
-                    "Garbage not measured by the local detector for this video (Gemini garbage examples unavailable); "
-                    "garbage score uses Gemini's severity rating instead."
-                )
-
-            exemplars = objects.get("garbage_exemplar_frames")
-            detector_caption = (
-                f"{objects.get('detector', 'detector')} · {frames} frames analysed · "
-                f"tracks seen in fewer than {min_frames} analysed frames are dropped as flicker"
-            )
-            if exemplars:
-                detector_caption += f" · garbage examples taken from {exemplars} frames Gemini marked as garbage"
-            st.caption(detector_caption + ".")
-
-            w_col, t_col = st.columns([1, 1.4], gap="large")
-            with w_col:
-                st.markdown('<div class="fg-k" style="margin:8px 0 4px 0;">Share of garbage area by waste stream</div>', unsafe_allow_html=True)
-                shares = _waste_shares(objects.get("waste_breakdown") or {}) if garbage_measured else {}
-                if not garbage_measured:
-                    st.caption("Not measured for this video.")
-                elif shares:
-                    st.plotly_chart(_waste_chart(shares), use_container_width=True, config=_CHART_CONFIG)
-                else:
-                    st.caption("No garbage measured.")
-            with t_col:
-                timeline = objects.get("timeline") or []
-                counts_fig, cov_fig = _timeline_charts(timeline) if timeline else (None, None)
-                if not garbage_measured:
-                    cov_fig = None
-                if counts_fig is not None:
-                    st.markdown('<div class="fg-k" style="margin:8px 0 4px 0;">Objects in view over time</div>', unsafe_allow_html=True)
-                    st.plotly_chart(counts_fig, use_container_width=True, config=_CHART_CONFIG)
-                if cov_fig is not None:
-                    st.markdown('<div class="fg-k" style="margin:8px 0 4px 0;">Garbage coverage over time</div>', unsafe_allow_html=True)
-                    st.plotly_chart(cov_fig, use_container_width=True, config=_CHART_CONFIG)
-
-            tracked = objects.get("objects") or []
-            if not tracked:
-                st.info(f"No objects were tracked across {frames} analysed frames.")
-            else:
-                rows = [
-                    {
-                        "Track": f"#{o['track_id']}",
-                        "Object": o["label"],
-                        "Group": CATEGORY_LABELS.get(o["category"], o["category"]),
-                        "Waste stream": WASTE_TYPE_LABELS.get(o.get("waste_type"), "") if o.get("waste_type") else "",
-                        "Seen (s)": f"{o['first_sec']:.1f}–{o['last_sec']:.1f}",
-                        "Frames": o["frames_seen"],
-                        "Max confidence": round(o["max_confidence"], 2),
-                    }
-                    for o in tracked
-                ]
-                with st.expander(f"Tracked objects ({len(rows)})"):
-                    st.dataframe(rows, hide_index=True, use_container_width=True)
-                    st.caption("A person can appear under more than one track ID when the camera pans or people overlap.")
-
-        # Gemini findings
+        site = location_for_job(job.filename, job.source_gps)
         incidents = (
             db.query(Incident)
             .filter(Incident.job_id == job.id, Incident.subtype != "dumping_violation")
             .order_by(Incident.severity.desc())
             .all()
         )
-        st.markdown(section_title("Gemini findings"), unsafe_allow_html=True)
-        if not incidents:
-            st.info("Gemini reported no drainage, garbage or road issues in this video.")
-        for inc in incidents:
-            with st.container(border=True):
-                img_col, txt_col = st.columns([1, 2])
-                frame = next((e.path for e in inc.evidences if e.kind == "annotated" and Path(e.path).is_file()), None)
-                if frame:
-                    img_col.image(frame, use_container_width=True)
+
+        left, right = st.columns([1, 1.25], gap="large")
+
+        # Right: the evidence video and the frames that went to the queue
+        with right:
+            video_path = Path(result["annotated_video_path"])
+            if video_path.is_file():
+                _video_panel(video_path, job.filename, f"{site['name']} · job {job.id[:8]}", f"result_{job.id[:8]}")
+            st.caption(
+                "Coloured outlines are per-object masks from the local detector, each with a track ID that follows it "
+                "across frames. White boxes marked VLM are Gemini's findings."
+            )
+            st.markdown(section_title("Key frames", "Saved automatically and attached to this video's incidents in the priority queue."),
+                        unsafe_allow_html=True)
+            render_frame_gallery(job_key_frames(job), key=f"res_{job.id[:8]}", columns=2)
+
+        # Left: everything about the video
+        with left:
+            st.markdown(
+                f'<div class="fg-card" style="padding:12px 16px;">'
+                f'<div class="fg-k">Location</div><div style="font-size:15px;font-weight:600;color:#0B1220;margin-top:2px;">{site["name"]}</div>'
+                f'<div style="font-size:12px;color:#64708A;">{site["ward"]} &middot; {site["zone"]} zone &middot; '
+                f'GPS {escape(job.source_gps or "not given")} &middot; analysed {job.created_at:%d %b %Y, %H:%M}</div></div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                '<div class="fg-grid fg-grid-2">'
+                + _score_tile("Composite risk", result.get("composite_score"), result.get("composite_band", ""))
+                + _score_tile("Drainage risk", result.get("drainage_score"), result.get("drainage_band", ""),
+                              "" if result.get("drainage_score") is not None else "Scored only when Gemini finds and inspects a drain")
+                + _score_tile("Garbage risk", result.get("garbage_score"), result.get("garbage_band", ""))
+                + _stat_tile("Dumping violations", str(result.get("violations_count", 0)), "waiting for officer review in the queue")
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+            sources = result.get("score_sources") or {}
+            if sources:
+                st.caption("Score inputs: " + " · ".join(f"{k.replace('_', ' ')}: {v}" for k, v in sources.items()))
+
+            if objects is None:
+                st.warning("The local detector did not run for this video, so only Gemini's findings are available.")
+            else:
+                _render_detector_summary(objects)
+
+            st.markdown(section_title("Gemini findings", f"{len(incidents)} issue(s), most severe first"), unsafe_allow_html=True)
+            if not incidents:
+                st.info("Gemini reported no drainage, garbage or road issues in this video.")
+            for inc in incidents:
+                sev_level = "Critical" if inc.severity >= 5 else ("High" if inc.severity >= 4 else "Medium")
                 sent = {log.channel: log.status for log in inc.alerts}
-                txt_col.markdown(
-                    f"**{inc.subtype.replace('_', ' ').capitalize()}** ({inc.type}) · severity {inc.severity}/5 · "
-                    f"at {inc.video_ts} · confidence {inc.confidence:.0%}"
+                alert_note = (
+                    "Alerts: " + ", ".join(f"{c} {s}" for c, s in sent.items()) if sent
+                    else ("Alert not sent: no alert channel configured." if inc.severity >= settings.ALERT_MIN_SEVERITY else "")
                 )
-                txt_col.write(inc.description)
-                if inc.sewer_score:
-                    txt_col.caption(f"Sewer overflow score: {inc.sewer_score.score:.0f}/100 ({inc.sewer_score.band})")
-                if sent:
-                    txt_col.caption("Alerts: " + ", ".join(f"{c} {s}" for c, s in sent.items()))
-                elif inc.severity >= settings.ALERT_MIN_SEVERITY:
-                    txt_col.caption("Alert not sent: no alert channel configured.")
+                sewer = f" &middot; sewer overflow {inc.sewer_score.score:.0f}/100" if inc.sewer_score else ""
+                alert_html = f'<div style="font-size:11.5px;color:#94A3B8;margin-top:6px;">{alert_note}</div>' if alert_note else ""
+                st.markdown(
+                    f'<div class="fg-card" style="padding:12px 14px;box-shadow:inset 3px 0 0 {status_color(sev_level)}, var(--fg-shadow);">'
+                    f'<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;">'
+                    f'<span style="font-size:13.5px;font-weight:600;color:#0B1220;">{inc.subtype.replace("_", " ").capitalize()}</span>'
+                    f'{status_pill(sev_level, f"Severity {inc.severity}/5")}</div>'
+                    f'<div class="fg-mono" style="font-size:11px;color:#64708A;margin:2px 0 6px;">{inc.type} &middot; at {inc.video_ts} &middot; '
+                    f'confidence {inc.confidence:.0%}{sewer}</div>'
+                    f'<div style="font-size:13px;color:#334155;line-height:1.5;">{escape(inc.description)}</div>'
+                    f'{alert_html}'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
 
-        # Tactical crew deployment for the detected site
-        site_name = _infer_job_location(job)
-        suggested_mach = (
-            "High Pressure Silt Jetting & Suction Tanker"
-            if any(inc.type == "drainage" for inc in incidents)
-            else "Solid Waste Rapid Clearance Unit"
-        )
-        st.markdown("<hr class='fg-rule' style='margin:24px 0 16px 0;'>", unsafe_allow_html=True)
-        st.markdown(section_title(
-            "Tactical crew deployment",
-            "Dispatch rapid response machinery and assign an engineer directly to this detected site without navigating away.",
-        ), unsafe_allow_html=True)
+        # Full width: charts and object table
+        if objects is not None:
+            _render_detector_charts(objects)
 
+        st.markdown(section_title("Send a crew", f"Dispatch machinery and an engineer to {site['name']}."), unsafe_allow_html=True)
         render_crew_dispatch_widget(
-            location_name=site_name,
+            location_name=site["name"],
             key_prefix=f"cctv_{job.id[:8]}",
-            suggested_machinery=suggested_mach,
-            zone="Central",
+            suggested_machinery=(
+                "High Pressure Silt Jetting & Suction Tanker"
+                if any(inc.type == "drainage" for inc in incidents)
+                else "Solid Waste Rapid Clearance Unit"
+            ),
+            zone=site["zone"],
             header_title=None,
         )
     finally:
         db.close()
 
 
-def _infer_job_location(job: Job) -> str:
-    """Infer the municipal location for an analysed video from filename or GPS."""
-    fn = (job.filename or "").lower()
-    if "mg" in fn or "camp" in fn:
-        return "MG Road Junction"
-    if "fc" in fn or "fergusson" in fn:
-        return "FC Road Commercial Belt"
-    if "swargate" in fn:
-        return "Swargate Metro"
-    if "deccan" in fn:
-        return "Deccan Gymkhana Outfall"
-    if "ganga" in fn or "bibwewadi" in fn:
-        return "Bibwewadi Conduit"
-    if "hadapsar" in fn:
-        return "Hadapsar Industrial Nullah"
-    if "karve" in fn:
-        return "Karve Road Culvert"
-    if "dapodi" in fn:
-        return "Dapodi Sluice Gate"
+def _render_detector_summary(objects: Dict[str, Any]) -> None:
+    frames = objects.get("frames_analyzed", 0)
+    peak = objects.get("peak_in_frame")
+    counts = objects.get("counts_by_category") or {}
+    garbage_measured = objects.get("garbage_measured", True) is not False
 
-    if job.source_gps:
-        try:
-            parts = [float(p.strip()) for p in job.source_gps.split(",")]
-            lat, lng = parts[0], parts[1]
-            from app.ui.pune_data import PUNE_LOCATIONS
-            nearest = min(PUNE_LOCATIONS, key=lambda l: (l["lat"] - lat)**2 + (l["lng"] - lng)**2)
-            return nearest["name"]
-        except Exception:
-            pass
+    tiles = []
+    if garbage_measured:
+        cov = objects.get("garbage_coverage")
+        note = "90th percentile of frame area"
+        if cov is None and objects.get("max_garbage_coverage") is not None:
+            cov, note = objects.get("max_garbage_coverage"), "peak frame area"
+        tiles.append(_stat_tile("Garbage coverage", _pct(cov), note))
+        if objects.get("garbage_frame_fraction") is not None:
+            tiles.append(_stat_tile("Frames with garbage", _pct(objects.get("garbage_frame_fraction")), f"of {frames} analysed frames"))
+    for cat in ("person", "vehicle", "drainage"):
+        label = CATEGORY_LABELS.get(cat, cat)
+        if peak is not None:
+            tiles.append(_stat_tile(label, str(peak.get(cat, 0)), "most in one frame"))
+        elif cat in counts:
+            tiles.append(_stat_tile(label, str(counts.get(cat, 0)), "tracks (may overcount)"))
 
-    return "FC Road Commercial Belt"
+    st.markdown(section_title("Local detector", f"{objects.get('detector', 'YOLOE')} &middot; {frames} frames analysed"),
+                unsafe_allow_html=True)
+    if tiles:
+        st.markdown(f'<div class="fg-grid fg-grid-3">{"".join(tiles)}</div>', unsafe_allow_html=True)
+    if not garbage_measured:
+        st.caption("Garbage was not measured by the local detector for this video, so the garbage score uses Gemini's severity rating.")
 
+
+def _render_detector_charts(objects: Dict[str, Any]) -> None:
+    garbage_measured = objects.get("garbage_measured", True) is not False
+    timeline = objects.get("timeline") or []
+    counts_fig, cov_fig = _timeline_charts(timeline) if timeline else (None, None)
+    shares = _waste_shares(objects.get("waste_breakdown") or {}) if garbage_measured else {}
+
+    st.markdown("<hr class='fg-rule'>", unsafe_allow_html=True)
+    c1, c2 = st.columns([1.5, 1], gap="medium")
+    with c1:
+        with st.container(border=True):
+            st.markdown(section_title("Objects in view over time", "How many of each object the detector sees in each analysed frame"),
+                        unsafe_allow_html=True)
+            if counts_fig is not None:
+                st.plotly_chart(counts_fig, use_container_width=True, config=_CHART_CONFIG)
+            else:
+                st.caption("No objects tracked.")
+    with c2:
+        with st.container(border=True):
+            st.markdown(section_title("Garbage by waste stream", "Share of garbage area"), unsafe_allow_html=True)
+            if shares:
+                st.plotly_chart(_waste_chart(shares), use_container_width=True, config=_CHART_CONFIG)
+            else:
+                st.caption("Not measured for this video." if not garbage_measured else "No garbage measured.")
+    if cov_fig is not None and garbage_measured:
+        with st.container(border=True):
+            st.markdown(section_title("Garbage coverage over time", "Share of the frame covered by garbage masks"), unsafe_allow_html=True)
+            st.plotly_chart(cov_fig, use_container_width=True, config=_CHART_CONFIG)
+
+    tracked = objects.get("objects") or []
+    if tracked:
+        rows = [
+            {
+                "Track": f"#{o['track_id']}",
+                "Object": o["label"],
+                "Group": CATEGORY_LABELS.get(o["category"], o["category"]),
+                "Waste stream": WASTE_TYPE_LABELS.get(o.get("waste_type"), "") if o.get("waste_type") else "",
+                "Seen (s)": f"{o['first_sec']:.1f}–{o['last_sec']:.1f}",
+                "Frames": o["frames_seen"],
+                "Max confidence": round(o["max_confidence"], 2),
+            }
+            for o in tracked
+        ]
+        with st.expander(f"Tracked objects ({len(rows)})"):
+            st.dataframe(rows, hide_index=True, use_container_width=True)
+            st.caption("A person can appear under more than one track ID when the camera pans or people overlap.")
