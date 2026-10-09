@@ -51,12 +51,12 @@ class CivicEyePipeline:
         frames = select_keyframes(video_path, issues, settings.DETECTOR_EXEMPLAR_FRAMES)
         if not frames:
             return
-        log_progress(f"🧭 Asking Gemini to mark garbage on {len(frames)} frames to teach the local detector...")
+        log_progress(f"[Garbage Prompts] Asking Gemini to mark garbage on {len(frames)} frames to teach the local detector...")
         try:
             resp = self.client.locate_garbage([encode_jpeg(f, max_side=1024) for _, f in frames])
         except Exception as e:
             logger.warning(f"Garbage exemplar request failed: {e}")
-            log_progress(f"⚠️ Could not get garbage examples from Gemini ({e}); detector will use text prompts only.")
+            log_progress(f"[Notice] Could not get garbage examples from Gemini ({e}); detector will use text prompts only.")
             detector.set_exemplars([])
             return
 
@@ -113,12 +113,12 @@ class CivicEyePipeline:
             # 1. Upload video to Gemini Files API
             # Upload and Pass A failures are fatal: reporting "no hazards" for a video
             # that was never analysed would look like an all-clear to the municipality.
-            log_progress(f"📤 Uploading {video_path.name} to Gemini Files API...")
+            log_progress(f"[Upload] Uploading {video_path.name} to Gemini Files API...")
             uploaded_file = self.client.upload_video(video_path)
-            log_progress("✅ Video ready for multimodal inspection.")
+            log_progress("[Ready] Video ready for multimodal inspection.")
 
             # 2. Pass A: Infrastructure issues
-            log_progress("🔍 Scanning infrastructure hazards (Pass A: drains, garbage, road)...")
+            log_progress("[Pass A] Scanning infrastructure hazards (drains, garbage, road)...")
             infra_resp = self.client.analyze_infrastructure(uploaded_file)
             raw_issues = infra_resp.issues
             log_progress(f"Found {len(raw_issues)} hazard sightings.")
@@ -174,7 +174,7 @@ class CivicEyePipeline:
 
                 # 5. Pass C: Sewer assessment if drainage issue
                 if issue.category == "drainage":
-                    log_progress(f"🌊 Computing Sewer Overflow Risk Score for '{issue.subtype}' at {issue.best_frame_ts}...")
+                    log_progress(f"[Pass C] Computing Sewer Overflow Risk Score for '{issue.subtype}' at {issue.best_frame_ts}...")
                     try:
                         time.sleep(1.0)
                         sewer_resp = self.client.assess_sewer_point(uploaded_file, issue.best_frame_ts)
@@ -192,12 +192,12 @@ class CivicEyePipeline:
                         log_progress(f"Sewer Risk Score: {score}/100 [{band.upper()}]")
                     except Exception as e:
                         logger.warning(f"Pass C sewer assessment skipped: {e}")
-                        log_progress(f"⚠️ Pass C (sewer assessment) failed: {e}")
+                        log_progress(f"[Notice] Pass C sewer assessment skipped: {e}")
 
             # 6. Pass B: Violator Detection (if requested)
             dumping_events = 0
             if run_pass_b:
-                log_progress("👥 Scanning for illegal waste dumping violators (Pass B)...")
+                log_progress("[Pass B] Scanning for illegal waste dumping violators...")
                 try:
                     time.sleep(1.0)
                     violator_resp = self.client.analyze_violators(uploaded_file)
@@ -253,7 +253,7 @@ class CivicEyePipeline:
                     log_progress(f"Pass B completed: {len(violator_resp.events)} violator events queued.")
                 except Exception as e:
                     logger.warning(f"Pass B violator detection skipped: {e}", exc_info=True)
-                    log_progress(f"⚠️ Pass B (violator detection) failed: {e}")
+                    log_progress(f"[Pass B Warning] Violator detection failed: {e}")
 
             # 7. Per-frame object segmentation + tracking, rendered into the evidence video
             annotated_video_path = evidence_dir / f"surveillance_{job.id}_annotated.mp4"
@@ -267,17 +267,17 @@ class CivicEyePipeline:
             object_summary = None
             if detector:
                 self._teach_garbage(detector, video_path, deduped_issues, log_progress)
-                log_progress("🎯 Segmenting and tracking objects frame by frame (local YOLOE)...")
+                log_progress("[Local YOLOE] Segmenting and tracking objects frame by frame...")
                 try:
                     _, object_summary = generate_annotated_surveillance_video(
                         **render_kwargs, detector=detector, progress_cb=log_progress
                     )
                 except Exception as e:
                     logger.warning(f"Local detector failed: {e}", exc_info=True)
-                    log_progress(f"⚠️ Local detector failed ({e}); video shows Gemini findings only.")
+                    log_progress(f"[Notice] Local detector failed ({e}); video shows Gemini findings only.")
                     detector = None
             if not detector:
-                log_progress("🎬 Rendering evidence video with Gemini findings...")
+                log_progress("[Evidence] Rendering evidence video with Gemini findings...")
                 generate_annotated_surveillance_video(**render_kwargs)
             if object_summary:
                 log_progress(
@@ -309,15 +309,15 @@ class CivicEyePipeline:
             # officer approval in the Priority Queue before any evidence is sent.
             alertable = [i for i in created_incidents if i.severity >= settings.ALERT_MIN_SEVERITY]
             if alertable:
-                log_progress(f"📣 Alerting municipal corporation about {len(alertable)} hazard(s)...")
+                log_progress(f"[Alert] Alerting municipal corporation about {len(alertable)} hazard(s)...")
                 for incident in alertable:
                     logs = send_incident_alert(db, incident)
                     sent = sum(1 for log in logs if log.status == "sent")
                     if not logs:
-                        log_progress("⚠️ No alert channel configured (SMTP / Telegram / webhook); alert not sent.")
+                        log_progress("[Notice] No alert channel configured (SMTP / Telegram / webhook); alert not sent.")
                         break
                     log_progress(f"Alert for '{incident.subtype}': {sent}/{len(logs)} channel(s) delivered.")
-            log_progress("🎉 Analysis complete.")
+            log_progress("[Complete] Analysis complete.")
 
             result = {
                 "job_id": job.id,

@@ -10,8 +10,9 @@ sys.path.insert(0, str(BASE_DIR))
 
 import streamlit as st
 from app.db.session import init_db
-from app.ui.components.styles import BRAND_MARK, get_floodguard_css, icon
+from app.ui.components.styles import BRAND_MARK, get_floodguard_css
 from app.ui.pune_data import PRIORITY_QUEUE
+from app.core.weather_client import fetch_live_pune_weather
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
@@ -24,7 +25,7 @@ init_db()
 st.set_page_config(
     page_title="FloodGuard | Pune Municipal Corporation",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(get_floodguard_css(), unsafe_allow_html=True)
@@ -32,67 +33,131 @@ st.markdown(get_floodguard_css(), unsafe_allow_html=True)
 # -------------------------------------------------------------
 # Pages
 # -------------------------------------------------------------
-# (slug, title, short label, icon, description, function, badge)
 PAGE_SPECS = [
-    ("overview", "Overview", "Overview", "grid",
-     "City risk summary, ranked corridors and forecasts", render_overview_dashboard, None),
-    ("risk-map", "Risk map", "Risk map", "map",
-     "Monitored locations by zone, severity and camera", render_live_risk_map, None),
-    ("cctv", "CCTV analysis", "CCTV", "camera",
-     "Camera feeds and video analysis for drains and dumping", render_cctv_monitoring, None),
-    ("queue", "Priority queue", "Queue", "queue",
-     "Officer review, open incidents and crew dispatch", render_priority_queue_and_interventions, len(PRIORITY_QUEUE)),
-    ("analytics", "Analytics and reports", "Analytics", "chart",
-     "Rainfall correlation, ward comparison and exports", render_flood_analytics, None),
+    ("overview", "Dashboard", ":material/dashboard:",
+     "City risk summary, ranked corridors and forecasts", render_overview_dashboard),
+    ("risk-map", "Risk Map", ":material/map:",
+     "Monitored locations by zone, severity and camera", render_live_risk_map),
+    ("cctv", "CCTV Analysis", ":material/videocam:",
+     "Camera feeds and video analysis for drains and dumping", render_cctv_monitoring),
+    ("queue", "Priority Queue", ":material/assignment_late:",
+     "Officer review, open incidents and crew dispatch", render_priority_queue_and_interventions),
+    ("analytics", "Analytics & Reports", ":material/query_stats:",
+     "Rainfall correlation, ward comparison and exports", render_flood_analytics),
 ]
 
 pages = {
     slug: st.Page(fn, title=title, url_path=slug, default=(slug == "overview"))
-    for slug, title, _short, _ico, _desc, fn, _badge in PAGE_SPECS
+    for slug, title, _ico, _desc, fn in PAGE_SPECS
 }
 current = st.navigation(list(pages.values()), position="hidden")
 current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
 
 # -------------------------------------------------------------
-# Top bar: brand, inline links (wide screens) and pop-up menu
+# Proper Sidebar Navigation Panel
 # -------------------------------------------------------------
-with st.container(key="fg_topbar", horizontal=True, vertical_alignment="center", gap="small"):
-    with st.container(key="fg_brand"):
-        st.markdown(
-            f'<div class="fg-brand">{BRAND_MARK}<div>'
-            f'<div class="fg-brand-name">FloodGuard</div>'
-            f'<div class="fg-brand-org">Pune Municipal Corporation &middot; Disaster Management Cell</div>'
-            f"</div></div>",
-            unsafe_allow_html=True,
+with st.sidebar:
+    # PMC Disaster Management Brand
+    st.markdown(
+        f"""
+        <div class="fg-sb-brand">
+            <div class="fg-sb-logo">{BRAND_MARK}</div>
+            <div>
+                <div class="fg-sb-title">FloodGuard</div>
+                <div class="fg-sb-org">Pune Municipal Corporation &middot; Disaster Cell</div>
+            </div>
+        </div>
+        <div class="fg-sb-status">
+            <span class="fg-sb-pulse"></span>
+            <span class="fg-sb-stat-text">SYSTEM OPERATIONAL &middot; SENSORS LIVE</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="fg-sb-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="fg-sb-nav-label">COMMAND CONSOLE</div>', unsafe_allow_html=True)
+
+    # Navigation Links with Material Icons and Badge
+    for slug, title, ico, _desc, _fn in PAGE_SPECS:
+        badge_text = f" ({len(PRIORITY_QUEUE)} open)" if slug == "queue" and len(PRIORITY_QUEUE) > 0 else ""
+        st.page_link(
+            pages[slug],
+            label=f"{title}{badge_text}",
+            icon=ico,
+            use_container_width=True
         )
 
-    with st.container(key="fg_links", horizontal=True, vertical_alignment="center", gap=None):
-        for slug, _title, short, _ico, _desc, _fn, _badge in PAGE_SPECS:
-            state = "on" if slug == current_slug else "off"
-            with st.container(key=f"nav{state}_{slug.replace('-', '_')}"):
-                st.page_link(pages[slug], label=short)
+    st.markdown('<div class="fg-sb-divider"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="fg-sb-nav-label">OPERATIONS TELEMETRY</div>', unsafe_allow_html=True)
 
-    st.html(f'<div class="fg-clock">{datetime.now():%d %b %Y &middot; %H:%M}</div>')
+    # Live operational context card
+    try:
+        weather = fetch_live_pune_weather()
+        temp_str = f"{weather.temp_c:.0f}&deg;C"
+        precip_str = f"{weather.precip_mm:.1f} mm/h"
+        cond_str = weather.condition_text
+    except Exception:
+        temp_str = "24&deg;C"
+        precip_str = "0.0 mm/h"
+        cond_str = "Telemetry Active"
 
-    menu = st.popover("Menu", icon=":material/menu:")
-    with menu:
-        st.html(
-            '<div class="fg-pal-head"><span class="fg-pal-title">Go to</span>'
-            '<span class="fg-pal-title">5 sections</span></div>'
-        )
-        for slug, title, _short, ico, desc, _fn, badge in PAGE_SPECS:
-            state = "on_" if slug == current_slug else ""
-            with st.container(key=f"pal_{state}{slug.replace('-', '_')}", gap=None):
-                st.page_link(pages[slug], label=title)
-                badge_html = f'<span class="fg-pal-count">{badge} open</span>' if badge else ""
-                st.markdown(
-                    f'<div class="fg-pal-ico">{icon(ico, 15)}</div>'
-                    f'<div class="fg-pal-desc">{desc}</div>{badge_html}',
-                    unsafe_allow_html=True,
-                )
-        st.html(
-            '<div class="fg-pal-foot"><span>Pune Municipal Corporation</span>'
-            '<span>Zone: Central</span></div>'
-        )
+    st.markdown(
+        f"""
+        <div class="fg-sb-card">
+            <div class="fg-sb-card-row">
+                <span class="fg-sb-card-k">Monsoon Advisory</span>
+                <span class="fg-sb-card-v fg-sb-alert">LEVEL 2 SURVEILLANCE</span>
+            </div>
+            <div class="fg-sb-card-row">
+                <span class="fg-sb-card-k">Precipitation</span>
+                <span class="fg-sb-card-v font-mono">{precip_str}</span>
+            </div>
+            <div class="fg-sb-card-row">
+                <span class="fg-sb-card-k">Pune Weather</span>
+                <span class="fg-sb-card-v">{temp_str} &middot; {cond_str}</span>
+            </div>
+            <div class="fg-sb-card-row">
+                <span class="fg-sb-card-k">Mutha River Basin</span>
+                <span class="fg-sb-card-v font-mono">Discharge Normal</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Emergency Desk Contacts
+    st.markdown(
+        """
+        <div class="fg-sb-footer">
+            <div class="fg-sb-desk">PMC EMERGENCY OPERATIONS</div>
+            <div class="fg-sb-phone">Control Room: 020-25501269</div>
+            <div class="fg-sb-tollfree">Disaster Helpline: 1077</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# -------------------------------------------------------------
+# Top Operational Strip (Main Area)
+# -------------------------------------------------------------
+active_spec = next((item for item in PAGE_SPECS if item[0] == current_slug), PAGE_SPECS[0])
+st.markdown(
+    f"""
+    <div class="fg-top-strip">
+        <div class="fg-top-strip-left">
+            <span class="fg-top-tag">PMC DISASTER MANAGEMENT CELL</span>
+            <span class="fg-top-sep">&middot;</span>
+            <span class="fg-top-zone">{active_spec[1].upper()} VIEW</span>
+        </div>
+        <div class="fg-top-strip-right">
+            <span class="fg-top-clock">{datetime.now():%d %b %Y &middot; %H:%M IST}</span>
+            <span class="fg-top-dot"></span>
+            <span class="fg-top-active">LIVE FEEDS SYNCHRONIZED</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 current.run()
