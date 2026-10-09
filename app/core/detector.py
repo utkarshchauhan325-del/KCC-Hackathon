@@ -246,7 +246,19 @@ def mask_contours(result, min_area_px: float = 30.0) -> List[List[np.ndarray]]:
     segments, which draws long straight lines across the frame; keep pieces separate.
     """
     import cv2
-    from ultralytics.utils.ops import scale_coords
+    try:
+        from ultralytics.utils.ops import scale_coords
+    except ImportError:
+        def scale_coords(img1_shape, coords, img0_shape):
+            h1, w1 = img1_shape[:2]
+            h0, w0 = img0_shape[:2]
+            gain = min(h1 / h0, w1 / w0) if h0 and w0 else 1.0
+            pad_x = (w1 - w0 * gain) / 2.0
+            pad_y = (h1 - h0 * gain) / 2.0
+            pts = coords.copy()
+            pts[:, 0] = (pts[:, 0] - pad_x) / (gain or 1.0)
+            pts[:, 1] = (pts[:, 1] - pad_y) / (gain or 1.0)
+            return pts
 
     data = result.masks.data.cpu().numpy().astype(np.uint8)
     orig_h, orig_w = result.orig_shape[:2]

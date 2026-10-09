@@ -13,6 +13,12 @@ from app.db.models import Violation, Incident, Job, AuditLog
 from app.notify.alerts import send_incident_alert
 from app.ui.components.styles import _flat, page_header, section_title, status_pill
 from app.ui.components.styles import status_color as _level_color
+from app.ui.components.crew_dispatch import (
+    render_crew_dispatch_widget,
+    init_operations_state,
+    get_available_leads,
+    PUNE_MUNICIPAL_CREW_ROSTER,
+)
 
 # Municipal roster of Junior Engineers and Rapid Response Unit Leads across Pune
 PUNE_MUNICIPAL_CREW_ROSTER = [
@@ -240,133 +246,22 @@ def render_priority_queue_and_interventions():
         </div>
         """), unsafe_allow_html=True)
 
-        # UNDER EACH PLACE: Show deployed crew details OR the 4 dropdown boxes to deploy
-        if deployed_op:
-            # Active crew deployed for this place
-            st.markdown(_flat(f"""
-            <div class="fg-card" style="background:#F7FBF9; border-color:#CFE8DA; margin-bottom:8px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                        {status_pill('Low', 'Crew deployed')}
-                        <span style="font-size:14px; font-weight:600; color:#0B1220;">{deployed_op['type']}</span>
-                        <span class="fg-mono" style="font-size:11px; color:#64708A;">{deployed_op['id']}</span>
-                    </div>
-                    <span style="font-size:12px; color:#334155;">{deployed_op['status']}</span>
-                </div>
-                <div class="fg-kv" style="border-top-color:#DCEFE4;">
-                    <div><span class="fg-k">Unit lead</span><span class="fg-v">{deployed_op['crew_head']}</span></div>
-                    <div><span class="fg-k">Water pumped</span><span class="fg-v mono">{deployed_op.get('water_discharged_m3', 0)} m&sup3;</span></div>
-                    <div><span class="fg-k">Expected clear</span><span class="fg-v">{deployed_op.get('eta_cleared', '30 mins')}</span></div>
-                </div>
-            </div>
-            """), unsafe_allow_html=True)
+        # UNDER EACH PLACE: Unified crew dispatch & intervention widget
+        sugg_mach = (
+            "High Pressure Silt Jetting & Suction Tanker"
+            if "Jetting" in item.get("suggested_action", "")
+            else "Mobile 500 GPM Dewatering Pump"
+        )
+        render_crew_dispatch_widget(
+            location_name=item["location"],
+            key_prefix=f"pq_{item['id']}",
+            suggested_machinery=sugg_mach,
+            zone=item["zone"],
+            incident_id=item["id"],
+            header_title=None,
+        )
 
-            # Demobilize action button
-            demob_c1, demob_c2 = st.columns([5, 1])
-            with demob_c2:
-                if st.button("Recall crew", key=f"demob_{item['id']}_{deployed_op['id']}", help=f"Recall crew from {item['location']} and return officer to available pool", use_container_width=True):
-                    operations.remove(deployed_op)
-                    st.session_state["operations_list"] = operations
-                    try:
-                        db = SessionLocal()
-                        db.add(AuditLog(user="Chief Municipal Officer", action=f"demobilized_{deployed_op['id']}_from_{item['location']}", entity="operation", entity_id=deployed_op['id']))
-                        db.commit()
-                        db.close()
-                    except Exception:
-                        pass
-                    st.rerun()
-
-        else:
-            # NO CREW DEPLOYED YET: Show the 4 Dropdown Boxes directly under this place
-            with st.container(border=True):
-                st.markdown("<div class='fg-k' style='margin-bottom:6px;'>Dispatch a crew to this site</div>", unsafe_allow_html=True)
-
-                d1, d2 = st.columns(2)
-                with d1:
-                    mach_type = st.selectbox(
-                        "Machinery",
-                        [
-                            "High Pressure Silt Jetting & Suction Tanker",
-                            "Mobile 500 GPM Dewatering Pump",
-                            "Mobile 1000 GPM Heavy Surcharge Pump",
-                            "Robotic Drain Cleaning Crawler",
-                            "Traffic Diversion Barricade Unit"
-                        ],
-                        key=f"mach_{item['id']}"
-                    )
-
-                    # Target location dropdown (defaults to this place's name, plus any other unassigned spots)
-                    loc_options = [item['location']] + [l for l in available_locations if l.lower() != loc_lower]
-                    target_loc = st.selectbox(
-                        "Location",
-                        loc_options,
-                        index=0,
-                        key=f"loc_{item['id']}",
-                        help="Where the crew will be sent"
-                    )
-
-                with d2:
-                    if available_leads:
-                        assigned_lead = st.selectbox(
-                            "Assigned engineer (available only)",
-                            available_leads,
-                            key=f"lead_{item['id']}",
-                            help="Engineers already deployed are not listed"
-                        )
-                    else:
-                        st.warning("All engineers are currently deployed.")
-                        assigned_lead = None
-
-                    prio = st.selectbox(
-                        "Priority",
-                        [
-                            "Priority 1 (within 10 min)",
-                            "Priority 2 (within 30 min)",
-                            "Routine Preventive"
-                        ],
-                        key=f"prio_{item['id']}"
-                    )
-
-                can_deploy = bool(target_loc and assigned_lead)
-                if st.button(f"Dispatch to {item['location']}", key=f"deploy_btn_{item['id']}", type="primary", disabled=not can_deploy, use_container_width=False):
-                    new_id = f"OP-{700 + len(operations) + 1}"
-                    eta = "20 mins" if "10 min" in prio else ("45 mins" if "30 min" in prio else "1h 30m")
-                    new_op = {
-                        "id": new_id,
-                        "type": mach_type,
-                        "location": target_loc,
-                        "status": "Deployed & En Route",
-                        "crew_head": assigned_lead,
-                        "units": 1,
-                        "water_discharged_m3": 0,
-                        "eta_cleared": eta
-                    }
-
-                    # Prepend to active operations list
-                    st.session_state["operations_list"].insert(0, new_op)
-
-                    # Set toast data for floating screen overlay
-                    st.session_state["deploy_success_data"] = {
-                        "id": new_id,
-                        "eq_type": mach_type,
-                        "target_loc": target_loc,
-                        "crew_head": assigned_lead,
-                        "priority": prio,
-                        "timestamp": time.time()
-                    }
-
-                    # Audit log
-                    try:
-                        db = SessionLocal()
-                        db.add(AuditLog(user="Chief Municipal Officer", action=f"dispatched_{new_id}_{mach_type}_to_{target_loc}", entity="operation", entity_id=new_id))
-                        db.commit()
-                        db.close()
-                    except Exception:
-                        pass
-
-                    st.rerun()
-
-        st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
     # OTHER ACTIVE MUNICIPAL OPERATIONS ACROSS PUNE

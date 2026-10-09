@@ -591,7 +591,7 @@ def rank_locations_by_all_attributes(
         if t_rank == 1:
             t_loc["traffic"]["is_busiest"] = True
             t_loc["is_busiest_traffic"] = True
-            t_loc["busiest_corridor_title"] = f"🚗 #1 Most Busiest Corridor: {t_loc['name']} ({t_loc['traffic_congestion_pct']}% Congestion | {t_loc['traffic_speed_kmh']} km/h)"
+            t_loc["busiest_corridor_title"] = f"#1 Most Congested Corridor: {t_loc['name']} ({t_loc['traffic_congestion_pct']}% Congestion | {t_loc['traffic_speed_kmh']} km/h)"
 
     # Step 3: Compute Multi-Attribute Composite Score based on ALL ATTRIBUTES
     # Weights:
@@ -663,17 +663,17 @@ def rank_locations_by_all_attributes(
     # Assign priority rank and actionable multi-attribute directive
     for idx, item in enumerate(enriched, 1):
         item["priority_rank"] = idx
-        t_info = f"🚗 Traffic: {item['traffic_congestion_pct']}% ({item['traffic_speed_kmh']} km/h)"
-        p_info = f"🌧️ Precip: {item['precip_mm']} mm"
-        w_info = f"💧 Conduit: {item['water_level_pct']}%"
+        t_info = f"Traffic: {item['traffic_congestion_pct']}% ({item['traffic_speed_kmh']} km/h)"
+        p_info = f"Precip: {item['precip_mm']} mm"
+        w_info = f"Conduit: {item['water_level_pct']}%"
         if idx <= 5:
-            item["priority_directive"] = f"🚨 Rank #{idx} Emergency ({item['composite_score']}/100): {p_info} | {t_info} | {w_info} — Dispatch Quick Response"
+            item["priority_directive"] = f"CRITICAL - Rank #{idx} Emergency ({item['composite_score']}/100): {p_info} | {t_info} | {w_info} -- Dispatch Quick Response"
         elif idx <= 15:
-            item["priority_directive"] = f"⚠️ Rank #{idx} High Alert ({item['composite_score']}/100): {p_info} | {t_info} — Traffic Diversion & Jetting"
+            item["priority_directive"] = f"HIGH - Rank #{idx} Alert ({item['composite_score']}/100): {p_info} | {t_info} -- Traffic Diversion & Jetting"
         elif idx <= 30:
-            item["priority_directive"] = f"🟡 Rank #{idx} Watchlist ({item['composite_score']}/100): {p_info} | {t_info} — Telemetry Surveillance"
+            item["priority_directive"] = f"WATCH - Rank #{idx} Monitoring ({item['composite_score']}/100): {p_info} | {t_info} -- Telemetry Surveillance"
         else:
-            item["priority_directive"] = f"🟢 Rank #{idx} Low Risk ({item['composite_score']}/100): {p_info} | {t_info} — Normal Operations"
+            item["priority_directive"] = f"NORMAL - Rank #{idx} Routine ({item['composite_score']}/100): {p_info} | {t_info} -- Normal Operations"
 
     return enriched
 
@@ -705,13 +705,13 @@ def rank_locations_by_flood_priority(
     for idx, item in enumerate(enriched, 1):
         item["priority_rank"] = idx
         if idx <= 5:
-            item["priority_directive"] = f"🚨 Priority 1: High Precipitation ({item['precip_mm']} mm) — Emergency Dewatering"
+            item["priority_directive"] = f"Priority 1: High Precipitation ({item['precip_mm']} mm) -- Emergency Dewatering"
         elif idx <= 15:
-            item["priority_directive"] = f"⚠️ Priority 2: Inflow Surcharge ({item['precip_mm']} mm) — Suction Jetting"
+            item["priority_directive"] = f"Priority 2: Inflow Surcharge ({item['precip_mm']} mm) -- Suction Jetting"
         elif idx <= 30:
-            item["priority_directive"] = f"🟡 Priority 3: Moderate Rain ({item['precip_mm']} mm) — Catchment Watch"
+            item["priority_directive"] = f"Priority 3: Moderate Rain ({item['precip_mm']} mm) -- Catchment Watch"
         else:
-            item["priority_directive"] = f"🟢 Priority 4: Light Rain ({item['precip_mm']} mm) — Passive Monitoring"
+            item["priority_directive"] = f"Priority 4: Light Rain ({item['precip_mm']} mm) -- Passive Monitoring"
 
     return enriched
 

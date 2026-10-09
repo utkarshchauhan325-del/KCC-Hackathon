@@ -50,8 +50,12 @@ def test_parse_result_maps_classes_tracks_and_masks():
     data = np.zeros((2, 50, 50), dtype=np.uint8)
     data[0, 2:20, 2:20] = 1   # mask 0 has two separate pieces...
     data[0, 30:45, 30:45] = 1  # ...which must stay two outlines, not one joined polygon
-    import torch
-    masks = type("M", (), {"data": torch.from_numpy(data)})()
+    try:
+        import torch
+        m_data = torch.from_numpy(data)
+    except ImportError:
+        m_data = _Arr(data)
+    masks = type("M", (), {"data": m_data})()
     result = type("R", (), {"boxes": boxes, "masks": masks, "orig_shape": (50, 50)})()
 
     dets = parse_result(result, ALL_CLASSES, {0: 7})

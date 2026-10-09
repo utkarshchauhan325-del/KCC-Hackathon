@@ -14,6 +14,7 @@ from app.db.session import SessionLocal
 from app.db.models import Incident, Job
 from app.core.detector import CATEGORY_LABELS, WASTE_TYPE_LABELS
 from app.ui.components.charts import _style
+from app.ui.components.crew_dispatch import render_crew_dispatch_widget
 from app.ui.components.styles import ACCENT, chip, icon, page_header, section_title, status_pill
 
 _CHART_CONFIG = {"displayModeBar": False}
@@ -408,5 +409,60 @@ def render_job_results():
                     txt_col.caption("Alerts: " + ", ".join(f"{c} {s}" for c, s in sent.items()))
                 elif inc.severity >= settings.ALERT_MIN_SEVERITY:
                     txt_col.caption("Alert not sent: no alert channel configured.")
+
+        # Tactical crew deployment for the detected site
+        site_name = _infer_job_location(job)
+        suggested_mach = (
+            "High Pressure Silt Jetting & Suction Tanker"
+            if any(inc.type == "drainage" for inc in incidents)
+            else "Solid Waste Rapid Clearance Unit"
+        )
+        st.markdown("<hr class='fg-rule' style='margin:24px 0 16px 0;'>", unsafe_allow_html=True)
+        st.markdown(section_title(
+            "Tactical crew deployment",
+            "Dispatch rapid response machinery and assign an engineer directly to this detected site without navigating away.",
+        ), unsafe_allow_html=True)
+
+        render_crew_dispatch_widget(
+            location_name=site_name,
+            key_prefix=f"cctv_{job.id[:8]}",
+            suggested_machinery=suggested_mach,
+            zone="Central",
+            header_title=None,
+        )
     finally:
         db.close()
+
+
+def _infer_job_location(job: Job) -> str:
+    """Infer the municipal location for an analysed video from filename or GPS."""
+    fn = (job.filename or "").lower()
+    if "mg" in fn or "camp" in fn:
+        return "MG Road Junction"
+    if "fc" in fn or "fergusson" in fn:
+        return "FC Road Commercial Belt"
+    if "swargate" in fn:
+        return "Swargate Metro"
+    if "deccan" in fn:
+        return "Deccan Gymkhana Outfall"
+    if "ganga" in fn or "bibwewadi" in fn:
+        return "Bibwewadi Conduit"
+    if "hadapsar" in fn:
+        return "Hadapsar Industrial Nullah"
+    if "karve" in fn:
+        return "Karve Road Culvert"
+    if "dapodi" in fn:
+        return "Dapodi Sluice Gate"
+
+    if job.source_gps:
+        try:
+            parts = [float(p.strip()) for p in job.source_gps.split(",")]
+            lat, lng = parts[0], parts[1]
+            from app.ui.pune_data import PUNE_LOCATIONS
+            nearest = min(PUNE_LOCATIONS, key=lambda l: (l["lat"] - lat)**2 + (l["lng"] - lng)**2)
+            return nearest["name"]
+        except Exception:
+            pass
+
+    return "FC Road Commercial Belt"
+
