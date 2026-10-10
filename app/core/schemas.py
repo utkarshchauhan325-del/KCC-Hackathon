@@ -77,3 +77,12 @@ class GarbageExemplarFrame(BaseModel):
 class GarbageExemplarResponse(BaseModel):
     """Garbage regions Gemini located on sampled frames."""
     frames: List[GarbageExemplarFrame] = Field(default_factory=list)
+
+class WorkVerificationAssessment(BaseModel):
+    """Structured assessment returned by Gemini when comparing before and after photos."""
+    cleaned: bool = Field(..., description="True if the reported hazard/waste in the before photo has been substantially removed or fixed")
+    same_location: bool = Field(..., description="True if the background, road, walls, buildings or landmarks confirm this is the same location")
+    hazard_resolved: bool = Field(..., description="True if the primary issue (garbage heap, clogged inlet, overflowing water, open manhole) is resolved")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Confidence in this visual assessment")
+    explanation: str = Field(..., description="One to two sentence factual description of the changes between before and after images")
+

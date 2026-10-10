@@ -17,6 +17,9 @@ from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
 from app.ui.views.priority_queue import open_incident_count, render_priority_queue_and_interventions
 from app.ui.views.flood_analytics import render_flood_analytics
+from app.ui.views.worker_tasks import render_worker_tasks_view
+from app.ui.views.worker_task_detail import render_worker_task_detail_view
+from app.ui.views.worker_history import render_worker_history_view
 
 # Initialize SQLite/PostgreSQL Database
 init_db()
@@ -36,62 +39,113 @@ if not st.session_state.get("authenticated", False):
     render_login_page()
     st.stop()
 
-# -------------------------------------------------------------
-# Pages
-# -------------------------------------------------------------
-PAGE_SPECS = [
-    ("overview", "Dashboard", ":material/dashboard:",
-     "City risk summary, ranked corridors and forecasts", render_overview_dashboard),
-    ("risk-map", "Risk Map", ":material/map:",
-     "Monitored locations by zone, severity and camera", render_live_risk_map),
-    ("cctv", "CCTV Analysis", ":material/videocam:",
-     "Camera feeds and video analysis for drains and dumping", render_cctv_monitoring),
-    ("queue", "Priority Queue", ":material/assignment_late:",
-     "Officer review, open incidents and crew dispatch", render_priority_queue_and_interventions),
-    ("analytics", "Analytics & Reports", ":material/query_stats:",
-     "Rainfall correlation, ward comparison and exports", render_flood_analytics),
-]
-
-pages = {
-    slug: st.Page(fn, title=title, url_path=slug, default=(slug == "overview"))
-    for slug, title, _ico, _desc, fn in PAGE_SPECS
-}
-current = st.navigation(list(pages.values()), position="hidden")
-current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
+user_role = st.session_state.get("role", "admin")
 
 # -------------------------------------------------------------
-# Top navigation bar (Authenticated Admin Session)
+# Role-based Routing: Worker Application vs Admin Console
 # -------------------------------------------------------------
-NAV_LABELS = {"overview": "Dashboard", "risk-map": "Risk Map", "cctv": "CCTV", "queue": "Queue", "analytics": "Analytics"}
-queue_open = open_incident_count()
-user_email = st.session_state.get("auth_user", "admin@pune.gov.in")
+if user_role == "worker":
+    WORKER_PAGE_SPECS = [
+        ("worker-tasks", "My Tasks", ":material/checklist:",
+         "Assigned drainage and hazard tasks", render_worker_tasks_view),
+        ("worker-task-detail", "Task Detail", ":material/assignment:",
+         "View hazard details and submit photo proof", render_worker_task_detail_view),
+        ("worker-history", "Work History", ":material/history:",
+         "Archive of completed and AI-verified tasks", render_worker_history_view),
+    ]
 
-with st.container(key="fg_topnav"):
-    cols = st.columns([2.3] + [1] * len(PAGE_SPECS) + [2.0, 0.8], vertical_alignment="center", gap="small")
-    cols[0].markdown(
-        f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
-        <div><div class="fg-nav-title">FloodGuard</div><div class="fg-nav-org">Pune Municipal Corporation</div></div></div>''',
-        unsafe_allow_html=True,
-    )
-    for col, (slug, title, ico, desc, _fn) in zip(cols[1:], PAGE_SPECS):
-        label = NAV_LABELS.get(slug, title)
-        if slug == "queue" and queue_open:
-            label = f"{label} ({queue_open})"
-        state = "active" if slug == current_slug else "idle"
-        with col.container(key=f"fgnav_{state}_{slug.replace('-', '_')}"):
-            st.page_link(pages[slug], label=label, icon=ico, help=desc)
-    cols[-2].markdown(
-        f'''<div class="fg-nav-status"><span class="fg-top-dot"></span>
-        <span class="fg-nav-clock">{datetime.now():%d %b &middot; %H:%M} IST</span>
-        <span class="fg-nav-user-pill">{user_email}</span></div>''',
-        unsafe_allow_html=True,
-    )
-    with cols[-1].container(key="fg_logout_btn"):
-        if st.button("Sign out", key="btn_signout", help="Sign out of FloodGuard console"):
-            st.session_state["authenticated"] = False
-            st.session_state["login_success"] = False
-            st.session_state["login_error"] = None
-            st.rerun()
+    worker_pages = {
+        slug: st.Page(fn, title=title, url_path=slug, default=(slug == "worker-tasks"))
+        for slug, title, _ico, _desc, fn in WORKER_PAGE_SPECS
+    }
 
-current.run()
+    current = st.navigation(list(worker_pages.values()), position="hidden")
+    current_slug = next((s for s, p in worker_pages.items() if p.url_path == current.url_path), "worker-tasks")
 
+    # Handle programmatic navigation (e.g. from task card click)
+    target_page = st.session_state.pop("active_worker_page", None)
+    if target_page and target_page in worker_pages:
+        st.switch_page(worker_pages[target_page])
+
+    worker_name = st.session_state.get("worker_name", "Field Worker")
+    worker_zone = st.session_state.get("worker_zone", "Pune")
+
+    with st.container(key="fg_topnav"):
+        cols = st.columns([3.0, 1.3, 1.3, 2.5, 0.9], vertical_alignment="center", gap="small")
+        cols[0].markdown(
+            f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
+            <div><div class="fg-nav-title">FloodGuard Field</div><div class="fg-nav-org">PMC &bull; {worker_zone} Zone</div></div></div>''',
+            unsafe_allow_html=True,
+        )
+        with cols[1].container(key=f"fgnav_{'active' if current_slug == 'worker-tasks' else 'idle'}_wtasks"):
+            st.page_link(worker_pages["worker-tasks"], label="My Tasks", icon=":material/checklist:")
+        with cols[2].container(key=f"fgnav_{'active' if current_slug == 'worker-history' else 'idle'}_whist"):
+            st.page_link(worker_pages["worker-history"], label="Work History", icon=":material/history:")
+        cols[3].markdown(
+            f'''<div class="fg-nav-status"><span class="fg-top-dot"></span>
+            <span class="fg-nav-clock">{datetime.now():%d %b &middot; %H:%M} IST</span>
+            <span class="fg-nav-user-pill">👷 {worker_name}</span></div>''',
+            unsafe_allow_html=True,
+        )
+        with cols[4].container(key="fg_logout_btn"):
+            if st.button("Sign out", key="btn_worker_signout", help="Sign out of FloodGuard field app"):
+                st.session_state.clear()
+                st.rerun()
+
+    current.run()
+
+else:
+    # -------------------------------------------------------------
+    # Admin Console Routing
+    # -------------------------------------------------------------
+    PAGE_SPECS = [
+        ("overview", "Dashboard", ":material/dashboard:",
+         "City risk summary, ranked corridors and forecasts", render_overview_dashboard),
+        ("risk-map", "Risk Map", ":material/map:",
+         "Monitored locations by zone, severity and camera", render_live_risk_map),
+        ("cctv", "CCTV Analysis", ":material/videocam:",
+         "Camera feeds and video analysis for drains and dumping", render_cctv_monitoring),
+        ("queue", "Priority Queue", ":material/assignment_late:",
+         "Officer review, open incidents and crew dispatch", render_priority_queue_and_interventions),
+        ("analytics", "Analytics & Reports", ":material/query_stats:",
+         "Rainfall correlation, ward comparison and exports", render_flood_analytics),
+    ]
+
+    pages = {
+        slug: st.Page(fn, title=title, url_path=slug, default=(slug == "overview"))
+        for slug, title, _ico, _desc, fn in PAGE_SPECS
+    }
+    current = st.navigation(list(pages.values()), position="hidden")
+    current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
+
+    # Top navigation bar (Authenticated Admin Session)
+    NAV_LABELS = {"overview": "Dashboard", "risk-map": "Risk Map", "cctv": "CCTV", "queue": "Queue", "analytics": "Analytics"}
+    queue_open = open_incident_count()
+    user_email = st.session_state.get("auth_user", "admin@pune.gov.in")
+
+    with st.container(key="fg_topnav"):
+        cols = st.columns([2.3] + [1] * len(PAGE_SPECS) + [2.0, 0.8], vertical_alignment="center", gap="small")
+        cols[0].markdown(
+            f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
+            <div><div class="fg-nav-title">FloodGuard</div><div class="fg-nav-org">Pune Municipal Corporation</div></div></div>''',
+            unsafe_allow_html=True,
+        )
+        for col, (slug, title, ico, desc, _fn) in zip(cols[1:], PAGE_SPECS):
+            label = NAV_LABELS.get(slug, title)
+            if slug == "queue" and queue_open:
+                label = f"{label} ({queue_open})"
+            state = "active" if slug == current_slug else "idle"
+            with col.container(key=f"fgnav_{state}_{slug.replace('-', '_')}"):
+                st.page_link(pages[slug], label=label, icon=ico, help=desc)
+        cols[-2].markdown(
+            f'''<div class="fg-nav-status"><span class="fg-top-dot"></span>
+            <span class="fg-nav-clock">{datetime.now():%d %b &middot; %H:%M} IST</span>
+            <span class="fg-nav-user-pill">{user_email}</span></div>''',
+            unsafe_allow_html=True,
+        )
+        with cols[-1].container(key="fg_logout_btn"):
+            if st.button("Sign out", key="btn_signout", help="Sign out of FloodGuard console"):
+                st.session_state.clear()
+                st.rerun()
+
+    current.run()

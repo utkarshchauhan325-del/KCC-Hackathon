@@ -187,6 +187,9 @@ class CivicObjectDetector:
         return parse_result(result, self.classes, track_by_det)
 
 
+CivicDetector = CivicObjectDetector
+
+
 def torch_cat(tensors, dim: int):
     import torch
     return torch.cat(tensors, dim=dim)

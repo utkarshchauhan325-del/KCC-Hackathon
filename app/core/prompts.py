@@ -74,3 +74,19 @@ Read and analyze all visible characters on the registration plate:
 Return JSON matching the schema.
 """
 
+WORK_VERIFICATION_PROMPT = """
+You are CivicEye's municipal work verification inspector assisting Pune Municipal Corporation.
+You are given two street-level photographs:
+- Image 1 is the "BEFORE" photo showing the detected civic issue (garbage dump, blocked drain, waterlogging, or open manhole).
+- Image 2 is the "AFTER" photo submitted by a field worker as proof of resolution.
+
+Compare the two images and assess:
+1. same_location (boolean): Does Image 2 show the exact same location as Image 1? Look at background buildings, pavement, walls, trees, curb stones, drain structures, and landmarks.
+2. cleaned (boolean): Has the reported issue (garbage pile, blockage, stagnant water, debris) been substantially cleared or resolved?
+3. hazard_resolved (boolean): Is the specific municipal hazard fully resolved?
+4. confidence (float 0.0 to 1.0): Your confidence in this visual inspection.
+5. explanation (string): 1-2 sentence factual description of the visible changes between the before and after photos.
+
+Return the JSON schema only.
+"""
+

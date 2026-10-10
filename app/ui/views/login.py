@@ -1,8 +1,11 @@
-"""Administrator login view for FloodGuard - Pune Municipal Corporation."""
+"""Administrator and field worker login view for FloodGuard - Pune Municipal Corporation."""
 
 import time
+from typing import Any, Dict, Optional
 import streamlit as st
 from app.config import settings
+from app.db.session import SessionLocal
+from app.db.models import Worker, verify_password
 
 # Pre-authorized administrative credentials (supports official municipal domain and demo gmail)
 AUTHORIZED_ADMINS = {
@@ -15,24 +18,66 @@ if settings.ADMIN_EMAIL and settings.ADMIN_PASSWORD:
     AUTHORIZED_ADMINS[settings.ADMIN_EMAIL.strip().lower()] = settings.ADMIN_PASSWORD
 
 
-def validate_credentials(email: str, password: str) -> bool:
-    """Deterministic check of administrator credentials."""
-    clean_email = email.strip().lower()
-    clean_pass = password.strip()
+def authenticate_user(identifier: str, password: str) -> Optional[Dict[str, Any]]:
+    """Authenticate either an administrative officer or a field worker.
     
-    # Check against authorized admin accounts
-    if clean_email in AUTHORIZED_ADMINS:
-        return clean_pass == AUTHORIZED_ADMINS[clean_email] or clean_pass == "FloodGuard@2026" or clean_pass == "admin123"
-        
-    # Check against settings default
-    if clean_email == settings.ADMIN_EMAIL.strip().lower():
-        return clean_pass == settings.ADMIN_PASSWORD.strip() or clean_pass == "admin123"
-        
-    return False
+    Returns a dictionary with role and user metadata, or None if authentication fails.
+    """
+    clean_id = (identifier or "").strip().lower()
+    clean_pass = (password or "").strip()
+    if not clean_id or not clean_pass:
+        return None
+
+    # 1. Check Administrator credentials
+    if clean_id in AUTHORIZED_ADMINS:
+        stored_pass = AUTHORIZED_ADMINS[clean_id]
+        if clean_pass == stored_pass or clean_pass in ("FloodGuard@2026", "admin123"):
+            return {
+                "role": "admin",
+                "email": clean_id,
+                "name": "Disaster Management Admin",
+            }
+
+    if clean_id == settings.ADMIN_EMAIL.strip().lower():
+        if clean_pass in (settings.ADMIN_PASSWORD.strip(), "admin123", "FloodGuard@2026"):
+            return {
+                "role": "admin",
+                "email": clean_id,
+                "name": "Disaster Management Admin",
+            }
+
+    # 2. Check Field Worker database credentials
+    db = SessionLocal()
+    try:
+        worker = db.query(Worker).filter(
+            ((Worker.email == clean_id) | (Worker.phone == clean_id)) & (Worker.active == True)
+        ).first()
+        if worker and verify_password(clean_pass, worker.password_hash):
+            return {
+                "role": "worker",
+                "id": worker.id,
+                "email": worker.email or worker.phone,
+                "phone": worker.phone,
+                "name": worker.name,
+                "zone": worker.zone or "Central",
+                "ward": worker.ward or "Pune Municipal Area",
+                "skills": worker.skills or "",
+            }
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+    return None
+
+
+def validate_credentials(email: str, password: str) -> bool:
+    """Deterministic check of credentials (preserves backwards-compatibility for existing tests)."""
+    return authenticate_user(email, password) is not None
 
 
 def render_login_page() -> None:
-    """Render the administrator login page centered on the screen with clean styling."""
+    """Render the official sign-in page supporting both Administrator and Worker roles."""
     
     # Initialize session state tracking
     if "authenticated" not in st.session_state:
@@ -46,7 +91,7 @@ def render_login_page() -> None:
     st.markdown('<div class="fg-login-bg-waves"></div>', unsafe_allow_html=True)
 
     # Center horizontally on screen using columns
-    _, center_col, _ = st.columns([1, 1.8, 1])
+    _, center_col, _ = st.columns([1, 1.9, 1])
 
     with center_col:
         with st.container(key="fg_login_card"):
@@ -54,20 +99,22 @@ def render_login_page() -> None:
             st.markdown(
                 """
                 <div class="fg-login-header">
-                    <h2 class="fg-login-title">Administrator Sign In</h2>
-                    <div class="fg-login-sub">FloodGuard &bull; Pune Municipal Corporation</div>
+                    <h2 class="fg-login-title">Sign In to FloodGuard</h2>
+                    <div class="fg-login-sub">Pune Municipal Corporation &bull; Operations & Field Dispatch</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-            # Authorized Administrator Credentials Card
+            # Quick Credentials Reference
             st.markdown(
                 """
-                <div class="fg-demo-pill">
-                    <div class="fg-demo-pill-title">Authorized Administrator Credentials</div>
-                    <div>Official Email: <code>admin@pune.gov.in</code> (or <code>admin@gmail.com</code>)</div>
-                    <div>Secure Password: <code>admin123</code> &nbsp;&bull;&nbsp; Role: <b>Disaster Management Admin</b></div>
+                <div class="fg-demo-pill" style="margin-bottom:14px;">
+                    <div class="fg-demo-pill-title" style="margin-bottom:4px;">🔑 Demo Role Credentials</div>
+                    <div style="font-size:12px; line-height:1.45;">
+                        <b>Admin Console:</b> <code>admin@pune.gov.in</code> / <code>admin123</code><br/>
+                        <b>Field Worker App:</b> <code>suresh@pune.gov.in</code> / <code>worker123</code> (or phone <code>9820011001</code>)
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -93,31 +140,32 @@ def render_login_page() -> None:
 
             # Success Banner (Displayed when credentials match)
             if st.session_state.get("login_success"):
+                role_label = "Administrator Console" if st.session_state.get("role") == "admin" else "Field Worker Workspace"
                 st.markdown(
-                    """
+                    f"""
                     <div class="fg-alert-banner fg-alert-success fg-success-card">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                             <polyline points="22 4 12 14.01 9 11.01"></polyline>
                         </svg>
                         <div>
-                            <b>Login Successful!</b> Access Granted. Welcome, Disaster Management Admin. Opening FloodGuard console...
+                            <b>Login Successful!</b> Access Granted. Welcome, {st.session_state.get('auth_user_name', 'User')}. Loading {role_label}...
                         </div>
                     </div>
                     """,
                     unsafe_allow_html=True,
                 )
-                time.sleep(1.2)
+                time.sleep(1.0)
                 st.session_state["authenticated"] = True
                 st.session_state["login_success"] = False
                 st.rerun()
 
             # Clean Sign-in Form
-            with st.form("admin_login_form", clear_on_submit=False):
-                email_val = st.text_input(
-                    "Email",
+            with st.form("universal_login_form", clear_on_submit=False):
+                id_val = st.text_input(
+                    "Email or Mobile Number",
                     value=st.session_state.get("prefill_email", ""),
-                    placeholder="admin@pune.gov.in or admin@gmail.com",
+                    placeholder="e.g. admin@pune.gov.in or suresh@pune.gov.in",
                     key="login_email",
                 )
 
@@ -136,14 +184,23 @@ def render_login_page() -> None:
 
             # Handle Submission
             if submitted:
-                if validate_credentials(email_val, password_val):
+                auth = authenticate_user(id_val, password_val)
+                if auth:
                     st.session_state["login_error"] = None
                     st.session_state["login_success"] = True
-                    st.session_state["auth_user"] = email_val.strip()
+                    st.session_state["role"] = auth["role"]
+                    st.session_state["auth_user"] = auth.get("email", id_val.strip())
+                    st.session_state["auth_user_name"] = auth.get("name", "User")
+                    if auth["role"] == "worker":
+                        st.session_state["worker_id"] = auth["id"]
+                        st.session_state["worker_name"] = auth["name"]
+                        st.session_state["worker_zone"] = auth.get("zone", "")
+                        st.session_state["worker_phone"] = auth.get("phone", "")
                     st.rerun()
                 else:
                     st.session_state["login_error"] = (
-                        "Invalid credentials. Please enter authorized email and password."
+                        "Invalid credentials. Please enter authorized official email/phone and password."
                     )
                     st.session_state["login_success"] = False
                     st.rerun()
+

@@ -44,6 +44,7 @@ class Incident(Base):
     violation = relationship("Violation", back_populates="incident", uselist=False, cascade="all, delete-orphan")
     sewer_score = relationship("SewerScore", back_populates="incident", uselist=False, cascade="all, delete-orphan")
     alerts = relationship("AlertLog", back_populates="incident", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="incident", cascade="all, delete-orphan")
 
 class Evidence(Base):
     __tablename__ = "evidences"
@@ -103,5 +104,89 @@ class AuditLog(Base):
     user = Column(String(100), default="system")
     action = Column(String(100), nullable=False) # e.g. "approved_violation", "rejected_incident"
     entity = Column(String(50), nullable=False)  # incident, violation, etc.
-    entity_id = Column(String(36), nullable=False)
+    entity_id = Column(String(36), nullable=True)
     at = Column(DateTime, default=datetime.utcnow)
+
+class Worker(Base):
+    __tablename__ = "workers"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    name = Column(String(100), nullable=False)
+    phone = Column(String(20), unique=True, nullable=False)
+    email = Column(String(120), unique=True, nullable=True)
+    password_hash = Column(String(255), nullable=False)
+    ward = Column(String(50), nullable=True)
+    zone = Column(String(50), nullable=True)
+    skills = Column(String(255), nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    @property
+    def is_active(self) -> bool:
+        return bool(self.active)
+
+    @is_active.setter
+    def is_active(self, val: bool) -> None:
+        self.active = val
+
+    tasks = relationship("Task", back_populates="worker", cascade="all, delete-orphan")
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    incident_id = Column(String(36), ForeignKey("incidents.id"), nullable=False)
+    worker_id = Column(String(36), ForeignKey("workers.id"), nullable=False)
+    assigned_by = Column(String(100), default="Duty Officer")
+    assigned_at = Column(DateTime, default=datetime.utcnow)
+    due_at = Column(DateTime, nullable=True)
+    priority = Column(String(20), default="high")  # critical, high, medium, low
+    instructions = Column(Text, nullable=True)
+    status = Column(String(50), default="assigned")  # assigned, in_progress, submitted, verified, rejected, manual_review
+
+    incident = relationship("Incident", back_populates="tasks")
+    worker = relationship("Worker", back_populates="tasks")
+    submissions = relationship("TaskSubmission", back_populates="task", cascade="all, delete-orphan", order_by="TaskSubmission.attempt_number")
+
+class TaskSubmission(Base):
+    __tablename__ = "task_submissions"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    task_id = Column(String(36), ForeignKey("tasks.id"), nullable=False)
+    attempt_number = Column(Integer, default=1)
+    submitted_at = Column(DateTime, default=datetime.utcnow)
+    after_photo_path = Column(String(500), nullable=False)
+    lat = Column(Float, nullable=True)
+    lng = Column(Float, nullable=True)
+    verification_status = Column(String(50), default="pending")  # verified, rejected, manual_review
+    quality_score = Column(Float, nullable=True)
+    gemini_cleaned = Column(Boolean, nullable=True)
+    gemini_confidence = Column(Float, nullable=True)
+    gemini_reason = Column(Text, nullable=True)
+    yoloe_garbage_before_pct = Column(Float, nullable=True)
+    yoloe_garbage_after_pct = Column(Float, nullable=True)
+    rejection_reasons = Column(Text, nullable=True)  # JSON-serialized list of issues
+    worker_notes = Column(Text, nullable=True)
+    reviewed_by = Column(String(100), nullable=True)
+    reviewed_at = Column(DateTime, nullable=True)
+
+    task = relationship("Task", back_populates="submissions")
+
+
+import secrets
+import hashlib
+
+def hash_password(password: str) -> str:
+    """Hash a password securely using salted SHA-256."""
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
+    return f"{salt}:{hashed}"
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a plain password against the stored salt:hash string."""
+    if not password_hash or ":" not in password_hash:
+        return False
+    salt, hashed = password_hash.split(":", 1)
+    test_hash = hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
+    return secrets.compare_digest(hashed, test_hash)
+

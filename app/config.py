@@ -35,9 +35,20 @@ class Settings(BaseSettings):
     DATA_DIR: Path = Field(default=BASE_DIR / "data")
     UPLOADS_DIR: Path = Field(default=BASE_DIR / "data" / "uploads")
     EVIDENCE_DIR: Path = Field(default=BASE_DIR / "data" / "evidence")
+    AFTER_PHOTOS_DIR: Path = Field(default=BASE_DIR / "data" / "evidence" / "after")
     REPORTS_DIR: Path = Field(default=BASE_DIR / "data" / "reports")
     MODELS_DIR: Path = Field(default=BASE_DIR / "data" / "models")
     MAX_UPLOAD_SIZE_MB: int = Field(default=500)
+
+    # Worker AI Work Verification Thresholds
+    VERIFY_MIN_SHARPNESS: float = Field(default=45.0, description="Minimum Laplacian variance for blur check")
+    VERIFY_MIN_BRIGHTNESS: float = Field(default=25.0, description="Minimum average pixel luminance (0-255)")
+    VERIFY_MAX_BRIGHTNESS: float = Field(default=240.0, description="Maximum average pixel luminance (0-255)")
+    VERIFY_MAX_GARBAGE_REMAINING_PCT: float = Field(default=5.0, description="Max remaining garbage % for automatic verification")
+    VERIFY_MIN_GARBAGE_REDUCTION_PCT: float = Field(default=75.0, description="Minimum reduction % of garbage area")
+    VERIFY_MIN_GEMINI_CONFIDENCE: float = Field(default=0.70, description="Minimum VLM confidence for automatic pass")
+    VERIFY_MAX_ATTEMPTS: int = Field(default=3, description="Maximum submission attempts before escalating to manual review")
+    VERIFY_LOCATION_TOLERANCE_METERS: float = Field(default=250.0, description="Max distance in meters between task and proof GPS")
 
     # Sewer Overflow Scoring Weights (Deterministic 0-100)
     WEIGHT_WATER: float = 0.35
@@ -60,7 +71,7 @@ class Settings(BaseSettings):
     ALERT_MIN_SEVERITY: int = 3  # hazards at or above this severity (1-5) alert the municipality
     ALERT_TIMEOUT_SECONDS: int = 20
 
-    @field_validator("DATA_DIR", "UPLOADS_DIR", "EVIDENCE_DIR", "REPORTS_DIR", "MODELS_DIR")
+    @field_validator("DATA_DIR", "UPLOADS_DIR", "EVIDENCE_DIR", "AFTER_PHOTOS_DIR", "REPORTS_DIR", "MODELS_DIR")
     @classmethod
     def _resolve_against_project(cls, v: Path) -> Path:
         """Relative paths in .env (e.g. DATA_DIR=data) are relative to the project, not the CWD."""
@@ -68,7 +79,7 @@ class Settings(BaseSettings):
 
     def ensure_directories(self) -> None:
         """Ensure all runtime directories exist."""
-        for path in [self.DATA_DIR, self.UPLOADS_DIR, self.EVIDENCE_DIR, self.REPORTS_DIR, self.MODELS_DIR]:
+        for path in [self.DATA_DIR, self.UPLOADS_DIR, self.EVIDENCE_DIR, self.AFTER_PHOTOS_DIR, self.REPORTS_DIR, self.MODELS_DIR]:
             path.mkdir(parents=True, exist_ok=True)
 
 settings = Settings()

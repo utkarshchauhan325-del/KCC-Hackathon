@@ -193,3 +193,157 @@ def send_incident_alert(db: Session, incident: Incident) -> List[AlertLog]:
         incident.status = "sent"
     db.commit()
     return logs
+
+
+def send_task_assignment_alert(db: Session, task: Any) -> List[AlertLog]:
+    """Notify configured channels when a task is assigned to a field worker."""
+    channels = configured_channels()
+    if not channels:
+        return []
+
+    incident = task.incident
+    worker = task.worker
+    subject = f"[FloodGuard] Task Assigned: {incident.type.title()} at {incident.subtype.replace('_', ' ')}"
+    body = (
+        f"Task ID: {task.id}\n"
+        f"Assigned Worker: {worker.name} ({worker.phone})\n"
+        f"Zone: {worker.zone or 'Central'} | Ward: {worker.ward or 'Kasba'}\n"
+        f"Priority: {task.priority.upper()}\n"
+        f"Due: {task.due_at or 'Immediate'}\n"
+        f"Instructions: {task.instructions or 'Clean and clear site'}\n"
+        f"Incident: {incident.description}\n"
+    )
+    attachments = _evidence_paths(incident)
+    logs: List[AlertLog] = []
+    for channel in channels:
+        recipient = {"email": settings.ALERT_EMAIL_RECIPIENT, "telegram": settings.TELEGRAM_CHAT_ID, "webhook": settings.WEBHOOK_URL}[channel]
+        try:
+            if channel == "email":
+                resp = send_email(subject, body, attachments)
+            elif channel == "telegram":
+                resp = send_telegram(body, attachments)
+            else:
+                resp = send_webhook({"event": "task_assigned", "task_id": task.id, "worker": worker.name}, attachments)
+            status = "sent"
+        except Exception as e:
+            resp, status = str(e)[:1000], "failed"
+        log = AlertLog(incident_id=incident.id, channel=channel, recipient=recipient, status=status, response=resp)
+        db.add(log)
+        logs.append(log)
+    db.commit()
+    return logs
+
+
+def send_work_verified_alert(db: Session, task: Any, submission: Any) -> List[AlertLog]:
+    """Notify when field worker submission is AI-verified and incident resolved."""
+    channels = configured_channels()
+    if not channels:
+        return []
+
+    incident = task.incident
+    worker = task.worker
+    subject = f"[FloodGuard Verified] Issue Resolved: {incident.subtype.replace('_', ' ').capitalize()}"
+    body = (
+        f"Site work completed and verified by AI!\n"
+        f"Worker: {worker.name} ({worker.phone})\n"
+        f"Task: {task.id} (Attempt {submission.attempt_number})\n"
+        f"AI Confidence: {f'{submission.gemini_confidence:.0%}' if submission.gemini_confidence is not None else 'N/A'}\n"
+        f"Observation: {submission.gemini_reason or 'Site cleared'}\n"
+        f"Incident ID: {incident.id} marked RESOLVED.\n"
+    )
+    after_p = Path(submission.after_photo_path)
+    attachments = [after_p] if after_p.is_file() else []
+    logs: List[AlertLog] = []
+    for channel in channels:
+        recipient = {"email": settings.ALERT_EMAIL_RECIPIENT, "telegram": settings.TELEGRAM_CHAT_ID, "webhook": settings.WEBHOOK_URL}[channel]
+        try:
+            if channel == "email":
+                resp = send_email(subject, body, attachments)
+            elif channel == "telegram":
+                resp = send_telegram(body, attachments)
+            else:
+                resp = send_webhook({"event": "work_verified", "task_id": task.id, "worker": worker.name}, attachments)
+            status = "sent"
+        except Exception as e:
+            resp, status = str(e)[:1000], "failed"
+        log = AlertLog(incident_id=incident.id, channel=channel, recipient=recipient, status=status, response=resp)
+        db.add(log)
+        logs.append(log)
+    db.commit()
+    return logs
+
+
+def send_manual_review_alert(db: Session, task: Any, submission: Any) -> List[AlertLog]:
+    """Notify admin supervisor when proof needs manual review."""
+    channels = configured_channels()
+    if not channels:
+        return []
+
+    incident = task.incident
+    worker = task.worker
+    subject = f"[FloodGuard Review Needed] Worker Proof Escalation: {incident.subtype.replace('_', ' ')}"
+    body = (
+        f"A task submission requires manual review by duty officer.\n"
+        f"Worker: {worker.name} ({worker.phone})\n"
+        f"Task ID: {task.id} (Attempt {submission.attempt_number})\n"
+        f"Status: manual_review\n"
+        f"AI Notes: {submission.gemini_reason or 'Borderline evaluation'}\n"
+        f"Rejection/Escalation Reasons: {submission.rejection_reasons or 'None'}\n"
+    )
+    after_p = Path(submission.after_photo_path)
+    attachments = [after_p] if after_p.is_file() else []
+    logs: List[AlertLog] = []
+    for channel in channels:
+        recipient = {"email": settings.ALERT_EMAIL_RECIPIENT, "telegram": settings.TELEGRAM_CHAT_ID, "webhook": settings.WEBHOOK_URL}[channel]
+        try:
+            if channel == "email":
+                resp = send_email(subject, body, attachments)
+            elif channel == "telegram":
+                resp = send_telegram(body, attachments)
+            else:
+                resp = send_webhook({"event": "manual_review", "task_id": task.id, "worker": worker.name}, attachments)
+            status = "sent"
+        except Exception as e:
+            resp, status = str(e)[:1000], "failed"
+        log = AlertLog(incident_id=incident.id, channel=channel, recipient=recipient, status=status, response=resp)
+        db.add(log)
+        logs.append(log)
+    db.commit()
+    return logs
+
+
+def send_task_overdue_alert(db: Session, task: Any) -> List[AlertLog]:
+    """Notify when a task has exceeded its due timestamp without completion."""
+    channels = configured_channels()
+    if not channels:
+        return []
+
+    incident = task.incident
+    worker = task.worker
+    subject = f"[FloodGuard Alert] Overdue Task: {incident.subtype.replace('_', ' ')}"
+    body = (
+        f"Task ID {task.id} is OVERDUE!\n"
+        f"Assigned Worker: {worker.name} ({worker.phone})\n"
+        f"Due At: {task.due_at}\n"
+        f"Incident: {incident.description}\n"
+    )
+    attachments = _evidence_paths(incident)
+    logs: List[AlertLog] = []
+    for channel in channels:
+        recipient = {"email": settings.ALERT_EMAIL_RECIPIENT, "telegram": settings.TELEGRAM_CHAT_ID, "webhook": settings.WEBHOOK_URL}[channel]
+        try:
+            if channel == "email":
+                resp = send_email(subject, body, attachments)
+            elif channel == "telegram":
+                resp = send_telegram(body, attachments)
+            else:
+                resp = send_webhook({"event": "task_overdue", "task_id": task.id}, attachments)
+            status = "sent"
+        except Exception as e:
+            resp, status = str(e)[:1000], "failed"
+        log = AlertLog(incident_id=incident.id, channel=channel, recipient=recipient, status=status, response=resp)
+        db.add(log)
+        logs.append(log)
+    db.commit()
+    return logs
+
