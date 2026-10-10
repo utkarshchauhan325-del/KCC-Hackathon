@@ -10,7 +10,6 @@ import streamlit as st
 from app.core.tinyfish_client import (
     fetch_pune_civic_intelligence,
     get_tinyfish_api_key,
-    mask_api_key,
 )
 from app.ui.components.styles import (
     ACCENT,
@@ -63,19 +62,14 @@ def render_civic_intelligence():
     )
 
     api_key = get_tinyfish_api_key()
-    masked_key = mask_api_key(api_key)
 
     # API Status Banner
     if api_key:
         st.markdown(
-            f"""
-            <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:10px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="height:9px; width:9px; border-radius:50%; background:#16A34A; display:inline-block;"></span>
-                    <span style="font-size:13px; font-weight:600; color:#15803D;">TinyFish Search API Connected</span>
-                    <span style="font-size:12px; color:#166534; margin-left:6px;">Endpoint: <code>api.search.tinyfish.ai</code></span>
-                </div>
-                <div style="font-size:12px; color:#166534; font-family:'JetBrains Mono', monospace;">Key: {masked_key}</div>
+            """
+            <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+                <span style="height:9px; width:9px; border-radius:50%; background:#16A34A; display:inline-block;"></span>
+                <span style="font-size:13px; font-weight:600; color:#15803D;">TinyFish is live</span>
             </div>
             """,
             unsafe_allow_html=True,
