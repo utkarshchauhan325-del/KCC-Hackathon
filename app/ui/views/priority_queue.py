@@ -506,7 +506,7 @@ def render_priority_queue_and_interventions():
         <div class="fg-pq-title-group">
             <div class="fg-eyebrow">OPERATIONS</div>
             <h1>Priority queue</h1>
-            <p>Every hazard Gemini finds in CCTV video lands here with its key frame. Review, then dispatch a crew.</p>
+            <p>Every hazard the LLM model finds in CCTV video lands here with its key frame. Review, then dispatch a crew.</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -811,8 +811,7 @@ def render_priority_queue_and_interventions():
             # AI Observation Box
             st.markdown(
                 f"""
-                <div class="fg-pq-ai-lbl">AI observation &middot; Gemini</div>
-                <div class="fg-pq-ai-text">{escape(selected_item['description'])}</div>
+                <div class="fg-pq-ai-text" style="margin-top:14px;">{escape(selected_item['description'])}</div>
                 """,
                 unsafe_allow_html=True,
             )
