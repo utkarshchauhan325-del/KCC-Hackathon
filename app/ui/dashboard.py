@@ -11,7 +11,6 @@ sys.path.insert(0, str(BASE_DIR))
 import streamlit as st
 from app.db.session import init_db
 from app.ui.components.styles import BRAND_MARK, get_floodguard_css
-from app.core.weather_client import fetch_live_pune_weather
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
@@ -24,7 +23,7 @@ init_db()
 st.set_page_config(
     page_title="FloodGuard | Pune Municipal Corporation",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(get_floodguard_css(), unsafe_allow_html=True)
@@ -53,63 +52,29 @@ current = st.navigation(list(pages.values()), position="hidden")
 current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
 
 # -------------------------------------------------------------
-# Proper Sidebar Navigation Panel
+# Top navigation bar
 # -------------------------------------------------------------
-with st.sidebar:
-    # PMC Disaster Management Brand
-    st.markdown(
-        f"""
-        <div class="fg-sb-brand">
-            <div class="fg-sb-logo">{BRAND_MARK}</div>
-            <div>
-                <div class="fg-sb-title">FloodGuard</div>
-                <div class="fg-sb-org">Pune Municipal Corporation &middot; Disaster Cell</div>
-            </div>
-        </div>
-        <div class="fg-sb-status">
-            <span class="fg-sb-pulse"></span>
-            <span class="fg-sb-stat-text">SYSTEM OPERATIONAL &middot; SENSORS LIVE</span>
-        </div>
-        """,
+NAV_LABELS = {"overview": "Dashboard", "risk-map": "Risk Map", "cctv": "CCTV", "queue": "Queue", "analytics": "Analytics"}
+queue_open = open_incident_count()
+
+with st.container(key="fg_topnav"):
+    cols = st.columns([2.6] + [1] * len(PAGE_SPECS) + [2.2], vertical_alignment="center", gap="small")
+    cols[0].markdown(
+        f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
+        <div><div class="fg-nav-title">FloodGuard</div><div class="fg-nav-org">Pune Municipal Corporation</div></div></div>''',
         unsafe_allow_html=True,
     )
-
-    st.markdown('<div class="fg-sb-divider"></div>', unsafe_allow_html=True)
-    st.markdown('<div class="fg-sb-nav-label">COMMAND CONSOLE</div>', unsafe_allow_html=True)
-
-    # Navigation Links with Material Icons and Badge
-    queue_open = open_incident_count()
-    for slug, title, ico, _desc, _fn in PAGE_SPECS:
-        badge_text = f" ({queue_open} open)" if slug == "queue" and queue_open > 0 else ""
-        st.page_link(
-            pages[slug],
-            label=f"{title}{badge_text}",
-            icon=ico,
-            use_container_width=True
-        )
-
-
-
-# -------------------------------------------------------------
-# Top Operational Strip (Main Area)
-# -------------------------------------------------------------
-active_spec = next((item for item in PAGE_SPECS if item[0] == current_slug), PAGE_SPECS[0])
-st.markdown(
-    f"""
-    <div class="fg-top-strip">
-        <div class="fg-top-strip-left">
-            <span class="fg-top-tag">PMC DISASTER MANAGEMENT CELL</span>
-            <span class="fg-top-sep">&middot;</span>
-            <span class="fg-top-zone">{active_spec[1].upper()} VIEW</span>
-        </div>
-        <div class="fg-top-strip-right">
-            <span class="fg-top-clock">{datetime.now():%d %b %Y &middot; %H:%M IST}</span>
-            <span class="fg-top-dot"></span>
-            <span class="fg-top-active">LIVE FEEDS SYNCHRONIZED</span>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+    for col, (slug, title, ico, desc, _fn) in zip(cols[1:], PAGE_SPECS):
+        label = NAV_LABELS.get(slug, title)
+        if slug == "queue" and queue_open:
+            label = f"{label} ({queue_open})"
+        state = "active" if slug == current_slug else "idle"
+        with col.container(key=f"fgnav_{state}_{slug.replace('-', '_')}"):
+            st.page_link(pages[slug], label=label, icon=ico, help=desc)
+    cols[-1].markdown(
+        f'''<div class="fg-nav-status"><span class="fg-top-dot"></span>
+        <span class="fg-nav-clock">{datetime.now():%d %b &middot; %H:%M} IST</span></div>''',
+        unsafe_allow_html=True,
+    )
 
 current.run()

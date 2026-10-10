@@ -128,7 +128,8 @@ def render_rainfall_forecast_bars(hourly) -> go.Figure:
         yaxis2=dict(overlaying="y", side="right", range=[0, 100], showgrid=False, ticksuffix="%",
                     tickfont=dict(family=MONO, size=10, color=MUTED), zeroline=False),
     )
-    fig.update_xaxes(tickangle=0, nticks=8)
+    # Every 4th hour keeps labels readable down to phone width
+    fig.update_xaxes(tickangle=0, tickmode="array", tickvals=times[::4])
     fig.update_layout(yaxis=dict(range=[0, top], ticksuffix=" mm"))
     return fig
 
@@ -165,7 +166,7 @@ def render_water_level_trend(series, times) -> go.Figure:
     _style(fig, 260, dict(t=30, b=30, l=45, r=15), legend=dict(
         orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
         font=dict(size=11, color=MUTED), bgcolor="rgba(0,0,0,0)"))
-    fig.update_xaxes(nticks=8, tickangle=0)
+    fig.update_xaxes(tickangle=0, tickmode="array", tickvals=x[::4])
     fig.update_yaxes(range=[0, 105], tickvals=[0, 25, 50, 75, 100], ticksuffix="%")
     return fig
 
