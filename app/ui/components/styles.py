@@ -624,6 +624,7 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
 
 /* Master List: Incident Card Containers */
 [class*="st-key-pq_card_"] {
+  position: relative !important;
   background: #FFFFFF !important;
   border: 1px solid #E2E8F0 !important;
   border-radius: 10px !important;
@@ -640,14 +641,45 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
 }
 [class*="st-key-pq_card_sel_"] {
+  position: relative !important;
   background: #FFFFFF !important;
   border: 1.5px solid #0E7C86 !important;
+  border-radius: 10px !important;
+  padding: 14px 16px !important;
+  margin-bottom: 12px !important;
   box-shadow: 0 0 0 1px rgba(14, 124, 134, 0.15), 0 4px 12px rgba(14, 124, 134, 0.06) !important;
   cursor: pointer !important;
 }
 [class*="st-key-pq_card_sel_"]:hover {
   background: #F8FAFC !important;
   border-color: #0E7C86 !important;
+}
+
+/* Invisible overlay button allowing full-card click anywhere on the div */
+[class*="st-key-sel_card_"] {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 5 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+[class*="st-key-sel_card_"] button {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  background: transparent !important;
+  border: none !important;
+  color: transparent !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 /* Thumbnail with Bounding Box and Timestamp Overlays */

@@ -84,23 +84,29 @@ _BBOX_OVERLAYS = {
 
 
 def _render_thumb_html(item: Dict[str, Any], is_detail: bool = False, active_kf: Optional[Dict[str, Any]] = None) -> str:
-    if not item.get("photo_b64") and not is_detail:
+    subtype = (active_kf.get("subtype") if active_kf else None) or item.get("subtype", "dump_pile")
+    ts = (active_kf.get("ts") if active_kf else None) or item.get("video_ts", "00:05")
+    
+    b64 = None
+    if active_kf and active_kf.get("b64"):
+        b64 = active_kf["b64"]
+    if not b64:
+        b64 = item.get("photo_b64")
+
+    if not b64 and not is_detail:
         return """
         <div class="fg-pq-hatched">
             No camera frame &middot; sensor report
         </div>
         """
-    subtype = (active_kf.get("subtype") if active_kf else None) or item.get("subtype", "dump_pile")
-    ts = (active_kf.get("ts") if active_kf else None) or item.get("video_ts", "00:05")
-    b64 = (active_kf.get("b64") if active_kf else None) or item.get("photo_b64")
+    
     sev = item.get("severity", 5)
-
     overlay = _BBOX_OVERLAYS.get(subtype, {
         "top": "15%", "left": "8%", "width": "84%", "height": "70%", "label": f"{subtype} · Sev {sev}"
     })
     
     if is_detail:
-        fn = item.get("filename") or "pond_garbage_clean2.mp4"
+        fn = item.get("filename") or "video.mp4"
         label_txt = f"{subtype} · Sev {sev} · 100%"
         return f"""
         <div class="fg-pq-detail-img-box">
@@ -124,7 +130,7 @@ def _render_thumb_html(item: Dict[str, Any], is_detail: bool = False, active_kf:
 
 
 def _cctv_incidents(db) -> List[Dict[str, Any]]:
-    """Open incidents found in analysed videos matching docs/queue_design.png."""
+    """Open incidents found in analysed videos."""
     rows = (
         db.query(Incident)
         .options(joinedload(Incident.evidences), joinedload(Incident.job))
@@ -136,50 +142,25 @@ def _cctv_incidents(db) -> List[Dict[str, Any]]:
     cam_by_loc = {c["location_id"]: c for c in ASSIGNED_CAMERAS}
     items, seen = [], set()
     for inc in rows:
-        loc = location_for_job(inc.job.filename, inc.job.source_gps)
-        if (loc["id"], inc.subtype) in seen:
+        if inc.id in seen:
             continue
-        seen.add((loc["id"], inc.subtype))
+        seen.add(inc.id)
+        
+        loc = location_for_job(inc.job.filename, inc.job.source_gps)
+        if inc.job and ("vehical" in inc.job.filename or "vehicle" in inc.job.filename):
+            loc = next((l for l in PUNE_LOCATIONS if l["id"] == "LOC-02"), loc)
+
         cam = cam_by_loc.get(loc["id"])
         action, machinery = _ACTION_BY_TYPE.get(inc.type, ("Inspect the site", "Mobile 500 GPM Dewatering Pump"))
         
-        # Format metadata to precisely reflect the design layout
-        if inc.subtype == "dump_pile":
-            title = "Dump pile"
-            category = "Garbage & dumping"
-            desc = "Mixed solid waste and plastic debris clogging a water body."
-            conf = 1.0
-            score_val = 47
-            reported_at = "1 h ago"
-            item_id = "CCTV-1539CF"
-            ts = "00:05"
-        elif "hazardous" in inc.subtype:
-            title = "Hazardous manual cleaning"
-            category = "Safety violation"
-            desc = "Workers cleaning contaminated water without protective equipment."
-            conf = 0.95
-            score_val = 47
-            reported_at = "1 h ago"
-            item_id = "CCTV-9CFE88"
-            ts = "00:06"
-        elif "drain" in inc.subtype or "stagnant" in inc.subtype:
-            title = "Blocked drain"
-            category = "Drain blockage"
-            desc = "Open outlet heavily clogged with solid waste, preventing drainage."
-            conf = 1.0
-            score_val = 66
-            reported_at = "2 h ago"
-            item_id = "CCTV-8C1F06"
-            ts = "00:11"
-        else:
-            title = inc.subtype.replace("_", " ").capitalize()
-            category = _CATEGORY_BY_TYPE.get(inc.type, inc.type.capitalize())
-            desc = inc.description
-            conf = inc.confidence or 1.0
-            score_val = 47
-            reported_at = _ago(inc.job.created_at)
-            item_id = f"CCTV-{inc.id[:6].upper()}"
-            ts = inc.video_ts
+        title = inc.subtype.replace("_", " ").capitalize()
+        category = _CATEGORY_BY_TYPE.get(inc.type, inc.type.capitalize())
+        desc = inc.description or f"AI detected {title.lower()} requiring immediate inspection."
+        conf = inc.confidence or 0.95
+        score_val = int(min(100, max(25, inc.severity * 15 + int(conf * 20))))
+        reported_at = _ago(inc.job.created_at) if inc.job and inc.job.created_at else "1 h ago"
+        item_id = f"CCTV-{inc.id[:6].upper()}"
+        ts = inc.video_ts or "00:05"
 
         photo_path = incident_frame(inc)
         items.append({
@@ -285,34 +266,86 @@ def _pending_violations(db):
     )
 
 
-def _get_job_keyframes(job_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Return all 4 keyframe snapshots (00:05, 00:06, 00:08, 00:11) matching docs/queue_design.png."""
+def _get_job_keyframes(item_or_job_id: Any = None) -> List[Dict[str, Any]]:
+    """Return keyframes for the selected incident's video, preserving the actual annotated frame."""
     from app.core.evidence import extract_frame_at_timestamp
     import cv2
-    vid_file = "data/uploads/pond_garbage_clean2.mp4"
-    configs = [
-        ("00:05", 5.0, "dump_pile", 5),
-        ("00:06", 6.0, "hazardous_cleaning", 5),
-        ("00:08", 8.0, "dump_pile", 5),
-        ("00:11", 11.0, "blocked_drain", 5),
-    ]
-    res = []
-    for ts, sec, subtype, sev in configs:
-        b64 = ""
+
+    item = item_or_job_id if isinstance(item_or_job_id, dict) else {}
+    filename = item.get("filename") or "pond_garbage_clean2.mp4"
+    main_ts = item.get("video_ts", "00:05")
+    photo_b64 = item.get("photo_b64")
+    subtype = item.get("subtype", "dump_pile")
+    sev = item.get("severity", 5)
+
+    res: List[Dict[str, Any]] = []
+    
+    vid_path = None
+    if filename:
+        for candidate in [Path("data/uploads") / filename, Path(filename)]:
+            if candidate.is_file():
+                vid_path = str(candidate)
+                break
+
+    if vid_path:
         try:
-            frame = extract_frame_at_timestamp(vid_file, sec)
-            if frame is not None:
-                ret, buf = cv2.imencode(".jpg", frame)
-                if ret:
-                    b64 = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('ascii')}"
+            cap = cv2.VideoCapture(vid_path)
+            fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+            total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 100
+            duration = max(3.0, total_frames / fps)
+            cap.release()
+
+            try:
+                parts = main_ts.split(":")
+                main_sec = float(parts[-2]) * 60 + float(parts[-1]) if len(parts) >= 2 else float(parts[0])
+            except Exception:
+                main_sec = 2.0
+            main_sec = min(duration - 0.5, max(0.5, main_sec))
+
+            raw_secs = [
+                max(1.0, duration * 0.15),
+                max(2.0, duration * 0.45),
+                max(3.0, duration * 0.75),
+                main_sec,
+            ]
+            unique_secs = sorted(list({round(s, 1) for s in raw_secs}))
+            while len(unique_secs) < 4:
+                unique_secs.append(min(duration - 0.5, unique_secs[-1] + 1.5))
+
+            for s in unique_secs[:4]:
+                ts_str = f"{int(s // 60):02d}:{int(s % 60):02d}"
+                if abs(s - main_sec) < 1.0 and photo_b64:
+                    res.append({
+                        "ts": ts_str,
+                        "b64": photo_b64,
+                        "subtype": subtype,
+                        "severity": sev,
+                    })
+                else:
+                    b64_val = ""
+                    try:
+                        frame = extract_frame_at_timestamp(vid_path, s)
+                        if frame is not None:
+                            ret, buf = cv2.imencode(".jpg", frame)
+                            if ret:
+                                b64_val = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('ascii')}"
+                    except Exception:
+                        pass
+                    res.append({
+                        "ts": ts_str,
+                        "b64": b64_val or photo_b64,
+                        "subtype": subtype,
+                        "severity": sev,
+                    })
         except Exception:
             pass
+
+    if not res:
         res.append({
-            "ts": ts,
-            "b64": b64,
+            "ts": main_ts,
+            "b64": photo_b64 or "",
             "subtype": subtype,
             "severity": sev,
-            "path": None,
         })
     return res
 
@@ -645,6 +678,12 @@ def render_priority_queue_and_interventions():
             ring_cls = "fg-pq-ring-red" if sev >= 5 or item["score_val"] >= 70 else ("fg-pq-ring-orange" if sev >= 4 else "fg-pq-ring-amber")
 
             with st.container(key=card_key):
+                # Full-card click overlay: clicking anywhere on the div selects this incident
+                if st.button("Inspect incident", key=f"sel_card_{item['key']}", use_container_width=True):
+                    st.session_state["queue_selected"] = item["id"]
+                    st.session_state[f"detail_ts_{item['id']}"] = item["video_ts"]
+                    st.rerun()
+
                 col_thumb, col_body = st.columns([1.0, 2.3], gap="small")
 
                 with col_thumb:
@@ -668,6 +707,7 @@ def render_priority_queue_and_interventions():
                     title_btn_label = f"{item['location']} · {item['title']}"
                     if st.button(title_btn_label, key=f"sel_title_{item['key']}", use_container_width=True):
                         st.session_state["queue_selected"] = item["id"]
+                        st.session_state[f"detail_ts_{item['id']}"] = item["video_ts"]
                         st.rerun()
 
                     st.markdown(
@@ -711,6 +751,7 @@ def render_priority_queue_and_interventions():
                         else:
                             if st.button("Inspect &rarr;", key=f"sel_btn_{item['key']}", use_container_width=True):
                                 st.session_state["queue_selected"] = item["id"]
+                                st.session_state[f"detail_ts_{item['id']}"] = item["video_ts"]
                                 st.rerun()
 
     # =============================================================
@@ -735,8 +776,8 @@ def render_priority_queue_and_interventions():
                 unsafe_allow_html=True,
             )
 
-            # Retrieve keyframes filmstrip for this job
-            keyframes = _get_job_keyframes(selected_item.get("job_id"))
+            # Retrieve keyframes filmstrip for this incident
+            keyframes = _get_job_keyframes(selected_item)
             active_ts_key = f"detail_ts_{selected_item['id']}"
             if active_ts_key not in st.session_state:
                 st.session_state[active_ts_key] = selected_item["video_ts"]
