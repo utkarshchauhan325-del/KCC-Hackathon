@@ -45,7 +45,7 @@ def test_charts_generation():
     assert len(ward_bars.data) == 3
 
     scatter = render_blockage_vs_flood_scatter()
-    assert len(scatter.data) == 1
+    assert len(scatter.data) == 4
 
 def test_printable_html_report_generation():
     """Verify official report generation contains required metadata."""

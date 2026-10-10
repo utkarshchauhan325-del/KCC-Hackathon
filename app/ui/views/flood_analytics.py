@@ -212,7 +212,7 @@ def render_flood_analytics():
                 st.plotly_chart(render_ward_vulnerability_bars(), use_container_width=True, config=_CHART_CONFIG)
         with c2:
             with st.container(border=True):
-                st.markdown(section_title("Blockage against standing water", "Each point is a monitored location"), unsafe_allow_html=True)
+                st.markdown(section_title("Blockage against standing water", "Standing water depth (mm) by drainage blockage severity tier"), unsafe_allow_html=True)
                 st.plotly_chart(render_blockage_vs_flood_scatter(), use_container_width=True, config=_CHART_CONFIG)
 
     with tab_report:
