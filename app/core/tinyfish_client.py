@@ -29,7 +29,9 @@ PUNE_KNOWN_LOCATIONS = [
     "Aundh", "Pashan", "Camp", "Koregaon Park", "Kalyani Nagar", "Khadki",
     "Bibvewadi", "Dhankawadi", "Warje", "Wakad", "Pimpri", "Chinchwad",
     "Bhosari", "Nigdi", "Kasba Peth", "Budhwar Peth", "Bund Garden",
-    "Mula-Mutha", "Mutha River", "Mula River", "Khadakwasla", "Pashan Lake"
+    "Mula-Mutha", "Mutha River", "Mula River", "Khadakwasla", "Pashan Lake",
+    "Dighi", "Dighigaon", "Chakan", "Alandi", "Wagholi", "Manjri",
+    "Kondhwa", "Undri", "Vadgaon Sheri", "Lohegaon", "Dhanori", "Vishrantwadi"
 ]
 
 FALLBACK_CIVIC_REPORTS: List[Dict[str, Any]] = [
@@ -117,13 +119,19 @@ def mask_api_key(key: str) -> str:
     return f"{key[:11]}••••••••{key[-4:]}"
 
 
-def extract_pune_locations(text: str) -> List[str]:
+def extract_pune_locations(text: str, query_keyword: str = "") -> List[str]:
     """Scan text against known Pune zones, wards, and arterial roads."""
     found: List[str] = []
     text_lower = text.lower()
+
+    if query_keyword and query_keyword.strip():
+        qk = query_keyword.strip().lower()
+        if qk in text_lower:
+            found.append(query_keyword.strip().title())
+
     for loc in PUNE_KNOWN_LOCATIONS:
         pattern = r"\b" + re.escape(loc.lower()) + r"\b"
-        if re.search(pattern, text_lower):
+        if re.search(pattern, text_lower) and loc not in found and loc.title() not in found:
             found.append(loc)
     return found[:4]
 
@@ -215,12 +223,25 @@ def execute_tinyfish_search(query: str, limit: int = 10) -> Dict[str, Any]:
 
 def fetch_pune_civic_intelligence(
     query: str = "pune flood advisory rainfall waterlogging road closure drainage complaint",
-    limit: int = 12,
-    use_fallback_if_empty: bool = True
+    limit: int = 15,
+    use_fallback_if_empty: bool = True,
+    location_filter: str = "",
 ) -> Dict[str, Any]:
-    """Fetch and structure real-time Pune civic intelligence reports from TinyFish."""
+    """Fetch and structure real-time Pune civic intelligence reports from TinyFish.
+    
+    If location_filter is provided (e.g. 'Dighi', 'Kothrud'), results are strictly
+    filtered so only reports mentioning that specific locality are returned.
+    """
     api_key = get_tinyfish_api_key()
-    res = execute_tinyfish_search(query=query, limit=limit)
+    loc_clean = location_filter.strip().lower() if location_filter else ""
+
+    # When searching a specific area, target that area explicitly in the search query
+    target_query = query
+    if loc_clean and loc_clean not in query.lower():
+        target_query = f"{loc_clean} pune waterlogging flood rain drainage road"
+
+    fetch_limit = 20 if loc_clean else limit
+    res = execute_tinyfish_search(query=target_query, limit=fetch_limit)
 
     reports: List[Dict[str, Any]] = []
     source_type = "tinyfish_api"
@@ -229,10 +250,16 @@ def fetch_pune_civic_intelligence(
         for idx, item in enumerate(res["results"]):
             title = item.get("title") or "Pune Civic Advisory"
             snippet = item.get("snippet") or ""
+            combined_text = f"{title} {snippet}"
+
+            # Strict location filtering: discard reports from other areas
+            if loc_clean and loc_clean not in combined_text.lower():
+                continue
+
             cat = categorize_report(title, snippet)
-            locs = extract_pune_locations(f"{title} {snippet}")
+            locs = extract_pune_locations(combined_text, query_keyword=location_filter)
             if not locs:
-                locs = ["Pune Urban"]
+                locs = [location_filter.strip().title() if loc_clean else "Pune Urban"]
 
             reports.append({
                 "id": f"tf-live-{idx+1}",
@@ -248,10 +275,16 @@ def fetch_pune_civic_intelligence(
     else:
         # Fall back gracefully so dashboard continues to demonstrate intelligence
         if use_fallback_if_empty:
-            reports = list(FALLBACK_CIVIC_REPORTS)
+            if loc_clean:
+                reports = [
+                    r for r in FALLBACK_CIVIC_REPORTS
+                    if loc_clean in (r["title"] + " " + r["snippet"] + " " + " ".join(r.get("locations", []))).lower()
+                ]
+            else:
+                reports = list(FALLBACK_CIVIC_REPORTS)
             source_type = "cached_fallback"
 
-    # Category breakdown
+    # Category breakdown strictly for matching reports
     counts = {
         "Total": len(reports),
         "Official Advisory": sum(1 for r in reports if r["category"] == "Official Advisory"),
@@ -266,7 +299,8 @@ def fetch_pune_civic_intelligence(
         "source": source_type,
         "api_key_configured": bool(api_key),
         "api_key_masked": mask_api_key(api_key),
-        "query": query,
+        "query": target_query,
+        "location_filter": location_filter,
         "counts": counts,
         "reports": reports,
     }

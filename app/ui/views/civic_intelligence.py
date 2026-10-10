@@ -108,8 +108,8 @@ def render_civic_intelligence():
             key="sb_preset_intel",
         )
         custom_query = fcols[1].text_input(
-            "Custom Keyword Filter",
-            placeholder="e.g. Sinhagad Road, Kothrud",
+            "Filter by Specific Area / Locality",
+            placeholder="e.g. Dighi, Kothrud, Sinhagad Road",
             key="txt_custom_filter",
         )
         refresh_btn = fcols[2].button(
@@ -120,26 +120,49 @@ def render_civic_intelligence():
             key="btn_refresh_intel",
         )
 
+    loc_filter = custom_query.strip()
     active_query = PRESET_QUERIES[selected_preset]
-    if custom_query.strip():
-        active_query = f"pune {custom_query.strip()} flood waterlogging"
+    if loc_filter:
+        active_query = f"{loc_filter} pune waterlogging flood rain drainage road"
 
     # Fetch data (cached in session or triggered via refresh)
-    cache_key = f"intel_data_{active_query}"
+    cache_key = f"intel_data_{active_query}_{loc_filter}"
     if refresh_btn or cache_key not in st.session_state:
-        with st.spinner("Querying TinyFish web search agent for live Pune alerts..."):
-            data = fetch_pune_civic_intelligence(query=active_query, limit=12)
+        spinner_msg = f"Querying TinyFish web search agent for {loc_filter.title()}..." if loc_filter else "Querying TinyFish web search agent for live Pune alerts..."
+        with st.spinner(spinner_msg):
+            data = fetch_pune_civic_intelligence(query=active_query, limit=20, location_filter=loc_filter)
             st.session_state[cache_key] = data
     else:
         data = st.session_state[cache_key]
 
-    reports = data.get("reports", [])
-    counts = data.get("counts", {})
+    raw_reports = data.get("reports", [])
+    
+    # Strictly isolate reports: if an area is searched, discard ALL reports from other locations
+    if loc_filter:
+        lf = loc_filter.lower()
+        reports = [
+            r for r in raw_reports
+            if lf in r.get("title", "").lower()
+            or lf in r.get("snippet", "").lower()
+            or any(lf in loc.lower() for loc in r.get("locations", []))
+        ]
+    else:
+        reports = raw_reports
+
+    # Recalculate KPIs strictly for filtered reports
+    counts = {
+        "Total": len(reports),
+        "Official Advisory": sum(1 for r in reports if r["category"] == "Official Advisory"),
+        "Road Closure": sum(1 for r in reports if r["category"] == "Road Closure"),
+        "Drainage Issue": sum(1 for r in reports if r["category"] == "Drainage Issue"),
+        "Citizen Complaint": sum(1 for r in reports if r["category"] == "Citizen Complaint"),
+    }
 
     # Summary KPI Cards
+    sub_label = f"For '{loc_filter.title()}'" if loc_filter else "Live Web & News Items"
     kcols = st.columns(4, gap="medium")
     kcols[0].markdown(
-        _render_kpi_card("Total Reports", counts.get("Total", len(reports)), "Live Web & News Items", "layers", ACCENT),
+        _render_kpi_card("Total Reports", counts.get("Total", len(reports)), sub_label, "layers", ACCENT),
         unsafe_allow_html=True,
     )
     kcols[1].markdown(
@@ -151,7 +174,7 @@ def render_civic_intelligence():
         unsafe_allow_html=True,
     )
     kcols[3].markdown(
-        _render_kpi_card("Drainage & Complaints", counts.get("Drainage Issue", 0) + counts.get("Citizen Complaint", 0), "Citizen & Nullah Choke-points", "drop", "#C2410C"),
+        _render_kpi_card("Drainage & Complaints", counts.get("Drainage Issue", 0) + counts.get("Citizen Complaint", 0), "Choke-points & Citizens", "drop", "#C2410C"),
         unsafe_allow_html=True,
     )
 
@@ -170,13 +193,28 @@ def render_civic_intelligence():
     if cat_filter != "All Categories":
         filtered_reports = [r for r in reports if r.get("category") == cat_filter]
 
+    heading_sub = f"{len(filtered_reports)} verified reports for '{loc_filter.title()}'" if loc_filter else f"{len(filtered_reports)} verified reports"
     st.markdown(
-        section_title("Monitored Intelligence Feed", f"{len(filtered_reports)} verified reports"),
+        section_title("Monitored Intelligence Feed", heading_sub),
         unsafe_allow_html=True,
     )
 
     if not filtered_reports:
-        st.info("No matching reports found for the selected category.")
+        if loc_filter:
+            st.markdown(
+                f"""
+                <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:32px 20px; text-align:center; margin-top:14px;">
+                    <div style="font-size:24px; margin-bottom:8px;">📍</div>
+                    <div style="font-size:16px; font-weight:600; color:{INK}; margin-bottom:6px;">No reports found exclusively for &ldquo;{loc_filter}&rdquo;</div>
+                    <div style="font-size:13px; color:{MUTED}; max-width:480px; margin:0 auto;">
+                        All reports from other Pune areas have been filtered out. Try clearing the filter or searching another area.
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("No matching reports found for the selected category.")
         return
 
     # Render report cards in a clean 2-column responsive layout

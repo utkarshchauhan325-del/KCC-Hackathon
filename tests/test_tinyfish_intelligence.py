@@ -93,3 +93,39 @@ def test_fetch_pune_civic_intelligence_fallback_when_no_key():
         assert data["source"] == "cached_fallback"
         assert len(data["reports"]) > 0
         assert data["counts"]["Total"] > 0
+
+
+@patch("requests.get")
+def test_fetch_pune_civic_intelligence_strict_location_filter(mock_get):
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {
+        "query": "dighi pune",
+        "total_results": 2,
+        "results": [
+            {
+                "title": "Flood Situation @ Dighigaon",
+                "snippet": "Water has entered residences in Dighigaon after heavy rains.",
+                "url": "https://example.com/dighi",
+                "date": "1 day ago",
+                "site_name": "instagram.com",
+            },
+            {
+                "title": "Khadakwasla Dam Water Released",
+                "snippet": "Mutha river in Deccan Gymkhana reaches warning level.",
+                "url": "https://example.com/dam",
+                "date": "2 days ago",
+                "site_name": "timesofindia.com",
+            },
+        ],
+    }
+    mock_get.return_value = mock_resp
+
+    with patch("app.core.tinyfish_client.get_tinyfish_api_key", return_value="sk-test-key-12345678"):
+        data = fetch_pune_civic_intelligence(location_filter="Dighi")
+        assert data["status"] == "ok"
+        # Only the Dighigaon report should be kept, Khadakwasla / Deccan Gymkhana must be filtered out!
+        assert len(data["reports"]) == 1
+        assert "Dighigaon" in data["reports"][0]["title"]
+        assert data["counts"]["Total"] == 1
+
