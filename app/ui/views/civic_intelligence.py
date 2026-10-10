@@ -115,19 +115,7 @@ def render_civic_intelligence():
     else:
         data = st.session_state[cache_key]
 
-    raw_reports = data.get("reports", [])
-    
-    # Strictly isolate reports: if an area is searched, discard ALL reports from other locations
-    if loc_filter:
-        lf = loc_filter.lower()
-        reports = [
-            r for r in raw_reports
-            if lf in r.get("title", "").lower()
-            or lf in r.get("snippet", "").lower()
-            or any(lf in loc.lower() for loc in r.get("locations", []))
-        ]
-    else:
-        reports = raw_reports
+    reports = data.get("reports", [])
 
     # Recalculate KPIs strictly for filtered reports
     counts = {
@@ -136,44 +124,52 @@ def render_civic_intelligence():
         "Road Closure": sum(1 for r in reports if r["category"] == "Road Closure"),
         "Drainage Issue": sum(1 for r in reports if r["category"] == "Drainage Issue"),
         "Citizen Complaint": sum(1 for r in reports if r["category"] == "Citizen Complaint"),
+        "Videos": sum(1 for r in reports if r.get("is_video")),
     }
 
     # Summary KPI Cards
-    sub_label = f"For '{loc_filter.title()}'" if loc_filter else "Live Web & News Items"
+    sub_label = f"Strictly For '{loc_filter.title()}'" if loc_filter else "Live Web & News Items"
     kcols = st.columns(4, gap="medium")
     kcols[0].markdown(
         _render_kpi_card("Total Reports", counts.get("Total", len(reports)), sub_label, "layers", ACCENT),
         unsafe_allow_html=True,
     )
     kcols[1].markdown(
-        _render_kpi_card("Official Advisories", counts.get("Official Advisory", 0), "PMC & IMD Bulletins", "alert", "#1D4ED8"),
+        _render_kpi_card("Video Footage", counts.get("Videos", 0), "Ground Reels & Broadcasts", "film", "#DC2626"),
         unsafe_allow_html=True,
     )
     kcols[2].markdown(
-        _render_kpi_card("Road Closures", counts.get("Road Closure", 0), "Arterial Disruptions", "truck", "#DC2626"),
+        _render_kpi_card("Official Advisories", counts.get("Official Advisory", 0), "PMC & IMD Bulletins", "alert", "#1D4ED8"),
         unsafe_allow_html=True,
     )
     kcols[3].markdown(
-        _render_kpi_card("Drainage & Complaints", counts.get("Drainage Issue", 0) + counts.get("Citizen Complaint", 0), "Choke-points & Citizens", "drop", "#C2410C"),
+        _render_kpi_card("Drainage & Closures", counts.get("Drainage Issue", 0) + counts.get("Road Closure", 0), "Choke-points & Diverts", "drop", "#C2410C"),
         unsafe_allow_html=True,
     )
 
     st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
-    # Secondary filter by category
+    # Secondary filter by category / video
+    cat_options = ["All Reports"]
+    if counts.get("Videos", 0) > 0:
+        cat_options.append("📹 Videos & Footage Only")
+    cat_options.extend(["Official Advisory", "Road Closure", "Drainage Issue", "Citizen Complaint"])
+
     cat_filter = st.radio(
         "Filter by category",
-        ["All Categories", "Official Advisory", "Road Closure", "Drainage Issue", "Citizen Complaint"],
+        cat_options,
         horizontal=True,
         label_visibility="collapsed",
         key="rad_cat_filter",
     )
 
     filtered_reports = reports
-    if cat_filter != "All Categories":
+    if cat_filter == "📹 Videos & Footage Only":
+        filtered_reports = [r for r in reports if r.get("is_video")]
+    elif cat_filter != "All Reports":
         filtered_reports = [r for r in reports if r.get("category") == cat_filter]
 
-    heading_sub = f"{len(filtered_reports)} verified reports for '{loc_filter.title()}'" if loc_filter else f"{len(filtered_reports)} verified reports"
+    heading_sub = f"{len(filtered_reports)} verified reports strictly for '{loc_filter.title()}'" if loc_filter else f"{len(filtered_reports)} verified reports"
     st.markdown(
         section_title("Monitored Intelligence Feed", heading_sub),
         unsafe_allow_html=True,
@@ -185,7 +181,7 @@ def render_civic_intelligence():
                 f"""
                 <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; padding:32px 20px; text-align:center; margin-top:14px;">
                     <div style="font-size:24px; margin-bottom:8px;">📍</div>
-                    <div style="font-size:16px; font-weight:600; color:{INK}; margin-bottom:6px;">No reports found exclusively for &ldquo;{loc_filter}&rdquo;</div>
+                    <div style="font-size:16px; font-weight:600; color:{INK}; margin-bottom:6px;">No reports or videos found exclusively for &ldquo;{loc_filter}&rdquo;</div>
                     <div style="font-size:13px; color:{MUTED}; max-width:480px; margin:0 auto;">
                         All reports from other Pune areas have been filtered out. Try clearing the filter or searching another area.
                     </div>
@@ -205,20 +201,41 @@ def render_civic_intelligence():
         cstyle = CATEGORY_COLORS.get(cat, CATEGORY_COLORS["Official Advisory"])
         sev = report.get("severity", "Medium")
         sev_color = STATUS.get(sev, STATUS["Medium"])["fg"]
+        is_vid = report.get("is_video", False)
+        embed_url = report.get("embed_url")
+
+        # Sanitize location tags: if filtered, only show the entered place
+        if loc_filter:
+            display_locs = [loc for loc in report.get("locations", []) if loc_filter.lower() in loc.lower()]
+            if not display_locs:
+                display_locs = [loc_filter.strip().title()]
+        else:
+            display_locs = report.get("locations", ["Pune Urban"])
 
         loc_tags = "".join(
             f'<span style="background:#F1F5F9; color:#334155; font-size:11px; font-weight:500; padding:2px 8px; border-radius:12px; margin-right:6px;">📍 {loc}</span>'
-            for loc in report.get("locations", [])
+            for loc in display_locs
         )
 
+        video_pill = ""
+        if is_vid:
+            video_pill = """
+            <span style="background:#FEF2F2; color:#DC2626; border:1px solid #FECACA; font-size:11px; font-weight:700; padding:2px 7px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">
+                📹 Video Report
+            </span>
+            """
+
+        link_text = "▶️ Watch Video Footage &rarr;" if is_vid else "Open Source Link &rarr;"
+
         card_html = f"""
-        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; padding:18px 20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; justify-content:space-between; min-height:210px;">
+        <div style="background:#FFFFFF; border:1px solid #E2E8F0; border-radius:10px; padding:18px 20px; margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,0.02); display:flex; flex-direction:column; justify-content:space-between;">
             <div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                         <span style="background:{cstyle['bg']}; color:{cstyle['fg']}; border:1px solid {cstyle['border']}; font-size:11px; font-weight:600; padding:3px 8px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">
                             {cat}
                         </span>
+                        {video_pill}
                         <span style="font-size:11px; font-weight:600; color:{sev_color};">
                             &bull; {sev} Severity
                         </span>
@@ -241,13 +258,19 @@ def render_civic_intelligence():
                         🌐 {report.get('site_name', 'Web')}
                     </span>
                     <a href="{report.get('url', '#')}" target="_blank" style="color:{ACCENT}; font-size:12px; font-weight:600; text-decoration:none;">
-                        Open Source Link &rarr;
+                        {link_text}
                     </a>
                 </div>
             </div>
         </div>
         """
         col.markdown(card_html, unsafe_allow_html=True)
+
+        # If it is an embeddable YouTube video, embed the video player directly below the card
+        if embed_url:
+            with col:
+                with st.expander("▶️ Play Embedded Video Footage", expanded=False):
+                    st.video(embed_url)
 
     # Explanation and Architecture note
     with st.expander("ℹ️ About TinyFish Civic Intelligence Architecture", expanded=False):

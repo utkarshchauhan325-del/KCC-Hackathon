@@ -166,6 +166,55 @@ def assess_severity(title: str, snippet: str, category: str) -> str:
     return "Low"
 
 
+PUNE_LOCATION_ALIASES: Dict[str, List[str]] = {
+    "sinhagad": ["sinhagad", "sinhgad"],
+    "sinhgad": ["sinhagad", "sinhgad"],
+    "dighi": ["dighi", "dighigaon"],
+    "dighigaon": ["dighi", "dighigaon"],
+    "fc road": ["fc road", "fergusson"],
+    "fergusson": ["fc road", "fergusson"],
+    "deccan": ["deccan", "deccan gymkhana"],
+    "kothrud": ["kothrud"],
+    "baner": ["baner"],
+    "hadapsar": ["hadapsar"],
+    "hinjawadi": ["hinjawadi", "hinjewadi"],
+    "hinjewadi": ["hinjawadi", "hinjewadi"],
+    "shivajinagar": ["shivajinagar", "shivaji nagar"],
+    "viman nagar": ["viman nagar", "vimannagar"],
+    "katraj": ["katraj"],
+    "swargate": ["swargate"],
+    "karve": ["karve road", "karve nagar", "karvenagar"],
+    "aundh": ["aundh"],
+    "pashan": ["pashan"],
+    "wakad": ["wakad"],
+    "bavdhan": ["bavdhan"],
+}
+
+
+def is_video_report(url: str, title: str = "") -> bool:
+    """Check if a URL or title represents video footage, reel, or broadcast."""
+    u = (url or "").lower()
+    t = (title or "").lower()
+    return (
+        any(k in u for k in ["youtube.com", "youtu.be", "/reel/", "/videos/", "videoshow", "shorts"])
+        or any(k in t for k in ["video", "reel", "footage", "live", "watch"])
+    )
+
+
+def get_embed_video_url(url: str) -> Optional[str]:
+    """Return embeddable video URL for Streamlit st.video if supported."""
+    if not url:
+        return None
+    u = url.strip()
+    if "youtube.com/shorts/" in u:
+        return u.replace("youtube.com/shorts/", "youtube.com/watch?v=")
+    if "youtube.com/watch" in u or "youtu.be/" in u:
+        return u
+    if u.endswith((".mp4", ".webm", ".ogg")):
+        return u
+    return None
+
+
 def execute_tinyfish_search(query: str, limit: int = 10) -> Dict[str, Any]:
     """Perform a live HTTP query against TinyFish Search API."""
     api_key = get_tinyfish_api_key()
@@ -233,59 +282,136 @@ def fetch_pune_civic_intelligence(
 ) -> Dict[str, Any]:
     """Fetch and structure real-time Pune civic intelligence reports from TinyFish.
     
-    If location_filter is provided (e.g. 'Dighi', 'Kothrud'), results are strictly
-    filtered so only reports mentioning that specific locality are returned.
+    If location_filter is provided (e.g. 'Dighi', 'Kothrud', 'Sinhagad'), results
+    are strictly isolated to only reports and videos of that specific place.
+    All reports whose primary topic is another place are completely eliminated.
     """
     api_key = get_tinyfish_api_key()
     loc_clean = location_filter.strip().lower() if location_filter else ""
 
-    # When searching a specific area, target that area explicitly in the search query
-    target_query = query
-    if loc_clean and loc_clean not in query.lower():
-        target_query = f"{loc_clean} pune waterlogging flood rain drainage road"
+    raw_candidates: List[Dict[str, Any]] = []
+    seen_urls: set = set()
+    last_status = "missing_key"
+    last_error = None
 
-    fetch_limit = 20 if loc_clean else limit
-    res = execute_tinyfish_search(query=target_query, limit=fetch_limit)
+    if loc_clean:
+        # Search both general alerts and video footage for maximum locality coverage
+        q_general = f"{loc_clean} pune waterlogging flood rain drainage road"
+        q_video = f"{loc_clean} pune waterlogging video footage"
+        
+        res1 = execute_tinyfish_search(query=q_video, limit=12)
+        res2 = execute_tinyfish_search(query=q_general, limit=12)
+        
+        last_status = res1["status"] if res1["status"] != "missing_key" else res2["status"]
+        last_error = res1.get("error") or res2.get("error")
+        
+        for r in (res1.get("results", []) + res2.get("results", [])):
+            u = r.get("url")
+            if u and u not in seen_urls:
+                seen_urls.add(u)
+                raw_candidates.append(r)
+    else:
+        res = execute_tinyfish_search(query=query, limit=limit)
+        last_status = res["status"]
+        last_error = res.get("error")
+        raw_candidates = res.get("results", [])
 
     reports: List[Dict[str, Any]] = []
     source_type = "tinyfish_api"
 
-    if res["status"] == "ok" and res.get("results"):
-        for idx, item in enumerate(res["results"]):
+    if last_status == "ok" and raw_candidates:
+        if loc_clean:
+            aliases = PUNE_LOCATION_ALIASES.get(loc_clean, [loc_clean])
+            
+            # Additional other locations that should cause a report to be excluded if in the title
+            known_other_areas = [
+                loc.lower() for loc in PUNE_KNOWN_LOCATIONS
+                if not any(a in loc.lower() for a in aliases)
+            ] + ["pasalkar", "ekta nagar", "ektanagar", "hadapsar", "kothrud", "karve", "paud road", "dehu"]
+            
+            filtered_candidates = []
+            for item in raw_candidates:
+                t_raw = item.get("title") or ""
+                t_lower = t_raw.lower()
+                s_lower = (item.get("snippet") or "").lower()
+                full_text = f"{t_lower} {s_lower}"
+                
+                # Must mention at least one alias of the queried location
+                if not any(a in full_text for a in aliases):
+                    continue
+                
+                # If title mentions another distinct locality, exclude it
+                other_in_title = [
+                    other for other in known_other_areas
+                    if not any(a in other for a in aliases) and other in t_lower
+                ]
+                if other_in_title:
+                    continue
+                
+                # Check whether title itself has the alias
+                has_title_alias = any(a in t_lower for a in aliases)
+                filtered_candidates.append((has_title_alias, item))
+            
+            # Prioritize title hits: if title hits exist, retain only title hits
+            title_hits = [item for has_title, item in filtered_candidates if has_title]
+            final_items = title_hits if title_hits else [item for _, item in filtered_candidates]
+        else:
+            final_items = raw_candidates[:limit]
+
+        for idx, item in enumerate(final_items):
             title = item.get("title") or "Pune Civic Advisory"
             snippet = item.get("snippet") or ""
-            combined_text = f"{title} {snippet}"
-
-            # Strict location filtering: discard reports from other areas
-            if loc_clean and loc_clean not in combined_text.lower():
-                continue
-
+            url = item.get("url") or "https://www.pmc.gov.in"
             cat = categorize_report(title, snippet)
-            locs = extract_pune_locations(combined_text, query_keyword=location_filter)
-            if not locs:
-                locs = [location_filter.strip().title() if loc_clean else "Pune Urban"]
+            is_vid = is_video_report(url, title)
+            embed_url = get_embed_video_url(url)
+
+            # Sanitize locations: strictly the entered place when filtered
+            if loc_clean:
+                loc_display = location_filter.strip().title()
+                if "road" in title.lower() and not loc_display.lower().endswith("road"):
+                    loc_display = f"{loc_display} Road"
+                locs = [loc_display]
+            else:
+                locs = extract_pune_locations(f"{title} {snippet}", query_keyword=location_filter)
+                if not locs:
+                    locs = ["Pune Urban"]
 
             reports.append({
                 "id": f"tf-live-{idx+1}",
                 "title": title,
                 "snippet": snippet,
-                "url": item.get("url") or "https://www.pmc.gov.in",
+                "url": url,
                 "date": item.get("date") or "Recently reported",
                 "site_name": item.get("site_name") or "Web Search",
                 "category": cat,
                 "severity": assess_severity(title, snippet, cat),
                 "locations": locs,
+                "is_video": is_vid,
+                "embed_url": embed_url,
             })
     else:
         # Fall back gracefully so dashboard continues to demonstrate intelligence
         if use_fallback_if_empty:
             if loc_clean:
-                reports = [
-                    r for r in FALLBACK_CIVIC_REPORTS
-                    if loc_clean in (r["title"] + " " + r["snippet"] + " " + " ".join(r.get("locations", []))).lower()
-                ]
+                aliases = PUNE_LOCATION_ALIASES.get(loc_clean, [loc_clean])
+                reports = []
+                for r in FALLBACK_CIVIC_REPORTS:
+                    combined_fb = (r["title"] + " " + r["snippet"]).lower()
+                    if any(a in combined_fb for a in aliases):
+                        # Clone and sanitize locations
+                        r_copy = dict(r)
+                        r_copy["locations"] = [location_filter.strip().title()]
+                        r_copy["is_video"] = is_video_report(r_copy["url"], r_copy["title"])
+                        r_copy["embed_url"] = get_embed_video_url(r_copy["url"])
+                        reports.append(r_copy)
             else:
-                reports = list(FALLBACK_CIVIC_REPORTS)
+                reports = []
+                for r in FALLBACK_CIVIC_REPORTS:
+                    r_copy = dict(r)
+                    r_copy["is_video"] = is_video_report(r_copy["url"], r_copy["title"])
+                    r_copy["embed_url"] = get_embed_video_url(r_copy["url"])
+                    reports.append(r_copy)
             source_type = "cached_fallback"
 
     # Category breakdown strictly for matching reports
@@ -295,15 +421,16 @@ def fetch_pune_civic_intelligence(
         "Road Closure": sum(1 for r in reports if r["category"] == "Road Closure"),
         "Drainage Issue": sum(1 for r in reports if r["category"] == "Drainage Issue"),
         "Citizen Complaint": sum(1 for r in reports if r["category"] == "Citizen Complaint"),
+        "Videos": sum(1 for r in reports if r.get("is_video")),
     }
 
     return {
-        "status": res["status"],
-        "error": res.get("error"),
+        "status": last_status,
+        "error": last_error,
         "source": source_type,
         "api_key_configured": bool(api_key),
         "api_key_masked": mask_api_key(api_key),
-        "query": target_query,
+        "query": f"{loc_clean} pune alerts" if loc_clean else query,
         "location_filter": location_filter,
         "counts": counts,
         "reports": reports,
