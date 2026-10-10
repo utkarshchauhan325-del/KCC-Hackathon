@@ -18,14 +18,14 @@ T = TypeVar("T", bound=BaseModel)
 # Tried in order after GEMINI_MODEL. Free-tier quota is per model (20 requests/day), so a
 # 429 on one model moves straight to the next.
 FALLBACK_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
     "gemini-3-flash-preview",
     "gemini-flash-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
 ]
 
 class GeminiVideoClient:

@@ -106,7 +106,11 @@ FALLBACK_CIVIC_REPORTS: List[Dict[str, Any]] = [
 
 def get_tinyfish_api_key() -> str:
     """Retrieve TinyFish API key from environment variable or settings."""
-    key = os.getenv("TINYFISH_API_KEY") or getattr(settings, "TINYFISH_API_KEY", "")
+    key = (
+        os.getenv("TINYFISH_API_KEY")
+        or os.getenv("tinyfishapikey")
+        or getattr(settings, "TINYFISH_API_KEY", "")
+    )
     return key.strip() if key else ""
 
 

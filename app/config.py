@@ -24,7 +24,11 @@ class Settings(BaseSettings):
     )
     WEATHER_API_KEY: str = Field(default="", description="WeatherAPI Key for meteorological forecasting")
     TOMTOM_API_KEY: str = Field(default="", description="TomTom Traffic API Key for road congestion monitoring")
-    TINYFISH_API_KEY: str = Field(default="", description="TinyFish API Key")
+    TINYFISH_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices("TINYFISH_API_KEY", "tinyfishapikey", "TINYFISHAPIKEY"),
+        description="TinyFish API Key"
+    )
     LOG_LEVEL: str = Field(default="INFO")
 
     # Administrator Authentication
