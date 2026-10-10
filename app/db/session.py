@@ -36,6 +36,81 @@ def init_db() -> None:
     except Exception:
         pass
 
+    # Ensure default PMC field worker accounts are always provisioned and persisted in SQLite
+    try:
+        from app.db.models import Worker, hash_password
+        db = SessionLocal()
+        try:
+            worker_count = db.query(Worker).count()
+            if worker_count < 5:
+                demo_workers = [
+                    {
+                        "name": "Suresh Jadhav",
+                        "email": "suresh@pune.gov.in",
+                        "phone": "9820011001",
+                        "password": "worker123",
+                        "zone": "Central",
+                        "ward": "Kasba-Vishrambaugwada",
+                        "skills": "drainage, jetting, suction tanker",
+                    },
+                    {
+                        "name": "Ramesh Kadam",
+                        "email": "ramesh@pune.gov.in",
+                        "phone": "9820011002",
+                        "password": "worker123",
+                        "zone": "North",
+                        "ward": "Shivajinagar-Ghole Road",
+                        "skills": "solid waste, rapid clearance",
+                    },
+                    {
+                        "name": "Santosh Shinde",
+                        "email": "santosh@pune.gov.in",
+                        "phone": "9820011003",
+                        "password": "worker123",
+                        "zone": "South",
+                        "ward": "Bibwewadi",
+                        "skills": "dewatering, road hazard",
+                    },
+                    {
+                        "name": "Amit Gaikwad",
+                        "email": "amit@pune.gov.in",
+                        "phone": "9820011004",
+                        "password": "worker123",
+                        "zone": "West",
+                        "ward": "Kothrud-Bavdhan",
+                        "skills": "drainage, robotic crawler",
+                    },
+                    {
+                        "name": "Sachin More",
+                        "email": "sachin@pune.gov.in",
+                        "phone": "9820011005",
+                        "password": "worker123",
+                        "zone": "East",
+                        "ward": "Nagar Road-Vadgaon Sheri",
+                        "skills": "solid waste, barricading",
+                    },
+                ]
+                for w_data in demo_workers:
+                    existing = db.query(Worker).filter(
+                        (Worker.phone == w_data["phone"]) | (Worker.email == w_data["email"])
+                    ).first()
+                    if not existing:
+                        db.add(Worker(
+                            name=w_data["name"],
+                            email=w_data["email"],
+                            phone=w_data["phone"],
+                            password_hash=hash_password(w_data["password"]),
+                            zone=w_data["zone"],
+                            ward=w_data["ward"],
+                            skills=w_data["skills"],
+                            active=True,
+                        ))
+                db.commit()
+        finally:
+            db.close()
+    except Exception:
+        pass
+
 def get_db():
     """Dependency for obtaining a database session."""
     db = SessionLocal()

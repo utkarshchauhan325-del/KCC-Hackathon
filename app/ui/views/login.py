@@ -165,7 +165,7 @@ def render_login_page() -> None:
                 id_val = st.text_input(
                     "Email or Mobile Number",
                     value=st.session_state.get("prefill_email", ""),
-                    placeholder="e.g. admin@pune.gov.in or suresh@pune.gov.in",
+                    placeholder="Enter email or mobile number",
                     key="login_email",
                 )
 
