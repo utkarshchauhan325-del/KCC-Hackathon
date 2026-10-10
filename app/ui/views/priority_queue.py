@@ -468,27 +468,16 @@ def render_priority_queue_and_interventions():
     # -------------------------------------------------------------
     # Page Header matching docs/queue_design.png
     # -------------------------------------------------------------
-    head_left, head_right = st.columns([3.5, 1.5], vertical_alignment="bottom")
-    with head_left:
-        st.markdown(
-            """
-            <div class="fg-pq-title-group">
-                <div class="fg-eyebrow">OPERATIONS</div>
-                <h1>Priority queue</h1>
-                <p>Every hazard Gemini finds in CCTV video lands here with its key frame. Review, then dispatch a crew.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with head_right:
-        act_col1, act_col2 = st.columns([1, 1.2])
-        with act_col1:
-            if st.button("Export log", key="pq_btn_export", use_container_width=True):
-                st.toast("Priority incident audit log exported to CSV")
-        with act_col2:
-            if st.button("Upload video", key="pq_btn_upload", type="primary", use_container_width=True):
-                st.toast("Navigating to CCTV Video Analysis...")
-                st.switch_page("app/ui/views/cctv_monitoring.py")
+    st.markdown(
+        """
+        <div class="fg-pq-title-group">
+            <div class="fg-eyebrow">OPERATIONS</div>
+            <h1>Priority queue</h1>
+            <p>Every hazard Gemini finds in CCTV video lands here with its key frame. Review, then dispatch a crew.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Toast feedback for actions
     toast_data = st.session_state.pop("deploy_success_data", None)
