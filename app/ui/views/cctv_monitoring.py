@@ -293,21 +293,17 @@ def _render_upload() -> None:
         run_pass_b = True
 
         if st.button("Run analysis", type="primary", use_container_width=True, disabled=target is None):
-            with st.status("Analysing video", expanded=True) as status:
-                status.write(f"Source: `{target.name}` ({target.stat().st_size / (1024 * 1024):.1f} MB) · {area['name']}")
+            with st.spinner("Uploading video..."):
                 try:
                     result = CivicEyePipeline().process_video(
                         video_path=target,
                         source_gps=gps,
                         run_pass_b=run_pass_b,
-                        progress_cb=lambda msg: status.write(msg),
                     )
-                    status.update(label="Analysis complete", state="complete", expanded=False)
                     st.session_state["active_job_id"] = result["job_id"]
                     st.toast("Analysis complete. Key frames were added to the priority queue.")
                     st.rerun()
                 except Exception as e:
-                    status.update(label="Analysis failed", state="error")
                     st.error(f"Video analysis failed: {e}")
 
 
