@@ -191,7 +191,6 @@ def render_flood_analytics():
 
     st.markdown(page_header(
         "Analytics and reports",
-        "Rainfall against risk, ward comparison and blockage against standing water. Export the audit report and datasets.",
         eyebrow="Analytics",
         meta=["Report ref <b>PMC/DRM/2026/FL-0924</b>"],
     ), unsafe_allow_html=True)

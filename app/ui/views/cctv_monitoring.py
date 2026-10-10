@@ -152,10 +152,7 @@ def render_cctv_monitoring():
 
 
 def _render_camera_grid() -> None:
-    st.markdown(section_title(
-        "Assigned cameras",
-        "Scores from the analysed video of each camera. The dashboard shows the same scores for these locations.",
-    ), unsafe_allow_html=True)
+    st.markdown(section_title("Assigned cameras"), unsafe_allow_html=True)
     locations = {l["id"]: l for l in get_weather_adjusted_locations()}
     db = SessionLocal()
     try:
@@ -436,7 +433,7 @@ def render_job_results():
 
         st.markdown("<hr class='fg-rule'>", unsafe_allow_html=True)
         head, pick = st.columns([1.3, 1], vertical_alignment="bottom")
-        head.markdown(section_title("Results", "Scores, findings and key frames for an analysed video."), unsafe_allow_html=True)
+        head.markdown(section_title("Results"), unsafe_allow_html=True)
         active = st.session_state.get("active_job_id")
         by_id = {j.id: j for j in jobs}
         ids = list(by_id)
@@ -469,8 +466,7 @@ def render_job_results():
                 "Coloured outlines are per-object masks from the local detector, each with a track ID that follows it "
                 "across frames. White boxes marked VLM are Gemini's findings."
             )
-            st.markdown(section_title("Key frames", "Saved automatically and attached to this video's incidents in the priority queue."),
-                        unsafe_allow_html=True)
+            st.markdown(section_title("Key frames"), unsafe_allow_html=True)
             render_frame_gallery(job_key_frames(job), key=f"res_{job.id[:8]}", columns=2)
 
         # Left: everything about the video
@@ -492,9 +488,7 @@ def render_job_results():
                 + "</div>",
                 unsafe_allow_html=True,
             )
-            sources = result.get("score_sources") or {}
-            if sources:
-                st.caption("Score inputs: " + " · ".join(f"{k.replace('_', ' ')}: {v}" for k, v in sources.items()))
+
 
             if objects is None:
                 st.warning("The local detector did not run for this video, so only Gemini's findings are available.")

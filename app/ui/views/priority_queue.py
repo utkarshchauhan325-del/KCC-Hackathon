@@ -382,17 +382,12 @@ def render_priority_queue_and_interventions():
     ])
 
     with tab_inc:
-        f1, f2 = st.columns([1.2, 3], vertical_alignment="bottom")
+        f1, _ = st.columns([1.2, 3], vertical_alignment="bottom")
         source = f1.selectbox("Source", ["All sources", "CCTV only", "Sensor reports only"], label_visibility="collapsed")
         shown = [
             i for i in incidents
             if source == "All sources" or (source == "CCTV only") == (i["source"] == "cctv")
         ]
-        f2.markdown(
-            f'<div style="font-size:12px;color:#64708A;padding-bottom:10px;">Highest severity first. '
-            f'Showing {len(shown)} of {len(incidents)}. Analysing a new video adds its findings here automatically.</div>',
-            unsafe_allow_html=True,
-        )
         if not shown:
             st.info("No open incidents for this filter.")
         for item in shown:
