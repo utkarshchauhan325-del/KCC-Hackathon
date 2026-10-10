@@ -209,7 +209,7 @@ def _render_upload() -> None:
 
     # Right: drag and drop + preview
     with col_video:
-        st.markdown(section_title("Footage", "Drag a video in, or pick one already uploaded."), unsafe_allow_html=True)
+        st.markdown(section_title("Footage"), unsafe_allow_html=True)
         uploaded = st.file_uploader(
             "Video file",
             type=VIDEO_TYPES,
@@ -251,7 +251,7 @@ def _render_upload() -> None:
 
     # Left: where the video is from, what it is, what will run
     with col_details:
-        st.markdown(section_title("Video details", "Tag the footage with its camera or area."), unsafe_allow_html=True)
+        st.markdown(section_title("Video details"), unsafe_allow_html=True)
         z_col, a_col = st.columns([1, 2.2])
         zone = z_col.selectbox("Zone", zones)
         options = [a for a in areas if zone == "All zones" or a["zone"] == zone]
@@ -290,7 +290,7 @@ def _render_upload() -> None:
         )
 
 
-        run_pass_b = st.checkbox("Look for people dumping waste (Gemini B)", value=True)
+        run_pass_b = True
 
         if st.button("Run analysis", type="primary", use_container_width=True, disabled=target is None):
             with st.status("Analysing video", expanded=True) as status:
