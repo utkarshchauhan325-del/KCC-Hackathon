@@ -9,7 +9,7 @@ from app.ui.components.charts import (
     render_ward_vulnerability_bars,
     render_blockage_vs_flood_scatter
 )
-from app.ui.views.flood_analytics import generate_printable_html_report
+from app.ui.views.flood_analytics import generate_printable_html_report, generate_printable_pdf_report
 
 def test_pune_dataset_metrics():
     """Verify exact alignment with FloodGuard dashboard specifications."""
@@ -55,6 +55,13 @@ def test_printable_html_report_generation():
     assert "MG Road Junction" in html_report
     assert "FC Road Junction" in html_report
     assert "Deccan Gymkhana" in html_report
+
+def test_printable_pdf_report_generation():
+    """Verify official PDF audit report generation produces valid binary PDF data."""
+    pdf_report = generate_printable_pdf_report()
+    assert isinstance(pdf_report, bytes)
+    assert pdf_report.startswith(b"%PDF")
+    assert len(pdf_report) > 1000
 
 def test_location_diagnostic_data():
     """Verify detailed site problem diagnostics generated correctly."""

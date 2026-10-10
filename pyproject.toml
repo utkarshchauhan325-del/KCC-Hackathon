@@ -16,6 +16,7 @@ dependencies = [
     "pillow>=10.0.0",
     "python-dotenv>=1.0.0",
     "requests>=2.31.0",
+    "reportlab>=4.0.0",
     # Local per-frame segmentation + tracking (YOLOE). For CPU-only torch, install first:
     #   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
     "imageio-ffmpeg>=0.5.0",  # H.264 transcode so evidence videos play in browsers
