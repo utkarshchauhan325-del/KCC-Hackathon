@@ -8,11 +8,10 @@ from app.core.weather_client import fetch_live_pune_weather
 from app.ui.components.charts import (
     render_risk_distribution_donut,
     render_rainfall_forecast_bars,
-    render_water_level_trend
 )
 from app.ui.components.map_view import create_floodguard_map, render_floodguard_map_component
 from app.ui.components.location_report import render_location_full_report_box
-from app.ui.components.styles import STATUS, chip, icon, page_header, section_title, status_pill
+from app.ui.components.styles import STATUS, icon, page_header, section_title, status_pill
 
 _CHART_CONFIG = {"displayModeBar": False}
 _ALERT_COLORS = {
@@ -52,8 +51,6 @@ def render_overview_dashboard():
     kpis = get_live_pune_kpis(locations)
     busiest = get_busiest_traffic_corridor(locations)
 
-    feed = chip('<span class="fg-dot"></span>Weather feed live', "ok") if weather.is_live else chip(
-        '<span class="fg-dot"></span>Weather feed offline, using defaults', "warn")
     meta = [
         f"{icon('rain', 13)} Pune <b>{weather.temp_c:.0f}&deg;C</b> &middot; {weather.condition_text}",
         f"{icon('pin', 13)} <b>{len(locations)}</b> locations",
@@ -61,10 +58,10 @@ def render_overview_dashboard():
     st.markdown(
         page_header(
             "Flood and traffic overview",
-            "Risk across monitored drains and corridors, ranked on rainfall, traffic, conduit saturation and blockage.",
+            "",
             eyebrow="Overview",
             meta=meta,
-        ).replace('<div class="fg-meta">', f'<div class="fg-meta">{feed}'),
+        ),
         unsafe_allow_html=True,
     )
 
@@ -238,33 +235,12 @@ def render_overview_dashboard():
             ), unsafe_allow_html=True)
             st.plotly_chart(render_rainfall_forecast_bars(weather.hourly_forecast), use_container_width=True, config=_CHART_CONFIG)
 
-    b1, b2 = st.columns([1.4, 1], gap="medium")
-    with b1:
-        with st.container(border=True):
-            watch = sorted(
-                [l for l in locations if l.get("saturation_forecast")],
-                key=lambda l: (l.get("projected_peak_pct", 0), l.get("water_level_pct", 0)),
-                reverse=True,
-            )[:3]
-            outlook = " &middot; ".join(f"{l['name']}: {l['overflow_outlook'].lower()}" for l in watch)
-            st.markdown(section_title(
-                "Overflow forecast",
-                f"Drain fill projected from the rain forecast, blockage and conduit size. {outlook}",
-            ), unsafe_allow_html=True)
-            st.plotly_chart(
-                render_water_level_trend(
-                    [(l["name"], l["water_level_pct"], l["saturation_forecast"]) for l in watch],
-                    [h.time for h in weather.hourly_forecast],
-                ),
-                use_container_width=True, config=_CHART_CONFIG,
-            )
-    with b2:
-        with st.container(border=True):
-            st.markdown(section_title("Recent alerts", "Warnings and sensor threshold crossings"), unsafe_allow_html=True)
-            rows = "".join(
-                f'<div class="alert-item"><span class="alert-bar" style="background:{_ALERT_COLORS.get(a.get("severity", ""), "#94A0B4")}"></span>'
-                f'<div class="alert-content"><p class="alert-title">{a["title"]}</p><p class="alert-subtitle">{a["subtitle"]}</p></div>'
-                f'<span class="alert-time">{a["time"]}</span></div>'
-                for a in RECENT_ALERTS
-            )
-            st.markdown(f"<div>{rows}</div>", unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(section_title("Recent alerts", "Warnings and sensor threshold crossings"), unsafe_allow_html=True)
+        rows = "".join(
+            f'<div class="alert-item"><span class="alert-bar" style="background:{_ALERT_COLORS.get(a.get("severity", ""), "#94A0B4")}"></span>'
+            f'<div class="alert-content"><p class="alert-title">{a["title"]}</p><p class="alert-subtitle">{a["subtitle"]}</p></div>'
+            f'<span class="alert-time">{a["time"]}</span></div>'
+            for a in RECENT_ALERTS
+        )
+        st.markdown(f"<div>{rows}</div>", unsafe_allow_html=True)

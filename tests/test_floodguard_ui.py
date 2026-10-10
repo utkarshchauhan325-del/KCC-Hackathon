@@ -95,5 +95,3 @@ def test_render_floodguard_map_component_rendering():
         assert mock_comp.called
         assert "key" in mock_comp.call_args[1]
 
-
-

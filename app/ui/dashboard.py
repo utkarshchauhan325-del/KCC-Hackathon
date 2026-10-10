@@ -11,6 +11,7 @@ sys.path.insert(0, str(BASE_DIR))
 import streamlit as st
 from app.db.session import init_db
 from app.ui.components.styles import BRAND_MARK, get_floodguard_css
+from app.ui.views.login import render_login_page
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
@@ -27,6 +28,13 @@ st.set_page_config(
 )
 
 st.markdown(get_floodguard_css(), unsafe_allow_html=True)
+
+# -------------------------------------------------------------
+# Authentication Guard: Prompt sign-in if unauthenticated
+# -------------------------------------------------------------
+if not st.session_state.get("authenticated", False):
+    render_login_page()
+    st.stop()
 
 # -------------------------------------------------------------
 # Pages
@@ -52,13 +60,14 @@ current = st.navigation(list(pages.values()), position="hidden")
 current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
 
 # -------------------------------------------------------------
-# Top navigation bar
+# Top navigation bar (Authenticated Admin Session)
 # -------------------------------------------------------------
 NAV_LABELS = {"overview": "Dashboard", "risk-map": "Risk Map", "cctv": "CCTV", "queue": "Queue", "analytics": "Analytics"}
 queue_open = open_incident_count()
+user_email = st.session_state.get("auth_user", "admin@pune.gov.in")
 
 with st.container(key="fg_topnav"):
-    cols = st.columns([2.6] + [1] * len(PAGE_SPECS) + [2.2], vertical_alignment="center", gap="small")
+    cols = st.columns([2.3] + [1] * len(PAGE_SPECS) + [2.0, 0.8], vertical_alignment="center", gap="small")
     cols[0].markdown(
         f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
         <div><div class="fg-nav-title">FloodGuard</div><div class="fg-nav-org">Pune Municipal Corporation</div></div></div>''',
@@ -71,10 +80,18 @@ with st.container(key="fg_topnav"):
         state = "active" if slug == current_slug else "idle"
         with col.container(key=f"fgnav_{state}_{slug.replace('-', '_')}"):
             st.page_link(pages[slug], label=label, icon=ico, help=desc)
-    cols[-1].markdown(
+    cols[-2].markdown(
         f'''<div class="fg-nav-status"><span class="fg-top-dot"></span>
-        <span class="fg-nav-clock">{datetime.now():%d %b &middot; %H:%M} IST</span></div>''',
+        <span class="fg-nav-clock">{datetime.now():%d %b &middot; %H:%M} IST</span>
+        <span class="fg-nav-user-pill">{user_email}</span></div>''',
         unsafe_allow_html=True,
     )
+    with cols[-1].container(key="fg_logout_btn"):
+        if st.button("Sign out", key="btn_signout", help="Sign out of FloodGuard console"):
+            st.session_state["authenticated"] = False
+            st.session_state["login_success"] = False
+            st.session_state["login_error"] = None
+            st.rerun()
 
 current.run()
+

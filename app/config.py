@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     TOMTOM_API_KEY: str = Field(default="", description="TomTom Traffic API Key for road congestion monitoring")
     LOG_LEVEL: str = Field(default="INFO")
 
+    # Administrator Authentication
+    ADMIN_EMAIL: str = Field(default="admin@pune.gov.in", description="Official administrator email")
+    ADMIN_PASSWORD: str = Field(default="admin123", description="Administrator password")
+
     # Local per-frame segmentation + tracking (YOLOE open-vocabulary model, runs on CPU)
     DETECTOR_ENABLED: bool = True
     DETECTOR_MODEL: str = Field(default="yoloe-26s-seg.pt", description="Ultralytics YOLOE segmentation weights")
