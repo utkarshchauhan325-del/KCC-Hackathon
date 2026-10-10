@@ -573,16 +573,18 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
 .fg-src-sensor { color: var(--fg-ink-2); background: var(--fg-surface-2); }
 
 /* ==========================================================================
-   Administrator Sign-in Page Styling & Animations
+   Administrator Sign-in Page Styling & Centering
    ========================================================================== */
-.fg-login-page-wrapper {
-  position: relative;
-  min-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  padding: 30px 16px 40px;
+.stApp:has(.st-key-fg_login_card) [data-testid="stMainBlockContainer"],
+.stApp:has(.st-key-fg_login_card) .block-container {
+  max-width: 900px !important;
+  margin: 0 auto !important;
+  padding-top: 10vh !important;
+  padding-bottom: 5vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .fg-login-bg-waves {
@@ -593,7 +595,7 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
   height: 260px;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.7;
+  opacity: 0.6;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320' preserveAspectRatio='none'><path fill='%23BAE6FD' fill-opacity='0.45' d='M0,192L48,197.3C96,203,192,213,288,197.3C384,181,480,139,576,133.3C672,128,768,160,864,176C960,192,1056,192,1152,176C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'></path><path fill='%23E0F2FE' fill-opacity='0.6' d='M0,224L48,229.3C96,235,192,245,288,229.3C384,213,480,171,576,165.3C672,160,768,192,864,208C960,224,1056,224,1152,208C1248,192,1344,160,1392,144L1440,128L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'></path></svg>");
   background-size: cover;
   background-position: bottom;
@@ -604,72 +606,61 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 490px;
-  margin: 0 auto;
+  max-width: 480px;
+  margin: 0 auto !important;
   background: #FFFFFF !important;
   border: 1px solid #E2E8F0 !important;
-  border-radius: 24px !important;
-  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.04) !important;
-  padding: 38px 36px 30px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.05) !important;
+  padding: 34px 32px 28px !important;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .fg-login-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.fg-login-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background-color: #EBF5FF;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: 1px solid rgba(186, 230, 253, 0.7);
+  text-align: center;
+  margin-bottom: 22px;
 }
 .fg-login-title {
   font-family: var(--fg-font-head);
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 700;
-  color: #0F172A;
-  letter-spacing: -0.025em;
+  color: #0B132B;
+  letter-spacing: -0.02em;
   line-height: 1.2;
   margin: 0;
 }
 .fg-login-sub {
   font-size: 13px;
   color: #64748B;
-  margin-top: 4px;
+  margin-top: 5px;
   line-height: 1.35;
 }
 
 .fg-demo-pill {
-  background: #F8FAFC;
-  border: 1px dashed #CBD5E1;
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
   border-radius: 10px;
-  padding: 9px 12px;
+  padding: 12px 14px;
   margin-bottom: 20px;
-  font-size: 12px;
-  color: #475569;
+  font-size: 12.5px;
+  color: #0369A1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  line-height: 1.5;
 }
 .fg-demo-pill-title {
-  font-weight: 600;
-  color: #0A7C8F;
+  font-weight: 700;
+  color: #0284C7;
   font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
 }
 .fg-demo-pill code {
-  background: #E2E8F0;
-  color: #0F172A;
-  padding: 1.5px 6px;
+  background: #E0F2FE;
+  color: #0C4A6E;
+  padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
   font-family: var(--fg-font-mono);
@@ -682,15 +673,15 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
 }
 
 .st-key-fg_login_card label p {
-  font-size: 13px !important;
+  font-size: 13.5px !important;
   font-weight: 600 !important;
   color: #1E293B !important;
-  margin-bottom: 6px !important;
+  margin-bottom: 5px !important;
 }
 .st-key-fg_login_card [data-testid="stTextInputRootElement"] {
-  border-radius: 12px !important;
-  border: 1.5px solid #E2E8F0 !important;
-  background: #FAFCFF !important;
+  border-radius: 10px !important;
+  border: 1.5px solid #CBD5E1 !important;
+  background: #F8FAFC !important;
   transition: all 0.2s ease !important;
 }
 .st-key-fg_login_card [data-testid="stTextInputRootElement"]:focus-within {
@@ -701,97 +692,30 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
 .st-key-fg_login_card [data-testid="stTextInputRootElement"] input {
   font-size: 14px !important;
   color: #0F172A !important;
-  padding: 10px 14px 10px 42px !important;
-}
-
-.st-key-login_email [data-testid="stTextInputRootElement"] input {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='16' x='2' y='4' rx='2'/><path d='m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7'/></svg>") !important;
-  background-repeat: no-repeat !important;
-  background-position: 14px center !important;
-}
-.st-key-login_password [data-testid="stTextInputRootElement"] input {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='18' height='11' x='3' y='11' rx='2' ry='2'/><path d='M7 11V7a5 5 0 0 1 10 0v4'/></svg>") !important;
-  background-repeat: no-repeat !important;
-  background-position: 14px center !important;
-}
-
-.fg-login-aux {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 10px 0 20px 0;
-  font-size: 13px;
-}
-.fg-forgot-link {
-  color: #0284C7;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 13px;
-  cursor: pointer;
-  margin-left: auto;
-}
-.fg-forgot-link:hover {
-  text-decoration: underline;
+  padding: 10px 14px !important;
 }
 
 .st-key-fg_login_card [data-testid="stFormSubmitButton"] button {
   width: 100% !important;
-  background: #111C30 !important;
+  background: #0B132B !important;
   color: #FFFFFF !important;
   border: none !important;
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   padding: 12px 20px !important;
   font-size: 15px !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em !important;
-  box-shadow: 0 4px 14px rgba(17, 28, 48, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(11, 19, 43, 0.25) !important;
   transition: all 0.2s ease !important;
+  margin-top: 10px !important;
 }
 .st-key-fg_login_card [data-testid="stFormSubmitButton"] button:hover {
-  background: #1A2A44 !important;
+  background: #1C2541 !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 6px 18px rgba(17, 28, 48, 0.3) !important;
+  box-shadow: 0 6px 18px rgba(11, 19, 43, 0.3) !important;
 }
 .st-key-fg_login_card [data-testid="stFormSubmitButton"] button:active {
   transform: translateY(0px) !important;
-}
-
-.fg-security-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  margin: 22px 0 18px 0;
-  font-size: 12px;
-  color: #475569;
-  font-weight: 500;
-  position: relative;
-}
-.fg-security-badge::before, .fg-security-badge::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: #E2E8F0;
-}
-
-.fg-login-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid #F1F5F9;
-  padding-top: 16px;
-  margin-top: 8px;
-  font-size: 11.5px;
-  color: #64748B;
-}
-.fg-login-footer a {
-  color: #475569;
-  text-decoration: none;
-  margin-left: 8px;
-}
-.fg-login-footer a:hover {
-  color: #0284C7;
-  text-decoration: underline;
 }
 
 /* Shake Animation for failure */

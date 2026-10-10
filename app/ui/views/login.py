@@ -32,7 +32,7 @@ def validate_credentials(email: str, password: str) -> bool:
 
 
 def render_login_page() -> None:
-    """Render the official administrator login page matching the Pune Municipal Corporation design."""
+    """Render the administrator login page centered on the screen with clean styling."""
     
     # Initialize session state tracking
     if "authenticated" not in st.session_state:
@@ -41,190 +41,109 @@ def render_login_page() -> None:
         st.session_state["login_error"] = None
     if "login_success" not in st.session_state:
         st.session_state["login_success"] = False
-    if "shake_active" not in st.session_state:
-        st.session_state["shake_active"] = False
 
     # Ambient water wave background graphics
     st.markdown('<div class="fg-login-bg-waves"></div>', unsafe_allow_html=True)
 
-    # Outer flex wrapper to center the card vertically and horizontally
-    st.markdown('<div class="fg-login-page-wrapper">', unsafe_allow_html=True)
+    # Center horizontally on screen using columns
+    _, center_col, _ = st.columns([1, 1.8, 1])
 
-    # Determine animation CSS class for the card
-    card_class = "fg-shake-card" if st.session_state.get("shake_active") else ""
-    if st.session_state.get("login_success"):
-        card_class = "fg-success-card"
-
-    # Reset shake state for subsequent renders
-    st.session_state["shake_active"] = False
-
-    # Main Card Container (Streamlit keyed container allows full CSS customization)
-    with st.container(key="fg_login_card"):
-        # If card shake or success animation class is active, inject dynamic class
-        if card_class:
-            st.markdown(
-                f'<script>document.querySelector(".st-key-fg_login_card")?.classList.add("{card_class}");</script>',
-                unsafe_allow_html=True,
-            )
-
-        # Card Header: Profile Icon Box + Title + Subtitle
-        st.markdown(
-            """
-            <div class="fg-login-header">
-                <div class="fg-login-avatar">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                </div>
-                <div>
-                    <h2 class="fg-login-title">Administrator sign in</h2>
-                    <div class="fg-login-sub">Access is restricted to authorized personnel.</div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # Demo Credentials Guidance Callout
-        st.markdown(
-            """
-            <div class="fg-demo-pill">
-                <div class="fg-demo-pill-title">Authorized Administrator Credentials</div>
-                <div>Official Email: <code>admin@pune.gov.in</code> (or <code>admin@gmail.com</code>)</div>
-                <div>Secure Password: <code>admin123</code> &nbsp;&bull;&nbsp; Role: <b>Disaster Management Admin</b></div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # Display Animated Alerts (Failure or Success)
-        if st.session_state.get("login_error"):
-            st.markdown(
-                f"""
-                <div class="fg-alert-banner fg-alert-error">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <line x1="12" y1="8" x2="12" y2="12"></line>
-                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                    <div>
-                        <b>Access Denied:</b> {st.session_state["login_error"]}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        if st.session_state.get("login_success"):
+    with center_col:
+        with st.container(key="fg_login_card"):
+            # Header
             st.markdown(
                 """
-                <div class="fg-alert-banner fg-alert-success fg-success-card">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                    <div>
-                        <b>Credentials Verified:</b> Welcome Administrator. Decrypting FloodGuard Command Console...
-                    </div>
+                <div class="fg-login-header">
+                    <h2 class="fg-login-title">Administrator Sign In</h2>
+                    <div class="fg-login-sub">FloodGuard &bull; Pune Municipal Corporation</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
-        # Main Sign-in Form
-        with st.form("admin_login_form", clear_on_submit=False):
-            # Official Email Input (Defaulted to admin@pune.gov.in as in the reference design)
-            email_val = st.text_input(
-                "Official email",
-                value=st.session_state.get("prefill_email", "admin@pune.gov.in"),
-                placeholder="admin@pune.gov.in",
-                key="login_email",
+            # Authorized Administrator Credentials Card
+            st.markdown(
+                """
+                <div class="fg-demo-pill">
+                    <div class="fg-demo-pill-title">Authorized Administrator Credentials</div>
+                    <div>Official Email: <code>admin@pune.gov.in</code> (or <code>admin@gmail.com</code>)</div>
+                    <div>Secure Password: <code>admin123</code> &nbsp;&bull;&nbsp; Role: <b>Disaster Management Admin</b></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
 
-            # Password Input with native eye toggle
-            password_val = st.text_input(
-                "Password",
-                type="password",
-                placeholder="Enter your password",
-                key="login_password",
-            )
-
-            # Auxiliary row: Remember device checkbox + Forgot password link
-            aux_col1, aux_col2 = st.columns([1.6, 1], vertical_alignment="center")
-            with aux_col1:
-                remember_me = st.checkbox("Remember this device", value=True, key="login_remember")
-            with aux_col2:
+            # Error Banner
+            if st.session_state.get("login_error"):
                 st.markdown(
-                    '<div style="text-align: right;"><a href="#help" class="fg-forgot-link" title="Contact PMC IT Helpdesk">Forgot password?</a></div>',
+                    f"""
+                    <div class="fg-alert-banner fg-alert-error">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <div>
+                            <b>Access Denied:</b> {st.session_state["login_error"]}
+                        </div>
+                    </div>
+                    """,
                     unsafe_allow_html=True,
                 )
 
-            # Sign In Securely Button
-            submitted = st.form_submit_button(
-                "Sign in securely",
-                icon=":material/lock:",
-                use_container_width=True,
-            )
-
-        # Handle Form Submission
-        if submitted:
-            if validate_credentials(email_val, password_val):
-                st.session_state["login_error"] = None
-                st.session_state["login_success"] = True
-                st.session_state["authenticated"] = True
-                st.session_state["auth_user"] = email_val.strip()
-                st.session_state["shake_active"] = False
-                # Smooth animated delay before landing on the command console
-                time.sleep(0.9)
-                st.rerun()
-            else:
-                st.session_state["login_error"] = (
-                    "Invalid official credentials. Please check your admin email and password."
+            # Success Banner (Displayed when credentials match)
+            if st.session_state.get("login_success"):
+                st.markdown(
+                    """
+                    <div class="fg-alert-banner fg-alert-success fg-success-card">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        <div>
+                            <b>Login Successful!</b> Access Granted. Welcome, Disaster Management Admin. Opening FloodGuard console...
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
+                time.sleep(1.2)
+                st.session_state["authenticated"] = True
                 st.session_state["login_success"] = False
-                st.session_state["authenticated"] = False
-                st.session_state["shake_active"] = True
                 st.rerun()
 
-        # Quick Demo autofill option
-        demo_col1, demo_col2 = st.columns([1, 1])
-        with demo_col1:
-            if st.button("Quick Fill: Official Email", help="Autofill admin@pune.gov.in", key="btn_fill_pune"):
-                st.session_state["prefill_email"] = "admin@pune.gov.in"
-                st.rerun()
-        with demo_col2:
-            if st.button("Quick Fill: Admin Gmail", help="Autofill admin@gmail.com", key="btn_fill_gmail"):
-                st.session_state["prefill_email"] = "admin@gmail.com"
-                st.rerun()
+            # Clean Sign-in Form
+            with st.form("admin_login_form", clear_on_submit=False):
+                email_val = st.text_input(
+                    "Email",
+                    value=st.session_state.get("prefill_email", ""),
+                    placeholder="admin@pune.gov.in or admin@gmail.com",
+                    key="login_email",
+                )
 
-        # Security Badge: Protected municipal access · Secure session
-        st.markdown(
-            """
-            <div class="fg-security-badge">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                    <path d="m9 12 2 2 4-4"></path>
-                </svg>
-                <span>Protected municipal access &middot; Secure session</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                password_val = st.text_input(
+                    "Password",
+                    type="password",
+                    placeholder="Enter password",
+                    key="login_password",
+                )
 
-        # Card Footer: Copyright and Privacy/Help Desk links
-        st.markdown(
-            """
-            <div class="fg-login-footer">
-                <div>&copy; 2026 FloodGuard &middot; Pune Municipal Corporation</div>
-                <div>
-                    <a href="#privacy">Privacy</a> &middot; 
-                    <a href="#helpdesk">Help desk</a>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+                submitted = st.form_submit_button(
+                    "Sign In",
+                    icon=":material/login:",
+                    use_container_width=True,
+                )
 
-    # Close outer wrapper
-    st.markdown("</div>", unsafe_allow_html=True)
+            # Handle Submission
+            if submitted:
+                if validate_credentials(email_val, password_val):
+                    st.session_state["login_error"] = None
+                    st.session_state["login_success"] = True
+                    st.session_state["auth_user"] = email_val.strip()
+                    st.rerun()
+                else:
+                    st.session_state["login_error"] = (
+                        "Invalid credentials. Please enter authorized email and password."
+                    )
+                    st.session_state["login_success"] = False
+                    st.rerun()
