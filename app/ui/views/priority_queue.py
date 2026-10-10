@@ -21,6 +21,7 @@ from app.ui.components.crew_dispatch import (
     render_crew_dispatch_widget,
 )
 from app.ui.components.evidence_frames import incident_frame
+from app.core.plates import is_car_or_bike, analyze_plate_text, render_hsrp_badge_html
 from app.ui.components.styles import STATUS, _flat, icon, page_header, section_title, status_pill
 from app.ui.pune_data import ASSIGNED_CAMERAS, PRIORITY_QUEUE, PUNE_LOCATIONS, location_for_job
 
@@ -128,7 +129,8 @@ def _sensor_incidents(skip_locations: set) -> List[Dict[str, Any]]:
                 "High Pressure Silt Jetting & Suction Tanker" if "Jetting" in item["suggested_action"]
                 else "Mobile 500 GPM Dewatering Pump"
             ),
-            "photo": None,
+            "photo": item.get("evidence_crop"),
+            "plate_text": item.get("plate_text"),
         })
     return items
 
@@ -262,6 +264,16 @@ def render_violation_review():
                 else:
                     st.warning("No evidence images were saved for this violation.")
 
+                if is_car_or_bike(v.vehicle_type) and v.plate_text:
+                    p_analysis = analyze_plate_text(v.plate_text)
+                    st.markdown(render_hsrp_badge_html(v.plate_text), unsafe_allow_html=True)
+                    st.markdown(
+                        f'<div style="font-size:12px;color:#475569;background:#F8FAFC;border:1px solid #E2E8F0;padding:6px 10px;border-radius:6px;margin:4px 0 10px 0;">'
+                        f'<b>Plate Diagnostic:</b> {escape(p_analysis["summary"])}'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+
                 a, r, _ = st.columns([1.4, 1, 3])
                 if a.button("Approve and send to PMC", key=f"approve_{v.id}", type="primary", disabled=not officer.strip()):
                     st.session_state["violation_review_result"] = ("approved", _review_violation(v.id, "approved", officer.strip()))
@@ -324,6 +336,19 @@ def _render_incident(item: Dict[str, Any]) -> None:
               <div><span class="fg-k">Evidence</span><span class="fg-v" style="font-size:12px;">{escape(item['detail'])}</span></div>
             </div>
             """), unsafe_allow_html=True)
+
+            if item.get("plate_text"):
+                p_analysis = analyze_plate_text(item["plate_text"])
+                st.markdown(render_hsrp_badge_html(item["plate_text"]), unsafe_allow_html=True)
+                st.markdown(
+                    f'<div style="font-size:12px;color:#334155;background:#F8FAFC;border:1px solid #E2E8F0;padding:6px 10px;border-radius:6px;margin:4px 0 8px 0;">'
+                    f'<b>Plate Diagnostic:</b> {escape(p_analysis["summary"])}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+                if Path("data/sample_crops/plate_mh12qx4821.jpg").is_file():
+                    with st.expander("Detected number plate photo", expanded=True):
+                        st.image("data/sample_crops/plate_mh12qx4821.jpg", caption=f"Zoomed Plate ({item['plate_text']})", use_container_width=True)
 
             if item["incident_id"]:
                 _, btn = st.columns([3, 1])

@@ -7,8 +7,8 @@ from google import genai
 from google.genai import types
 
 from app.config import settings
-from app.core.prompts import SYSTEM_CONTEXT, INFRA_PROMPT, VIOLATOR_PROMPT, SEWER_PROMPT, GARBAGE_EXEMPLAR_PROMPT
-from app.core.schemas import InfraAnalysisResponse, ViolatorAnalysisResponse, SewerAssessment, GarbageExemplarResponse
+from app.core.prompts import SYSTEM_CONTEXT, INFRA_PROMPT, VIOLATOR_PROMPT, SEWER_PROMPT, GARBAGE_EXEMPLAR_PROMPT, PLATE_ANALYSIS_PROMPT
+from app.core.schemas import InfraAnalysisResponse, ViolatorAnalysisResponse, SewerAssessment, GarbageExemplarResponse, PlateAnalysisResponse
 
 logger = logging.getLogger("civiceye.gemini_client")
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -150,3 +150,13 @@ class GeminiVideoClient:
             contents.append(types.Part.from_bytes(data=jpeg, mime_type="image/jpeg"))
         contents.append(GARBAGE_EXEMPLAR_PROMPT.format(n=len(jpeg_frames)))
         return self._call_with_retry_and_fallback(contents, GarbageExemplarResponse)
+
+    def analyze_plate_image(self, plate_jpeg: bytes) -> PlateAnalysisResponse:
+        """Pass B helper: fine-grained VLM inspection of cropped license plate image."""
+        logger.info("Executing fine-grained license plate visual analysis...")
+        contents = [
+            types.Part.from_bytes(data=plate_jpeg, mime_type="image/jpeg"),
+            PLATE_ANALYSIS_PROMPT
+        ]
+        return self._call_with_retry_and_fallback(contents, PlateAnalysisResponse)
+

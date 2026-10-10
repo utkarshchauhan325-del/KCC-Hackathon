@@ -23,7 +23,8 @@ from app.core.evidence import (
     generate_annotated_surveillance_video,
 )
 from app.core.dedupe import deduplicate_infra_issues
-from app.core.plates import is_valid_indian_plate
+from app.core.plates import is_valid_indian_plate, is_car_or_bike, analyze_plate_text
+from app.core.schemas import BBox
 from app.notify.alerts import send_incident_alert
 from app.core.scoring import compute_sewer_score, compute_observed_hazard_scores
 from app.core.detector import CivicObjectDetector, GarbageExemplar
@@ -196,6 +197,7 @@ class CivicEyePipeline:
 
             # 6. Pass B: Violator Detection (if requested)
             dumping_events = 0
+            vehicle_plate_violations = []
             if run_pass_b:
                 log_progress("[Pass B] Scanning for illegal waste dumping violators...")
                 try:
@@ -220,16 +222,38 @@ class CivicEyePipeline:
                         ts_sec = timestamp_to_seconds(event.best_frame_ts)
                         frame = extract_frame_at_timestamp(video_path, ts_sec)
 
+                        plate_crop_path = None
+                        vehicle_crop_path = None
+                        person_crop_path = None
+                        frame_crop_path = None
+
+                        # Check if a car or bike/two-wheeler is present in the offence
+                        has_vehicle = is_car_or_bike(event.vehicle_type) or event.vehicle_box is not None
+
                         if frame is not None:
                             privacy_frame = blur_bystander_faces(frame, primary_box=event.person_box)
                             priv_path = evidence_dir / f"violation_{violator_inc.id}_frame.jpg"
                             save_image(privacy_frame, priv_path)
+                            frame_crop_path = priv_path
                             db.add(Evidence(incident_id=violator_inc.id, kind="frame", path=str(priv_path)))
+
+                            # If a car or bike is present but plate_box is missing, estimate plate location on vehicle
+                            plate_box = event.plate_box
+                            if plate_box is None and has_vehicle and event.vehicle_box is not None:
+                                v = event.vehicle_box
+                                vh = v.ymax - v.ymin
+                                vw = v.xmax - v.xmin
+                                plate_box = BBox(
+                                    ymin=int(v.ymin + vh * 0.58),
+                                    xmin=int(v.xmin + vw * 0.18),
+                                    ymax=int(min(1000, v.ymax)),
+                                    xmax=int(min(1000, v.xmin + vw * 0.82)),
+                                )
 
                             for kind, box in (
                                 ("crop_person", event.person_box),
-                                ("crop_vehicle", event.vehicle_box),
-                                ("crop_plate", event.plate_box),
+                                ("crop_vehicle", event.vehicle_box if has_vehicle else None),
+                                ("crop_plate", plate_box if has_vehicle else None),
                             ):
                                 if box is None:
                                     continue
@@ -239,17 +263,65 @@ class CivicEyePipeline:
                                 crop_path = evidence_dir / f"violation_{violator_inc.id}_{kind}.jpg"
                                 save_image(crop, crop_path)
                                 db.add(Evidence(incident_id=violator_inc.id, kind=kind, path=str(crop_path)))
+                                if kind == "crop_plate":
+                                    plate_crop_path = crop_path
+                                elif kind == "crop_vehicle":
+                                    vehicle_crop_path = crop_path
+                                elif kind == "crop_person":
+                                    person_crop_path = crop_path
+
+                        # Plate reading & analysis - ONLY performed when car or bike is present
+                        detected_plate = event.plate_text
+                        plate_legibility = event.plate_legibility
+                        plate_analysis = None
+
+                        if has_vehicle:
+                            # If Gemini did not identify plate characters in whole video, analyze cropped plate image
+                            if (not detected_plate or detected_plate.lower() in {"none", "null", "not legible"}) and plate_crop_path and plate_crop_path.is_file():
+                                try:
+                                    plate_vlm = self.client.analyze_plate_image(plate_crop_path.read_bytes())
+                                    if plate_vlm.plate_text:
+                                        detected_plate = plate_vlm.plate_text
+                                        plate_legibility = plate_vlm.legibility
+                                except Exception as e:
+                                    logger.debug(f"Targeted plate visual reading failed: {e}")
+
+                            # Deconstruct and analyze what's written on the plate
+                            plate_analysis = analyze_plate_text(detected_plate)
+                            final_plate_text = plate_analysis["formatted"] if plate_analysis["is_valid"] else detected_plate
+                        else:
+                            final_plate_text = None
+                            plate_legibility = "none"
 
                         violation_record = Violation(
                             incident_id=violator_inc.id,
-                            plate_text=event.plate_text,
-                            plate_valid=is_valid_indian_plate(event.plate_text),
-                            plate_legibility=event.plate_legibility,
-                            vehicle_type=event.vehicle_type,
+                            plate_text=final_plate_text,
+                            plate_valid=is_valid_indian_plate(final_plate_text) if has_vehicle else False,
+                            plate_legibility=plate_legibility,
+                            vehicle_type=event.vehicle_type if has_vehicle else "On foot / none",
                             review_status="pending_review",
                         )
                         db.add(violation_record)
                         dumping_events += 1
+
+                        if has_vehicle:
+                            vehicle_plate_violations.append({
+                                "incident_id": violator_inc.id,
+                                "video_ts": event.best_frame_ts,
+                                "vehicle_type": event.vehicle_type or "Vehicle",
+                                "description": event.description,
+                                "plate_text": final_plate_text,
+                                "plate_valid": is_valid_indian_plate(final_plate_text),
+                                "plate_legibility": plate_legibility,
+                                "plate_analysis": plate_analysis,
+                                "crops": {
+                                    "plate": str(plate_crop_path) if plate_crop_path else None,
+                                    "vehicle": str(vehicle_crop_path) if vehicle_crop_path else None,
+                                    "person": str(person_crop_path) if person_crop_path else None,
+                                    "frame": str(frame_crop_path) if frame_crop_path else None,
+                                }
+                            })
+
                     log_progress(f"Pass B completed: {len(violator_resp.events)} violator events queued.")
                 except Exception as e:
                     logger.warning(f"Pass B violator detection skipped: {e}", exc_info=True)
@@ -325,6 +397,7 @@ class CivicEyePipeline:
                 "filename": video_path.name,
                 "incidents_count": len(created_incidents),
                 "violations_count": dumping_events,
+                "vehicle_plate_violations": vehicle_plate_violations,
                 "annotated_video_path": str(annotated_video_path),
                 "objects": object_summary,
                 **scores,

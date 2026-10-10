@@ -60,3 +60,17 @@ Label each box with its dominant waste stream:
 Use at most 8 boxes per image, largest regions first. If an image has no garbage,
 return it with an empty list of regions.
 """
+
+PLATE_ANALYSIS_PROMPT = """
+You are an expert Indian vehicle registration and license plate reader for municipal law enforcement.
+Examine this cropped photograph of a vehicle's number plate taken from a street surveillance camera.
+Read and analyze all visible characters on the registration plate:
+- plate_text: exact registration number (e.g. "MH 12 QX 4821", "DL 3C AB 1234"). If unreadable, return null. Never guess or hallucinate.
+- legibility: "clear", "partial", "unreadable", or "none".
+- vehicle_type: inferred vehicle category (e.g. "car", "motorcycle", "scooter", "auto-rickshaw", "truck").
+- state: Indian state from the 2-letter prefix (e.g. "Maharashtra", "Delhi", "Karnataka").
+- description: short factual sentence describing the plate style and characters visible (e.g. "White HSRP plate with blue IND strip reading MH 12 QX 4821").
+- confidence: 0.0 to 1.0.
+Return JSON matching the schema.
+"""
+

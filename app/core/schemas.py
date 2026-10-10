@@ -42,6 +42,15 @@ class ViolatorAnalysisResponse(BaseModel):
     """Structured response container for Pass B."""
     events: List[ViolatorEvent] = Field(default_factory=list)
 
+class PlateAnalysisResponse(BaseModel):
+    """Fine-grained VLM analysis of cropped license plate image."""
+    plate_text: Optional[str] = Field(default=None, description="Exact plate registration text e.g. MH 12 AB 1234 or null if unreadable")
+    legibility: Literal["clear", "partial", "unreadable", "none"] = Field(default="none")
+    vehicle_type: Optional[str] = Field(default=None, description="Inferred vehicle category e.g. car, motorcycle, truck")
+    state: Optional[str] = Field(default=None, description="State abbreviation or name")
+    description: Optional[str] = Field(default=None, description="Short visual description of what is written on the plate")
+    confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+
 class SewerAssessment(BaseModel):
     """Detailed assessment for drain/manhole locations (Pass C)."""
     water_level: Literal["none", "damp", "pooling", "flowing_over", "gushing"]
