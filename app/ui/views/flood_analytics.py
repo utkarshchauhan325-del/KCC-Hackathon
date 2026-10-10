@@ -469,12 +469,6 @@ def render_flood_analytics():
 </div>
 {status_pill('High', 'Active monsoon surcharge')}
 </div>
-<div class="fg-kv" style="border-top:none; padding-top:0;">
-<div><span class="fg-k">Date</span><span class="fg-v mono">24 Sep 2026</span></div>
-<div><span class="fg-k">City risk index</span><span class="fg-v mono" style="color:#C8281C;">78.4 / 100</span></div>
-<div><span class="fg-k">Monsoon stage</span><span class="fg-v">Active, low pressure</span></div>
-<div><span class="fg-k">Monitored</span><span class="fg-v">53 locations, 6 cameras</span></div>
-</div>
 <div style="{h3}">Overview</div>
 <p style="{body}">Camera and sensor data from 53 arterial junctions indicate immediate waterlogging risk at 5 critical locations: MG Road Junction, FC Road Junction, Deccan Gymkhana, Dapodi Confluence, and Sangamwadi.</p>
 <p style="{body}">Current risk is driven by high antecedent rainfall (average 34 mm in 3 hours), debris blocking stormwater box culverts (average 71%), and a raised Mula-Mutha river stage, which is restricting drainage.</p>
