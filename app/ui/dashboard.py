@@ -20,6 +20,7 @@ from app.ui.views.flood_analytics import render_flood_analytics
 from app.ui.views.worker_tasks import render_worker_tasks_view
 from app.ui.views.worker_task_detail import render_worker_task_detail_view
 from app.ui.views.worker_history import render_worker_history_view
+from app.ui.views.civic_intelligence import render_civic_intelligence
 
 # Initialize SQLite/PostgreSQL Database
 init_db()
@@ -109,6 +110,8 @@ else:
          "Officer review, open incidents and crew dispatch", render_priority_queue_and_interventions),
         ("analytics", "Analytics & Reports", ":material/query_stats:",
          "Rainfall correlation, ward comparison and exports", render_flood_analytics),
+        ("civic-intel", "Civic Intel", ":material/public:",
+         "Live Pune flood advisories, road closures, and citizen web complaints via TinyFish Web Search", render_civic_intelligence),
     ]
 
     pages = {
@@ -119,7 +122,14 @@ else:
     current_slug = next((s for s, p in pages.items() if p.url_path == current.url_path), "overview")
 
     # Top navigation bar (Authenticated Admin Session)
-    NAV_LABELS = {"overview": "Dashboard", "risk-map": "Risk Map", "cctv": "CCTV", "queue": "Queue", "analytics": "Analytics"}
+    NAV_LABELS = {
+        "overview": "Dashboard",
+        "risk-map": "Risk Map",
+        "cctv": "CCTV",
+        "queue": "Queue",
+        "analytics": "Analytics",
+        "civic-intel": "Civic Intel",
+    }
     queue_open = open_incident_count()
     user_email = st.session_state.get("auth_user", "admin@pune.gov.in")
 
