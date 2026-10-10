@@ -1,0 +1,92 @@
+[
+  {
+    "id": "PMC-TRAIN-001",
+    "location": "FC Road Goodluck Chowk",
+    "zone": "Shivajinagar-Ghole Road",
+    "image_path": "data/evidence/fc_road_01.jpg",
+    "hazard_category": "drainage_blockage",
+    "ground_truth_boxes": [[620, 140, 890, 480]],
+    "conversations": [
+      {
+        "role": "user",
+        "content": "<image>\nIdentify municipal infrastructure hazards, drain choking, and litter in this CCTV frame."
+      },
+      {
+        "role": "assistant",
+        "content": "Visual inspection reveals a severe storm drain intake obstruction located at the curb line [620, 140, 890, 480]. Heavy accumulation of post-consumer plastic wrappers, thermocol, and beverage containers has formed a blockage spanning 42% of the grating aperture. Water ponding depth is approximately 8-12 cm. Immediate mechanical dredging and desilting required."
+      }
+    ]
+  },
+  {
+    "id": "PMC-TRAIN-002",
+    "location": "Deccan Gymkhana Outfall",
+    "zone": "Kasba-Vishrambaugwada",
+    "image_path": "data/evidence/deccan_outfall.jpg",
+    "hazard_category": "sewer_overflow",
+    "ground_truth_boxes": [[410, 220, 780, 860]],
+    "conversations": [
+      {
+        "role": "user",
+        "content": "<image>\nAssess the sewer outfall level and backflow risk."
+      },
+      {
+        "role": "assistant",
+        "content": "The CCTV frame captures critical river stage backflow at Deccan Gymkhana sluice gate [410, 220, 780, 860]. Water capacity threshold is exceeded at 86%, with floating organic debris impeding flap valve closure. Silt accumulation index is high. Risk of urban street flooding within 20 minutes if dewatering pumps are not engaged."
+      }
+    ]
+  },
+  {
+    "id": "PMC-TRAIN-003",
+    "location": "Karve Road Kothrud",
+    "zone": "Kothrud-Bavdhan",
+    "image_path": "data/evidence/karve_rd_dump.jpg",
+    "hazard_category": "illegal_dumping",
+    "ground_truth_boxes": [[180, 310, 520, 690], [240, 720, 490, 940]],
+    "conversations": [
+      {
+        "role": "user",
+        "content": "<image>\nDetect municipal solid waste dumping and identify associated vehicle or pedestrian."
+      },
+      {
+        "role": "assistant",
+        "content": "Unauthorized municipal solid waste dumping identified at road margin [180, 310, 520, 690]. Commercial cardboard packing and construction debris observed. Adjacent two-wheeler detected at [240, 720, 490, 940] involved in illegal disposal under Section 376 of Maharashtra Municipal Corporations Act."
+      }
+    ]
+  },
+  {
+    "id": "PMC-TRAIN-004",
+    "location": "Pune Station Underpass",
+    "zone": "Central",
+    "image_path": "data/evidence/station_underpass.jpg",
+    "hazard_category": "underpass_waterlogging",
+    "ground_truth_boxes": [[550, 80, 980, 920]],
+    "conversations": [
+      {
+        "role": "user",
+        "content": "<image>\nEvaluate water depth and traffic passability in the subway underpass."
+      },
+      {
+        "role": "assistant",
+        "content": "Underpass sump basin exhibits critical waterlogging [550, 80, 980, 920] covering the entire two-lane roadway. Submerged curb indicates water depth exceeding 35 cm, rendering the route impassable for two-wheelers and light motor vehicles. Automated sump pump failure suspected; traffic diversion barricades should be immediately deployed."
+      }
+    ]
+  },
+  {
+    "id": "PMC-TRAIN-005",
+    "location": "Hadapsar Gadital Junction",
+    "zone": "Hadapsar-Mundhwa",
+    "image_path": "data/evidence/hadapsar_culvert.jpg",
+    "hazard_category": "culvert_siltation",
+    "ground_truth_boxes": [[630, 290, 870, 750]],
+    "conversations": [
+      {
+        "role": "user",
+        "content": "<image>\nInspect box culvert intake for sediment and vegetative choking."
+      },
+      {
+        "role": "assistant",
+        "content": "Box culvert throat is 65% obstructed by dense silt sediment and weed growth [630, 290, 870, 750]. Hydraulic cross-section is severely compromised ahead of monsoon downpours. High-pressure jetting suction unit dispatched for desilting."
+      }
+    ]
+  }
+]

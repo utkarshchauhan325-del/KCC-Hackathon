@@ -15,7 +15,7 @@ from app.ui.views.login import render_login_page
 from app.ui.views.overview import render_overview_dashboard
 from app.ui.views.live_map import render_live_risk_map
 from app.ui.views.cctv_monitoring import render_cctv_monitoring
-from app.ui.views.priority_queue import open_incident_count, render_priority_queue_and_interventions
+from app.ui.views.priority_queue import render_priority_queue_and_interventions
 from app.ui.views.flood_analytics import render_flood_analytics
 from app.ui.views.worker_tasks import render_worker_tasks_view
 from app.ui.views.worker_task_detail import render_worker_task_detail_view
@@ -72,7 +72,7 @@ if user_role == "worker":
     worker_zone = st.session_state.get("worker_zone", "Pune")
 
     with st.container(key="fg_topnav"):
-        cols = st.columns([3.0, 1.3, 1.3, 2.5, 0.9], vertical_alignment="center", gap="small")
+        cols = st.columns([2.8, 1.2, 1.3, 2.3, 1.1], vertical_alignment="center", gap="small")
         cols[0].markdown(
             f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
             <div><div class="fg-nav-title">FloodGuard Field</div><div class="fg-nav-org">PMC &bull; {worker_zone} Zone</div></div></div>''',
@@ -89,7 +89,7 @@ if user_role == "worker":
             unsafe_allow_html=True,
         )
         with cols[4].container(key="fg_logout_btn"):
-            if st.button("Sign out", key="btn_worker_signout", help="Sign out of FloodGuard field app"):
+            if st.button("Sign out", key="btn_worker_signout", icon=":material/logout:", use_container_width=True, help="Sign out of FloodGuard field app"):
                 st.session_state.clear()
                 st.rerun()
 
@@ -130,11 +130,10 @@ else:
         "analytics": "Analytics",
         "civic-intel": "Civic Intel",
     }
-    queue_open = open_incident_count()
     user_email = st.session_state.get("auth_user", "admin@pune.gov.in")
 
     with st.container(key="fg_topnav"):
-        cols = st.columns([2.3] + [1] * len(PAGE_SPECS) + [2.0, 0.8], vertical_alignment="center", gap="small")
+        cols = st.columns([2.2] + [1] * len(PAGE_SPECS) + [1.8, 1.1], vertical_alignment="center", gap="small")
         cols[0].markdown(
             f'''<div class="fg-nav-brand"><div class="fg-sb-logo">{BRAND_MARK}</div>
             <div><div class="fg-nav-title">FloodGuard</div><div class="fg-nav-org">Pune Municipal Corporation</div></div></div>''',
@@ -142,8 +141,6 @@ else:
         )
         for col, (slug, title, ico, desc, _fn) in zip(cols[1:], PAGE_SPECS):
             label = NAV_LABELS.get(slug, title)
-            if slug == "queue" and queue_open:
-                label = f"{label} ({queue_open})"
             state = "active" if slug == current_slug else "idle"
             with col.container(key=f"fgnav_{state}_{slug.replace('-', '_')}"):
                 st.page_link(pages[slug], label=label, icon=ico, help=desc)
@@ -154,7 +151,7 @@ else:
             unsafe_allow_html=True,
         )
         with cols[-1].container(key="fg_logout_btn"):
-            if st.button("Sign out", key="btn_signout", help="Sign out of FloodGuard console"):
+            if st.button("Sign out", key="btn_signout", icon=":material/logout:", use_container_width=True, help="Sign out of FloodGuard console"):
                 st.session_state.clear()
                 st.rerun()
 

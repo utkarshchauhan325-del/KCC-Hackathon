@@ -1153,20 +1153,40 @@ div[data-testid="stMetricValue"] { font-family: var(--fg-font-mono) !important; 
   white-space: nowrap;
 }
 .st-key-fg_logout_btn div[data-testid="stButton"] button {
-  background: rgba(239, 68, 68, 0.18) !important;
-  border: 1px solid rgba(239, 68, 68, 0.35) !important;
-  color: #FECACA !important;
+  background: #DC2626 !important;
+  background-image: linear-gradient(135deg, #EF4444 0%, #DC2626 100%) !important;
+  border: 1px solid #F87171 !important;
+  color: #FFFFFF !important;
   border-radius: 8px !important;
-  padding: 4px 10px !important;
-  min-height: 28px !important;
-  height: 28px !important;
-  font-size: 11.5px !important;
-  font-weight: 500 !important;
-  transition: all 0.15s ease !important;
+  padding: 6px 14px !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
 }
 .st-key-fg_logout_btn div[data-testid="stButton"] button:hover {
-  background: rgba(239, 68, 68, 0.35) !important;
+  background: #B91C1C !important;
+  background-image: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%) !important;
+  border-color: #FECACA !important;
   color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5) !important;
+  transform: translateY(-1px) !important;
+}
+.st-key-fg_logout_btn div[data-testid="stButton"] button:active {
+  transform: translateY(1px) !important;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.3) !important;
+}
+.st-key-fg_logout_btn div[data-testid="stButton"] button * {
+  color: #FFFFFF !important;
+  fill: #FFFFFF !important;
 }
 
 /* ============================================================

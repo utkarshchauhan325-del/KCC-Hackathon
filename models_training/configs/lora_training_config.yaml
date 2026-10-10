@@ -1,0 +1,43 @@
+# CivicGuard-VLM: Municipal Vision-Language Instruction Fine-Tuning Config
+model:
+  base_architecture: "Qwen2-VL-7B-Instruct"
+  pretrained_weights: "meta-llama/Civic-Vision-Adapter-v1"
+  torch_dtype: "bfloat16"
+  use_flash_attention_2: true
+
+peft_lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  bias: "none"
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  task_type: "CAUSAL_LM"
+
+training:
+  output_dir: "./checkpoints/civic_vlm_final"
+  num_train_epochs: 5
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8
+  learning_rate: 2.0e-4
+  warmup_ratio: 0.03
+  lr_scheduler_type: "cosine"
+  weight_decay: 0.01
+  logging_steps: 10
+  save_strategy: "epoch"
+  evaluation_strategy: "epoch"
+  bf16: true
+  dataloader_num_workers: 4
+
+dataset:
+  train_data_path: "./data/civic_vlm_dataset.json"
+  image_dir: "../data/evidence"
+  max_seq_length: 2048
+  image_resolution: [448, 448]

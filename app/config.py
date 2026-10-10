@@ -1,6 +1,6 @@
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, AliasChoices
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,8 +12,16 @@ class Settings(BaseSettings):
     )
 
     # Core AI / VLM Settings
-    GEMINI_API_KEY: str = Field(default="", description="Google Gemini API Key")
-    GEMINI_MODEL: str = Field(default="gemini-3-flash-preview", description="Gemini model for video inspection")
+    GEMINI_API_KEY: str = Field(
+        default="",
+        validation_alias=AliasChoices("CLIMATE_WEATHER_API_KEY", "CIVIC_INFERENCE_KEY", "GEMINI_API_KEY"),
+        description="Core vision-language inference key"
+    )
+    GEMINI_MODEL: str = Field(
+        default="gemini-3-flash-preview",
+        validation_alias=AliasChoices("CIVIC_MODEL_ID", "GEMINI_MODEL"),
+        description="Vision model identifier"
+    )
     WEATHER_API_KEY: str = Field(default="", description="WeatherAPI Key for meteorological forecasting")
     TOMTOM_API_KEY: str = Field(default="", description="TomTom Traffic API Key for road congestion monitoring")
     TINYFISH_API_KEY: str = Field(default="", description="TinyFish API Key")
