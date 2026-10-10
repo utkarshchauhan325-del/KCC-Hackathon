@@ -105,17 +105,32 @@ def render_civic_intelligence():
     if loc_filter:
         active_query = f"{loc_filter} pune waterlogging flood rain drainage road"
 
+    # Purge any stale mock fallback data from older sessions
+    stale_keys = [
+        k for k, v in list(st.session_state.items())
+        if k.startswith("intel_data_") and isinstance(v, dict) and (v.get("source") == "cached_fallback" or any(r.get("id", "").startswith("tf-fallback") for r in v.get("reports", [])))
+    ]
+    for sk in stale_keys:
+        st.session_state.pop(sk, None)
+
     # Fetch data (cached in session or triggered via refresh)
     cache_key = f"intel_data_{active_query}_{loc_filter}"
     if refresh_btn or cache_key not in st.session_state:
-        spinner_msg = f"Querying TinyFish web search agent for {loc_filter.title()}..." if loc_filter else "Querying TinyFish web search agent for live Pune alerts..."
+        spinner_msg = f"Querying TinyFish live search for {loc_filter.title()}..." if loc_filter else "Querying TinyFish live web search for Pune alerts..."
         with st.spinner(spinner_msg):
             data = fetch_pune_civic_intelligence(query=active_query, limit=20, location_filter=loc_filter)
             st.session_state[cache_key] = data
     else:
         data = st.session_state[cache_key]
 
+    # Show actual API status if not healthy
+    if data.get("status") == "missing_key":
+        st.warning("⚠️ TinyFish API Key is not configured. Add TINYFISH_API_KEY in your .env file.")
+    elif data.get("status") in ("auth_error", "api_error", "network_error"):
+        st.error(f"⚠️ TinyFish Search API: {data.get('error', 'Error reaching endpoint')}")
+
     reports = data.get("reports", [])
+
 
     # Recalculate KPIs strictly for filtered reports
     counts = {

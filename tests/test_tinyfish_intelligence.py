@@ -86,13 +86,13 @@ def test_execute_tinyfish_search_auth_error(mock_get):
         assert result["results"] == []
 
 
-def test_fetch_pune_civic_intelligence_fallback_when_no_key():
+def test_fetch_pune_civic_intelligence_no_key():
     with patch("app.core.tinyfish_client.get_tinyfish_api_key", return_value=""):
-        data = fetch_pune_civic_intelligence(use_fallback_if_empty=True)
+        data = fetch_pune_civic_intelligence()
         assert data["status"] == "missing_key"
-        assert data["source"] == "cached_fallback"
-        assert len(data["reports"]) > 0
-        assert data["counts"]["Total"] > 0
+        assert data["reports"] == []
+        assert data["counts"]["Total"] == 0
+
 
 
 @patch("requests.get")

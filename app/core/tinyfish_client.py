@@ -34,74 +34,9 @@ PUNE_KNOWN_LOCATIONS = [
     "Kondhwa", "Undri", "Vadgaon Sheri", "Lohegaon", "Dhanori", "Vishrantwadi"
 ]
 
-FALLBACK_CIVIC_REPORTS: List[Dict[str, Any]] = [
-    {
-        "id": "tf-fallback-1",
-        "title": "PMC Issues Emergency Flood Alert for Riverside Wards Following Khadakwasla Dam Discharge",
-        "snippet": "The Pune Municipal Corporation (PMC) disaster cell issued an alert for residents in Ekta Nagar, Sinhagad Road, and Deccan Gymkhana following increased water discharge into the Mutha river basin.",
-        "url": "https://www.punekarnews.in/pune-municipal-corporation-issues-flood-warning-for-low-lying-areas/",
-        "date": "Today, 08:30 IST",
-        "site_name": "punekarnews.in",
-        "category": "Official Advisory",
-        "severity": "Critical",
-        "locations": ["Sinhagad Road", "Ekta Nagar", "Deccan Gymkhana", "Mutha River"],
-    },
-    {
-        "id": "tf-fallback-2",
-        "title": "Waterlogging Closes FC Road and Underpass at Shivajinagar Junction",
-        "snippet": "Traffic police have diverted vehicles away from FC Road and Sancheti Hospital underpass due to 2.5 feet of standing stormwater. Commuters advised to take J.M. Road.",
-        "url": "https://timesofindia.indiatimes.com/city/pune/waterlogging-traffic-diversions-pune-rains",
-        "date": "Today, 09:15 IST",
-        "site_name": "timesofindia.indiatimes.com",
-        "category": "Road Closure",
-        "severity": "High",
-        "locations": ["FC Road", "Shivajinagar"],
-    },
-    {
-        "id": "tf-fallback-3",
-        "title": "Residents Protest Clogged Stormwater Box Drains on MG Road and Camp Area",
-        "snippet": "Local merchants and residents raised urgent complaints regarding severe silt and plastic blockage in arterial stormwater drains along MG Road, leading to sewage backflow into shops.",
-        "url": "https://indianexpress.com/article/cities/pune/citizens-voice-outrage-over-choked-nullahs-pune-monsoon/",
-        "date": "Yesterday",
-        "site_name": "indianexpress.com",
-        "category": "Drainage Issue",
-        "severity": "High",
-        "locations": ["MG Road", "Camp"],
-    },
-    {
-        "id": "tf-fallback-4",
-        "title": "Citizen X/Twitter Reports: Overflowing Gutter Near Kothrud Bus Stand Inundating Lane",
-        "snippet": "Multiple citizen complaints submitted on PMC Care helpline and social media complaining of garbage-choked drains overflowing into residential lanes in Kothrud Ward 12.",
-        "url": "https://twitter.com/PMCcare/status/1816401928472918",
-        "date": "Yesterday",
-        "site_name": "twitter.com/PMCcare",
-        "category": "Citizen Complaint",
-        "severity": "Medium",
-        "locations": ["Kothrud"],
-    },
-    {
-        "id": "tf-fallback-5",
-        "title": "IMD Issues Orange Alert for Pune Ghats; Continuous Rainfall Expected for Next 24 Hours",
-        "snippet": "India Meteorological Department (IMD) forecasts intermittent moderate to heavy showers across Pune district with localized waterlogging risk in low-lying sub-sectors.",
-        "url": "https://mausam.imd.gov.in/pune/",
-        "date": "2 hours ago",
-        "site_name": "imd.gov.in",
-        "category": "Official Advisory",
-        "severity": "Medium",
-        "locations": ["Pune", "Khadakwasla"],
-    },
-    {
-        "id": "tf-fallback-6",
-        "title": "Dapodi Confluence Conduit Inundated: Drainage Sump Pump Dispatched",
-        "snippet": "PMC Drainage department mobilized emergency dewatering teams to Dapodi after stormwater overflow blocked Old Mumbai-Pune highway service road.",
-        "url": "https://punemirror.com/pune/civic/dapodi-waterlogging-drainage-teams-dispatched/",
-        "date": "Today, 07:45 IST",
-        "site_name": "punemirror.com",
-        "category": "Drainage Issue",
-        "severity": "High",
-        "locations": ["Dapodi"],
-    },
-]
+# Fallback list is strictly empty - no fake or hardcoded mock reports are permitted
+FALLBACK_CIVIC_REPORTS: List[Dict[str, Any]] = []
+
 
 
 def get_tinyfish_api_key() -> str:
@@ -277,14 +212,12 @@ def execute_tinyfish_search(query: str, limit: int = 10) -> Dict[str, Any]:
 def fetch_pune_civic_intelligence(
     query: str = "pune flood advisory rainfall waterlogging road closure drainage complaint",
     limit: int = 15,
-    use_fallback_if_empty: bool = True,
+    use_fallback_if_empty: bool = False,
     location_filter: str = "",
 ) -> Dict[str, Any]:
-    """Fetch and structure real-time Pune civic intelligence reports from TinyFish.
+    """Fetch and structure real-time Pune civic intelligence reports from TinyFish Search API.
     
-    If location_filter is provided (e.g. 'Dighi', 'Kothrud', 'Sinhagad'), results
-    are strictly isolated to only reports and videos of that specific place.
-    All reports whose primary topic is another place are completely eliminated.
+    Strictly queries live web search results. Never injects hardcoded fake news stories.
     """
     api_key = get_tinyfish_api_key()
     loc_clean = location_filter.strip().lower() if location_filter else ""
@@ -317,17 +250,11 @@ def fetch_pune_civic_intelligence(
         raw_candidates = res.get("results", [])
 
     reports: List[Dict[str, Any]] = []
-    source_type = "tinyfish_api"
+    source_type = "tinyfish_live" if last_status == "ok" else last_status
 
     if last_status == "ok" and raw_candidates:
         if loc_clean:
             aliases = PUNE_LOCATION_ALIASES.get(loc_clean, [loc_clean])
-            
-            # Additional other locations that should cause a report to be excluded if in the title
-            known_other_areas = [
-                loc.lower() for loc in PUNE_KNOWN_LOCATIONS
-                if not any(a in loc.lower() for a in aliases)
-            ] + ["pasalkar", "ekta nagar", "ektanagar", "hadapsar", "kothrud", "karve", "paud road", "dehu"]
             
             filtered_candidates = []
             for item in raw_candidates:
@@ -336,25 +263,27 @@ def fetch_pune_civic_intelligence(
                 s_lower = (item.get("snippet") or "").lower()
                 full_text = f"{t_lower} {s_lower}"
                 
-                # Must mention at least one alias of the queried location
-                if not any(a in full_text for a in aliases):
-                    continue
-                
-                # If title mentions another distinct locality, exclude it
-                other_in_title = [
-                    other for other in known_other_areas
-                    if not any(a in other for a in aliases) and other in t_lower
-                ]
-                if other_in_title:
-                    continue
-                
-                # Check whether title itself has the alias
+                # Check whether item matches the queried location
                 has_title_alias = any(a in t_lower for a in aliases)
-                filtered_candidates.append((has_title_alias, item))
+                has_alias = any(a in full_text for a in aliases)
+                
+                if has_title_alias:
+                    priority = 2
+                elif has_alias:
+                    priority = 1
+                else:
+                    priority = 0
+                
+                filtered_candidates.append((priority, item))
             
-            # Prioritize title hits: if title hits exist, retain only title hits
-            title_hits = [item for has_title, item in filtered_candidates if has_title]
-            final_items = title_hits if title_hits else [item for _, item in filtered_candidates]
+            # Prioritize items that explicitly mention the target locality
+            mention_hits = [item for p, item in filtered_candidates if p > 0]
+            if mention_hits:
+                title_hits = [item for p, item in filtered_candidates if p == 2]
+                snippet_hits = [item for p, item in filtered_candidates if p == 1]
+                final_items = (title_hits + snippet_hits)[:limit]
+            else:
+                final_items = [item for _, item in filtered_candidates][:limit]
         else:
             final_items = raw_candidates[:limit]
 
@@ -390,29 +319,27 @@ def fetch_pune_civic_intelligence(
                 "is_video": is_vid,
                 "embed_url": embed_url,
             })
-    else:
-        # Fall back gracefully so dashboard continues to demonstrate intelligence
-        if use_fallback_if_empty:
-            if loc_clean:
-                aliases = PUNE_LOCATION_ALIASES.get(loc_clean, [loc_clean])
-                reports = []
-                for r in FALLBACK_CIVIC_REPORTS:
-                    combined_fb = (r["title"] + " " + r["snippet"]).lower()
-                    if any(a in combined_fb for a in aliases):
-                        # Clone and sanitize locations
-                        r_copy = dict(r)
-                        r_copy["locations"] = [location_filter.strip().title()]
-                        r_copy["is_video"] = is_video_report(r_copy["url"], r_copy["title"])
-                        r_copy["embed_url"] = get_embed_video_url(r_copy["url"])
-                        reports.append(r_copy)
-            else:
-                reports = []
-                for r in FALLBACK_CIVIC_REPORTS:
+    elif use_fallback_if_empty and FALLBACK_CIVIC_REPORTS:
+        if loc_clean:
+            aliases = PUNE_LOCATION_ALIASES.get(loc_clean, [loc_clean])
+            reports = []
+            for r in FALLBACK_CIVIC_REPORTS:
+                combined_fb = (r["title"] + " " + r["snippet"]).lower()
+                if any(a in combined_fb for a in aliases):
                     r_copy = dict(r)
+                    r_copy["locations"] = [location_filter.strip().title()]
                     r_copy["is_video"] = is_video_report(r_copy["url"], r_copy["title"])
                     r_copy["embed_url"] = get_embed_video_url(r_copy["url"])
                     reports.append(r_copy)
-            source_type = "cached_fallback"
+        else:
+            reports = []
+            for r in FALLBACK_CIVIC_REPORTS:
+                r_copy = dict(r)
+                r_copy["is_video"] = is_video_report(r_copy["url"], r_copy["title"])
+                r_copy["embed_url"] = get_embed_video_url(r_copy["url"])
+                reports.append(r_copy)
+        source_type = "cached_fallback"
+
 
     # Category breakdown strictly for matching reports
     counts = {
