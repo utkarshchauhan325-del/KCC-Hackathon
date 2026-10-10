@@ -1,6 +1,11 @@
+from datetime import datetime
+from html import escape
+from typing import Optional
+
 import streamlit as st
+
+from app.core.river_watch import MUTHA_RIVERSIDE_IDS, get_river_watch, refresh_in_background, release_band
 from app.ui.pune_data import (
-    RECENT_ALERTS,
     get_weather_adjusted_locations, get_live_pune_kpis,
     get_busiest_traffic_corridor
 )
@@ -11,15 +16,9 @@ from app.ui.components.charts import (
 )
 from app.ui.components.map_view import create_floodguard_map, render_floodguard_map_component
 from app.ui.components.location_report import render_location_full_report_box
-from app.ui.components.styles import STATUS, icon, page_header, section_title, status_pill
+from app.ui.components.styles import STATUS, chip, icon, page_header, section_title, status_color, status_pill
 
 _CHART_CONFIG = {"displayModeBar": False}
-_ALERT_COLORS = {
-    "critical": STATUS["Critical"]["fg"],
-    "high": STATUS["High"]["fg"],
-    "medium": "#D4A106",
-    "low": STATUS["Low"]["fg"],
-}
 
 
 def _kpi(label: str, value: int, delta: str, ico: str, color: str) -> str:
@@ -232,12 +231,87 @@ def render_overview_dashboard():
             ), unsafe_allow_html=True)
             st.plotly_chart(render_rainfall_forecast_bars(weather.hourly_forecast), use_container_width=True, config=_CHART_CONFIG)
 
+    render_river_watch_card({l["id"]: l for l in locations})
+
+
+def _ago_text(iso: Optional[str]) -> str:
+    if not iso:
+        return "never"
+    mins = int((datetime.now() - datetime.fromisoformat(iso)).total_seconds() // 60)
+    if mins < 60:
+        return f"{max(mins, 0)} min ago"
+    return f"{mins // 60} h ago" if mins < 1440 else f"{mins // 1440} d ago"
+
+
+@st.fragment(run_every=10)
+def render_river_watch_card(locations_by_id) -> None:
+    """Khadakwasla dam releases into the Mutha, read from the web by a TinyFish agent.
+
+    A fragment so it re-checks the cache every 10 s while an agent run is in progress,
+    without rerunning the rest of the dashboard.
+    """
+    river = get_river_watch(auto_refresh=True)
+    latest = river["latest"]
+    level = river["band"]["level"]
+
     with st.container(border=True):
-        st.markdown(section_title("Recent alerts", "Warnings and sensor threshold crossings"), unsafe_allow_html=True)
-        rows = "".join(
-            f'<div class="alert-item"><span class="alert-bar" style="background:{_ALERT_COLORS.get(a.get("severity", ""), "#94A0B4")}"></span>'
-            f'<div class="alert-content"><p class="alert-title">{a["title"]}</p><p class="alert-subtitle">{a["subtitle"]}</p></div>'
-            f'<span class="alert-time">{a["time"]}</span></div>'
-            for a in RECENT_ALERTS
-        )
-        st.markdown(f"<div>{rows}</div>", unsafe_allow_html=True)
+        head, btn = st.columns([4, 1.3], vertical_alignment="bottom")
+        head.markdown(section_title(
+            "Mutha river watch",
+            f"Khadakwasla dam releases, read from news by a TinyFish web agent &middot; checked {_ago_text(river['checked_at'])}",
+        ), unsafe_allow_html=True)
+        if btn.button("Check now", key="river_watch_refresh", icon=":material/travel_explore:",
+                      disabled=river["refreshing"], use_container_width=True,
+                      help="Runs the TinyFish agent now (about a minute)"):
+            refresh_in_background()
+            st.rerun(scope="fragment")
+
+        if river["refreshing"]:
+            st.markdown(chip('<span class="fg-dot"></span>TinyFish agent is reading the news now, about a minute', "accent"),
+                        unsafe_allow_html=True)
+        elif river["status"] not in ("ok", "never_run") and river["error"]:
+            st.caption(f"Last check failed: {river['error']}. Showing the previous reading.")
+
+        if river["current"]:
+            headline = f"{latest['discharge_cusecs']:,.0f} cusecs released"
+            sub = f"Reported {latest['date']} &middot; riverside outfalls fill {river['inflow_pct_per_hour']}%/h faster"
+        else:
+            headline = "No current release"
+            sub = (f"Last reported: {latest['discharge_cusecs']:,.0f} cusecs on {latest['date']}" if latest
+                   else "No release figures found yet")
+        left, right = st.columns([1, 1.25], gap="large")
+        with left:
+            st.markdown(
+                f'<div style="display:flex;align-items:center;gap:10px;margin:4px 0 2px;">{status_pill(level, river["band"]["label"])}</div>'
+                f'<div class="fg-score-val" style="font-size:24px;margin:6px 0 2px;">{headline}</div>'
+                f'<div style="font-size:12.5px;color:#64708A;margin-bottom:12px;">{sub}</div>',
+                unsafe_allow_html=True,
+            )
+            rows = ""
+            for loc_id in sorted(MUTHA_RIVERSIDE_IDS):
+                loc = locations_by_id.get(loc_id)
+                if not loc:
+                    continue
+                rows += (
+                    f'<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #F1F5F9;font-size:12.5px;">'
+                    f'<span style="color:#0B1220;font-weight:500;">{loc["name"]}</span>'
+                    f'<span class="fg-mono" style="color:#64708A;white-space:nowrap;">{loc.get("water_level_pct", 0)}% now &middot; '
+                    f'{loc.get("overflow_outlook", "n/a")}</span></div>'
+                )
+            st.markdown(f'<div class="fg-k" style="margin-bottom:2px;">Riverside outfalls on the Mutha</div>{rows}',
+                        unsafe_allow_html=True)
+        with right:
+            items = ""
+            for r in river["reports"][:5]:
+                figure = f'{r["discharge_cusecs"]:,.0f} cusecs' if r["discharge_cusecs"] else "no figure"
+                title = escape(r["headline"] or "Report")
+                link = f'<a href="{escape(r["url"])}" target="_blank" style="color:#0B1220;text-decoration:none;">{title}</a>' if r["url"].startswith("http") else title
+                items += (
+                    f'<div class="alert-item"><span class="alert-bar" style="background:{status_color(release_band(r["discharge_cusecs"])["level"])}"></span>'
+                    f'<div class="alert-content"><p class="alert-title">{link}</p>'
+                    f'<p class="alert-subtitle">{escape(r["source"] or "News")} &middot; {figure}</p></div>'
+                    f'<span class="alert-time">{r["date"]}</span></div>'
+                )
+            st.markdown(f'<div class="fg-k" style="margin-bottom:2px;">Reports the agent found</div>'
+                        f'{items or "<p class=alert-subtitle>None yet. Press Check now.</p>"}',
+                        unsafe_allow_html=True)

@@ -59,3 +59,6 @@ ehthumbs.db
 Thumbs.db
 .vscode/
 .idea/
+
+# TinyFish river watch cache (runtime data)
+data/intel/

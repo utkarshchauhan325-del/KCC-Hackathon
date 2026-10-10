@@ -487,6 +487,7 @@ def project_overflow(
     blockage_pct: float,
     drain_type: str,
     hourly_precip_mm: List[float],
+    river_inflow_pct_per_h: float = 0.0,
 ) -> Dict[str, Any]:
     """Project hourly conduit saturation from the rain forecast and say when it overflows.
 
@@ -500,6 +501,7 @@ def project_overflow(
     eta: Optional[int] = 0 if sat >= OVERFLOW_DANGER_PCT else None
     for hour, rain in enumerate(hourly_precip_mm, 1):
         inflow = max(0.0, rain) * RAIN_TO_SATURATION * conduit_mult * (1.0 + 0.6 * block)
+        inflow += max(0.0, river_inflow_pct_per_h)  # river backflow from a dam release
         outflow = BASE_RECESSION_PCT_PER_H * (1.0 - 0.7 * block)
         sat = max(0.0, min(100.0, sat + inflow - outflow))
         forecast.append(round(sat, 1))
@@ -529,6 +531,7 @@ def rank_locations_by_all_attributes(
     traffic_map: Optional[Dict[str, Any]] = None,
     force_refresh_traffic: bool = False,
     hourly_precip_mm: Optional[List[float]] = None,
+    river_inflow_by_id: Optional[Dict[str, float]] = None,
 ) -> List[Dict[str, Any]]:
     """Enrich and rank all municipal monitoring locations on the basis of ALL attributes:
     1. Precipitation intensity (mm) from WeatherAPI
@@ -623,6 +626,7 @@ def rank_locations_by_all_attributes(
                 blockage_pct=float(loc_copy.get("blockage_pct", 50)),
                 drain_type=loc_copy.get("drain_type", ""),
                 hourly_precip_mm=[p * local_scale for p in hourly_precip_mm],
+                river_inflow_pct_per_h=(river_inflow_by_id or {}).get(loc_id, 0.0),
             ))
 
         enriched.append(loc_copy)

@@ -90,3 +90,14 @@ Compare the two images and assess:
 Return the JSON schema only.
 """
 
+
+# TinyFish Web Agent goal for the Mutha river watch. {today} is filled in at run time
+# so the agent can turn relative dates ("2 hours ago") into calendar dates.
+KHADAKWASLA_RELEASE_GOAL = """Today is {today}. This page lists news about water released (discharged) from
+Khadakwasla dam in Pune into the Mutha river. Read the visible results without opening them.
+Return JSON only:
+{{"reports": [{{"date": "YYYY-MM-DD", "discharge_cusecs": number or null, "headline": str, "source": str, "url": str}}]}}
+for up to 6 of the most recent results, newest first. Convert relative dates to YYYY-MM-DD using today's date.
+Set discharge_cusecs only when the result states a release figure in cusecs for Khadakwasla; otherwise null.
+Skip results about any other dam or river.
+"""

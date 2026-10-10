@@ -618,7 +618,10 @@ def get_all_attribute_ranked_locations(force_refresh: bool = False) -> List[Dict
     from app.core.weather_client import fetch_live_pune_weather
     from app.core.scoring import rank_locations_by_all_attributes
 
+    from app.core.river_watch import MUTHA_RIVERSIDE_IDS, get_river_watch
+
     weather = fetch_live_pune_weather(force_refresh=force_refresh)
+    river = get_river_watch()  # cached TinyFish dam-release reading; the dashboard refreshes it
     ranked = rank_locations_by_all_attributes(
         locations=PUNE_LOCATIONS,
         weather_rain_chance=weather.max_rain_chance,
@@ -627,6 +630,7 @@ def get_all_attribute_ranked_locations(force_refresh: bool = False) -> List[Dict
         humidity=weather.humidity,
         force_refresh_traffic=force_refresh,
         hourly_precip_mm=[h.precip_mm for h in weather.hourly_forecast],
+        river_inflow_by_id={loc_id: river["inflow_pct_per_hour"] for loc_id in MUTHA_RIVERSIDE_IDS},
     )
     return apply_camera_scores(ranked)
 

@@ -209,6 +209,58 @@ def execute_tinyfish_search(query: str, limit: int = 10) -> Dict[str, Any]:
         }
 
 
+TINYFISH_AGENT_ENDPOINT = "https://agent.tinyfish.ai/v1/automation/run-sse"
+AGENT_TIMEOUT_SECONDS = 240
+
+
+def run_web_agent(url: str, goal: str, timeout: int = AGENT_TIMEOUT_SECONDS) -> Dict[str, Any]:
+    """Run a TinyFish Web Agent: a cloud browser opens `url` and carries out `goal`.
+
+    Streams the run's server-sent events and returns
+    {"status": "ok", "result": <JSON the agent produced>, "steps": [...], "run_id": str}
+    or {"status": <error kind>, "error": str}. A run typically takes 30-90 seconds.
+    """
+    import json
+
+    api_key = get_tinyfish_api_key()
+    if not api_key:
+        return {"status": "missing_key", "error": "TINYFISH_API_KEY is not set in .env"}
+
+    steps: List[str] = []
+    run_id = None
+    try:
+        with requests.post(
+            TINYFISH_AGENT_ENDPOINT,
+            headers={"X-API-Key": api_key, "Content-Type": "application/json", "Accept": "text/event-stream"},
+            json={"url": url, "goal": goal},
+            stream=True,
+            timeout=(15, timeout),
+        ) as response:
+            if response.status_code in (401, 403):
+                return {"status": "auth_error", "error": f"TinyFish rejected the API key (HTTP {response.status_code})"}
+            if response.status_code != 200:
+                return {"status": "api_error", "error": f"TinyFish agent responded with HTTP {response.status_code}"}
+            for line in response.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data:"):
+                    continue
+                try:
+                    event = json.loads(line[5:].strip())
+                except ValueError:
+                    continue
+                run_id = event.get("run_id", run_id)
+                if event.get("type") == "PROGRESS" and event.get("purpose"):
+                    steps.append(event["purpose"])
+                elif event.get("type") == "COMPLETE":
+                    if event.get("status") != "COMPLETED":
+                        return {"status": "agent_failed", "error": event.get("error") or f"Agent run ended {event.get('status')}",
+                                "steps": steps, "run_id": run_id}
+                    return {"status": "ok", "result": event.get("result"), "steps": steps, "run_id": run_id}
+        return {"status": "agent_failed", "error": "Agent stream ended without a result", "steps": steps, "run_id": run_id}
+    except requests.RequestException as e:
+        logger.error("TinyFish agent request failed: %s", e)
+        return {"status": "network_error", "error": f"TinyFish agent request failed: {e}", "steps": steps, "run_id": run_id}
+
+
 def fetch_pune_civic_intelligence(
     query: str = "pune flood advisory rainfall waterlogging road closure drainage complaint",
     limit: int = 15,
