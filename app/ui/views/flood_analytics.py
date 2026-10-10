@@ -469,30 +469,13 @@ def render_flood_analytics():
 </div>
 {status_pill('High', 'Active monsoon surcharge')}
 </div>
-<div class="fg-kv" style="border-top:none; padding-top:0;">
-<div><span class="fg-k">Date</span><span class="fg-v mono">24 Sep 2026</span></div>
-<div><span class="fg-k">City risk index</span><span class="fg-v mono" style="color:#C8281C;">78.4 / 100</span></div>
-<div><span class="fg-k">Monsoon stage</span><span class="fg-v">Active, low pressure</span></div>
-<div><span class="fg-k">Monitored</span><span class="fg-v">53 locations, 6 cameras</span></div>
-</div>
-<div style="{h3}">1. Summary</div>
-<p style="{body}">Camera and sensor data from 53 arterial junctions show immediate waterlogging risk at <b>5 critical locations</b>: MG Road Junction, FC Road Junction, Deccan Gymkhana, Dapodi Confluence and Sangamwadi. Runoff is held back by high antecedent rainfall (average 34 mm in 3 h), debris in stormwater box culverts (average 71% blocked) and a raised Mula-Mutha river stage.</p>
-<div style="{h3}">2. Bottlenecks</div>
-<ul style="{body}">
-<li><b>MG Road Junction (Ward 14):</b> 90% conduit capacity, 28 cm standing water. Plastic and debris on road gratings. Mobile dewatering pump deployed.</li>
-<li><b>FC Road Junction (Ward 09):</b> 80% capacity. Commercial cardboard and plastic blocking the inlet. Solid waste enforcement notified.</li>
-<li><b>Deccan Gymkhana sluice gate:</b> River backflow prevents gravity drainage to the Mula outfall. Flap gate needs clearing by crane.</li>
-</ul>
-<div style="{h3}">3. Sewer overflow scoring (pass C)</div>
-<p style="{body}">Scores are computed in code, not by the model:</p>
-<code style="display:block; background:#F8FAFC; border:1px solid #E3E8EF; border-radius:8px; padding:10px 12px; font-size:12px; color:#0B1220; white-space:pre-wrap;">Risk = 0.35 x Water_State + 0.25 x Trash_Inside + 0.15 x Trash_Near + 0.10 x Inlet_Blocked + 0.10 x Hazard_Weight + 0.05 x Wet_Condition</code>
-<p style="{body} margin-top:8px;">A floor of 70 points applies whenever standing sewage or bubbling water is identified.</p>
-<div style="{h3}">4. Orders</div>
-<ol style="{body}">
-<li>Move 500 GPM mobile pumps to MG Road and FC Road junctions.</li>
-<li>Activate the Traffic Ward 3 underpass barricade protocol if rainfall exceeds 40 mm in the next 2 hours.</li>
-<li>Send a jetting machine to the Deccan Gymkhana river discharge culvert.</li>
-</ol>
+<div style="{h3}">Overview</div>
+<p style="{body}">Camera and sensor data from 53 arterial junctions indicate immediate waterlogging risk at 5 critical locations: MG Road Junction, FC Road Junction, Deccan Gymkhana, Dapodi Confluence, and Sangamwadi.</p>
+<p style="{body}">Current risk is driven by high antecedent rainfall (average 34 mm in 3 hours), debris blocking stormwater box culverts (average 71%), and a raised Mula-Mutha river stage, which is restricting drainage.</p>
+<div style="{h3}">Sewer Overflow Risk Formula</div>
+<p style="{body}">Risk scores are computed in code using:</p>
+<code style="display:block; background:#F8FAFC; border:1px solid #E3E8EF; border-radius:8px; padding:10px 12px; font-size:12px; color:#0B1220; white-space:pre-wrap;">Risk = 0.35 &times; Water_State + 0.25 &times; Trash_Inside + 0.15 &times; Trash_Near + 0.10 &times; Inlet_Blocked + 0.10 &times; Hazard_Weight + 0.05 &times; Wet_Condition</code>
+<p style="{body} margin-top:8px;">A minimum risk score of 70 points is applied whenever standing sewage or bubbling water is identified.</p>
 </div>
 """
         st.markdown(" ".join(l.strip() for l in report_summary_html.splitlines() if l.strip()), unsafe_allow_html=True)

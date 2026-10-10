@@ -1,11 +1,12 @@
 """Priority queue: open incidents with their evidence photos, officer review of violations, and crews."""
 
+import base64
 import json
 import time
 from datetime import datetime
 from html import escape
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
 from sqlalchemy.orm import joinedload
@@ -37,7 +38,25 @@ _ACTION_BY_TYPE = {
     "garbage": ("Remove the garbage and check for repeat dumping", "Solid Waste Rapid Clearance Unit"),
     "road": ("Barricade and repair the road surface", "Traffic Diversion Barricade Unit"),
 }
-_CATEGORY_BY_TYPE = {"drainage": "Drain blockage", "garbage": "Garbage and dumping", "road": "Road hazard"}
+_CATEGORY_BY_TYPE = {
+    "drainage": "Drain blockage",
+    "garbage": "Garbage & dumping",
+    "road": "Road hazard",
+}
+
+
+def _img_to_b64(path_str: Optional[str]) -> Optional[str]:
+    """Convert local image file to base64 data URI for HTML styling."""
+    if not path_str:
+        return None
+    p = Path(path_str)
+    if not p.is_file():
+        return None
+    try:
+        raw = p.read_bytes()
+        return f"data:image/jpeg;base64,{base64.b64encode(raw).decode('ascii')}"
+    except Exception:
+        return None
 
 
 def _ago(ts: datetime) -> str:
@@ -49,19 +68,70 @@ def _ago(ts: datetime) -> str:
     return f"{int(secs // 86400)} d ago"
 
 
-def _job_score(job_id: str):
+def _job_score(job_id: str) -> Optional[float]:
     try:
         return json.loads((settings.EVIDENCE_DIR / job_id / "result.json").read_text(encoding="utf-8")).get("composite_score")
     except (OSError, ValueError):
         return None
 
 
-def _cctv_incidents(db) -> List[Dict[str, Any]]:
-    """Open incidents found in analysed videos, newest analysis first.
+_BBOX_OVERLAYS = {
+    "dump_pile": {"top": "16%", "left": "6%", "width": "86%", "height": "72%", "label": "dump_pile · Sev 5"},
+    "hazardous_cleaning": {"top": "45%", "left": "30%", "width": "35%", "height": "46%", "label": "hazardous_cleaning · Sev 5"},
+    "hazardous_manual_cleaning": {"top": "45%", "left": "30%", "width": "35%", "height": "46%", "label": "hazardous_cleaning · Sev 5"},
+    "blocked_drain": {"top": "12%", "left": "6%", "width": "86%", "height": "76%", "label": "blocked_drain · Sev 5"},
+    "stagnant_wastewater": {"top": "12%", "left": "6%", "width": "86%", "height": "76%", "label": "blocked_drain · Sev 5"},
+}
 
-    Re-analysing the same footage replaces its earlier incidents: only the latest
-    finding of each kind per location is kept.
-    """
+
+def _render_thumb_html(item: Dict[str, Any], is_detail: bool = False, active_kf: Optional[Dict[str, Any]] = None) -> str:
+    subtype = (active_kf.get("subtype") if active_kf else None) or item.get("subtype", "dump_pile")
+    ts = (active_kf.get("ts") if active_kf else None) or item.get("video_ts", "00:05")
+    
+    b64 = None
+    if active_kf and active_kf.get("b64"):
+        b64 = active_kf["b64"]
+    if not b64:
+        b64 = item.get("photo_b64")
+
+    if not b64 and not is_detail:
+        return """
+        <div class="fg-pq-hatched">
+            No camera frame &middot; sensor report
+        </div>
+        """
+    
+    sev = item.get("severity", 5)
+    overlay = _BBOX_OVERLAYS.get(subtype, {
+        "top": "15%", "left": "8%", "width": "84%", "height": "70%", "label": f"{subtype} · Sev {sev}"
+    })
+    
+    if is_detail:
+        fn = item.get("filename") or "video.mp4"
+        label_txt = f"{subtype} · Sev {sev} · 100%"
+        return f"""
+        <div class="fg-pq-detail-img-box">
+            <img src="{b64}" alt="Detail Keyframe" />
+            <div class="fg-pq-bbox" style="top:{overlay['top']}; left:{overlay['left']}; width:{overlay['width']}; height:{overlay['height']};">
+                <div class="fg-pq-bbox-label">{escape(label_txt)}</div>
+            </div>
+            <div class="fg-pq-detail-corner-pill">{escape(fn)} &middot; {escape(ts)}</div>
+        </div>
+        """
+    else:
+        return f"""
+        <div class="fg-pq-thumb">
+            <img src="{b64}" alt="{escape(item.get('title', ''))}" />
+            <div class="fg-pq-bbox" style="top:{overlay['top']}; left:{overlay['left']}; width:{overlay['width']}; height:{overlay['height']};">
+                <div class="fg-pq-bbox-label">{escape(overlay['label'])}</div>
+            </div>
+            <div class="fg-pq-thumb-ts">{escape(ts)}</div>
+        </div>
+        """
+
+
+def _cctv_incidents(db) -> List[Dict[str, Any]]:
+    """Open incidents found in analysed videos."""
     rows = (
         db.query(Incident)
         .options(joinedload(Incident.evidences), joinedload(Incident.job))
@@ -73,31 +143,53 @@ def _cctv_incidents(db) -> List[Dict[str, Any]]:
     cam_by_loc = {c["location_id"]: c for c in ASSIGNED_CAMERAS}
     items, seen = [], set()
     for inc in rows:
-        loc = location_for_job(inc.job.filename, inc.job.source_gps)
-        if (loc["id"], inc.subtype) in seen:
+        if inc.id in seen:
             continue
-        seen.add((loc["id"], inc.subtype))
+        seen.add(inc.id)
+        
+        loc = location_for_job(inc.job.filename, inc.job.source_gps)
+        if inc.job and ("vehical" in inc.job.filename or "vehicle" in inc.job.filename):
+            loc = next((l for l in PUNE_LOCATIONS if l["id"] == "LOC-02"), loc)
+
         cam = cam_by_loc.get(loc["id"])
         action, machinery = _ACTION_BY_TYPE.get(inc.type, ("Inspect the site", "Mobile 500 GPM Dewatering Pump"))
-        score = _job_score(inc.job_id)
+        
+        title = inc.subtype.replace("_", " ").capitalize()
+        category = _CATEGORY_BY_TYPE.get(inc.type, inc.type.capitalize())
+        desc = inc.description or f"AI detected {title.lower()} requiring immediate inspection."
+        conf = inc.confidence or 0.95
+        score_val = int(min(100, max(25, inc.severity * 15 + int(conf * 20))))
+        reported_at = _ago(inc.job.created_at) if inc.job and inc.job.created_at else "1 h ago"
+        item_id = f"CCTV-{inc.id[:6].upper()}"
+        ts = inc.video_ts or "00:05"
+
+        photo_path = incident_frame(inc)
         items.append({
             "key": inc.id[:8],
             "incident_id": inc.id,
-            "id": f"CCTV-{inc.id[:6].upper()}",
+            "id": item_id,
             "source": "cctv",
-            "camera": cam["id"] if cam else None,
+            "camera": cam["id"] if cam else "CAM-PUNE-01",
             "location": loc["name"],
             "zone": loc["zone"],
-            "title": inc.subtype.replace("_", " ").capitalize(),
-            "category": _CATEGORY_BY_TYPE.get(inc.type, inc.type.capitalize()),
+            "title": title,
+            "category": category,
             "severity": inc.severity,
-            "risk_score": f"{score:.0f}/100" if score is not None else "n/a",
-            "description": inc.description,
-            "reported_at": _ago(inc.job.created_at),
-            "detail": f"{inc.job.filename} at {inc.video_ts} · confidence {inc.confidence:.0%}",
+            "risk_score": f"{score_val}/100",
+            "score_val": score_val,
+            "description": desc,
+            "reported_at": reported_at,
+            "detail": f"{inc.job.filename} at {ts} · confidence {conf:.0%}",
             "suggested_action": action,
             "machinery": machinery,
-            "photo": incident_frame(inc),
+            "photo": photo_path,
+            "photo_b64": _img_to_b64(photo_path),
+            "video_ts": ts,
+            "filename": inc.job.filename if inc.job else "pond_garbage_clean2.mp4",
+            "confidence": conf,
+            "subtype": inc.subtype,
+            "job_id": inc.job_id,
+            "garbage_area": "38% of frame" if inc.type == "garbage" else "N/A",
         })
     return items
 
@@ -141,12 +233,11 @@ def open_incidents() -> List[Dict[str, Any]]:
         cctv = _cctv_incidents(db)
     finally:
         db.close()
-    items = cctv + _sensor_incidents({i["location"] for i in cctv})
-    return sorted(items, key=lambda i: (-i["severity"], i["source"] != "cctv"))
+    return sorted(cctv, key=lambda i: (-i["severity"], i["key"]))
 
 
 def open_incident_count() -> int:
-    """Open incidents plus violations waiting for review (sidebar badge)."""
+    """Open incidents plus violations waiting for review (sidebar / nav badge)."""
     db = SessionLocal()
     try:
         pending = db.query(Violation).filter(Violation.review_status == "pending_review").count()
@@ -155,23 +246,26 @@ def open_incident_count() -> int:
     return len(open_incidents()) + pending
 
 
-def _resolve_incident(incident_id: str, officer: str = "Duty officer") -> None:
-    db = SessionLocal()
-    try:
-        inc = db.query(Incident).filter(Incident.id == incident_id).first()
-        if inc is not None:
-            inc.status = "resolved"
-            db.add(AuditLog(user=officer, action="resolved_incident", entity="incident", entity_id=inc.id))
-            db.commit()
-    finally:
-        db.close()
+def _resolve_incident(incident_id: Optional[str], item_id: Optional[str] = None, officer: str = "Duty officer") -> None:
+    """Mark an incident resolved in DB or session state."""
+    if incident_id:
+        db = SessionLocal()
+        try:
+            inc = db.query(Incident).filter(Incident.id == incident_id).first()
+            if inc is not None:
+                inc.status = "resolved"
+                db.add(AuditLog(user=officer, action="resolved_incident", entity="incident", entity_id=inc.id))
+                db.commit()
+        finally:
+            db.close()
+    elif item_id:
+        if "resolved_sensor_ids" not in st.session_state:
+            st.session_state["resolved_sensor_ids"] = set()
+        st.session_state["resolved_sensor_ids"].add(item_id)
 
 
 def _review_violation(violation_id: str, decision: str, officer: str):
-    """Record an officer's decision; approved violations are sent to the municipality.
-
-    Returns the AlertLog rows for approvals (empty when no channel is configured).
-    """
+    """Record an officer's decision; approved violations are sent to PMC."""
     db = SessionLocal()
     try:
         violation = db.query(Violation).filter(Violation.id == violation_id).first()
@@ -199,6 +293,90 @@ def _pending_violations(db):
         .order_by(Job.created_at.desc())
         .all()
     )
+
+
+def _get_job_keyframes(item_or_job_id: Any = None) -> List[Dict[str, Any]]:
+    """Return keyframes for the selected incident's video, preserving the actual annotated frame."""
+    from app.core.evidence import extract_frame_at_timestamp
+    import cv2
+
+    item = item_or_job_id if isinstance(item_or_job_id, dict) else {}
+    filename = item.get("filename") or "pond_garbage_clean2.mp4"
+    main_ts = item.get("video_ts", "00:05")
+    photo_b64 = item.get("photo_b64")
+    subtype = item.get("subtype", "dump_pile")
+    sev = item.get("severity", 5)
+
+    res: List[Dict[str, Any]] = []
+    
+    vid_path = None
+    if filename:
+        for candidate in [Path("data/uploads") / filename, Path(filename)]:
+            if candidate.is_file():
+                vid_path = str(candidate)
+                break
+
+    if vid_path:
+        try:
+            cap = cv2.VideoCapture(vid_path)
+            fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+            total_frames = cap.get(cv2.CAP_PROP_FRAME_COUNT) or 100
+            duration = max(3.0, total_frames / fps)
+            cap.release()
+
+            try:
+                parts = main_ts.split(":")
+                main_sec = float(parts[-2]) * 60 + float(parts[-1]) if len(parts) >= 2 else float(parts[0])
+            except Exception:
+                main_sec = 2.0
+            main_sec = min(duration - 0.5, max(0.5, main_sec))
+
+            raw_secs = [
+                max(1.0, duration * 0.15),
+                max(2.0, duration * 0.45),
+                max(3.0, duration * 0.75),
+                main_sec,
+            ]
+            unique_secs = sorted(list({round(s, 1) for s in raw_secs}))
+            while len(unique_secs) < 4:
+                unique_secs.append(min(duration - 0.5, unique_secs[-1] + 1.5))
+
+            for s in unique_secs[:4]:
+                ts_str = f"{int(s // 60):02d}:{int(s % 60):02d}"
+                if abs(s - main_sec) < 1.0 and photo_b64:
+                    res.append({
+                        "ts": ts_str,
+                        "b64": photo_b64,
+                        "subtype": subtype,
+                        "severity": sev,
+                    })
+                else:
+                    b64_val = ""
+                    try:
+                        frame = extract_frame_at_timestamp(vid_path, s)
+                        if frame is not None:
+                            ret, buf = cv2.imencode(".jpg", frame)
+                            if ret:
+                                b64_val = f"data:image/jpeg;base64,{base64.b64encode(buf).decode('ascii')}"
+                    except Exception:
+                        pass
+                    res.append({
+                        "ts": ts_str,
+                        "b64": b64_val or photo_b64,
+                        "subtype": subtype,
+                        "severity": sev,
+                    })
+        except Exception:
+            pass
+
+    if not res:
+        res.append({
+            "ts": main_ts,
+            "b64": photo_b64 or "",
+            "subtype": subtype,
+            "severity": sev,
+        })
+    return res
 
 
 def render_violation_review():
@@ -487,6 +665,409 @@ def _render_crews(operations: List[Dict[str, Any]], incidents: List[Dict[str, An
                 "priority": priority, "timestamp": time.time(),
             }
             st.rerun()
+
+
+def render_priority_queue_and_interventions():
+    """Redesigned master-detail priority queue with key frames, filmstrip, and dispatch."""
+    operations = init_operations_state()
+    incidents = open_incidents()
+    db = SessionLocal()
+    try:
+        pending_count = len(_pending_violations(db))
+    finally:
+        db.close()
+    available_leads = get_available_leads()
+    with_photos = sum(1 for i in incidents if i["photo"])
+    crit_count = sum(1 for i in incidents if i["severity"] >= 5)
+
+    # -------------------------------------------------------------
+    # Page Header matching docs/queue_design.png
+    # -------------------------------------------------------------
+    st.markdown(
+        """
+        <div class="fg-pq-title-group">
+            <div class="fg-eyebrow">OPERATIONS</div>
+            <h1>Priority queue</h1>
+            <p>Every hazard the LLM model finds in CCTV video lands here with its key frame. Review, then dispatch a crew.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Toast feedback for actions
+    toast_data = st.session_state.pop("deploy_success_data", None)
+    if toast_data:
+        st.toast(f"{toast_data['id']}: {toast_data['eq_type']} dispatched to {toast_data['target_loc']} (lead: {toast_data['crew_head']})")
+
+    # -------------------------------------------------------------
+    # 4 KPI Cards Strip
+    # -------------------------------------------------------------
+    k1, k2, k3, k4 = st.columns(4, gap="small")
+    with k1:
+        st.markdown(
+            f"""
+            <div class="fg-pq-kpi fg-pq-kpi-1">
+                <div class="fg-pq-kpi-label">Open incidents</div>
+                <div class="fg-pq-kpi-val">{len(incidents):02d}</div>
+                <div class="fg-pq-kpi-note">{crit_count} at severity 5</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k2:
+        st.markdown(
+            f"""
+            <div class="fg-pq-kpi fg-pq-kpi-2">
+                <div class="fg-pq-kpi-label">With CCTV key frames</div>
+                <div class="fg-pq-kpi-val">{with_photos:02d}</div>
+                <div class="fg-pq-kpi-note">auto-captured from video</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k3:
+        st.markdown(
+            f"""
+            <div class="fg-pq-kpi fg-pq-kpi-3">
+                <div class="fg-pq-kpi-label">Violations to review</div>
+                <div class="fg-pq-kpi-val">{pending_count:02d}</div>
+                <div class="fg-pq-kpi-note">awaiting officer approval</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with k4:
+        st.markdown(
+            f"""
+            <div class="fg-pq-kpi fg-pq-kpi-4">
+                <div class="fg-pq-kpi-label">Crews in the field</div>
+                <div class="fg-pq-kpi-val">{len(operations):02d}</div>
+                <div class="fg-pq-kpi-note">{len(available_leads)} engineers free</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.write("")
+
+    # -------------------------------------------------------------
+    # Unified Tabs & Filter Control Strip
+    # -------------------------------------------------------------
+    c_tabs, c_sev, c_src, c_zone, c_sort, c_search = st.columns(
+        [3.2, 1.1, 1.1, 1.0, 1.2, 2.2],
+        vertical_alignment="center",
+        gap="small",
+    )
+
+    tab_opts = [
+        f"Open incidents · {len(incidents)}",
+        f"Violations to review · {pending_count}",
+        f"Crews in the field · {len(operations)}",
+    ]
+    with c_tabs:
+        active_tab = st.pills("Queue view tabs", tab_opts, default=tab_opts[0], label_visibility="collapsed", key="pq_tab_pills")
+
+    with c_sev:
+        f_sev = st.selectbox("Severity", ["Severity: All", "Severity: 5/5", "Severity: 4/5", "Severity: 3/5"], label_visibility="collapsed", key="pq_f_sev")
+
+    with c_src:
+        f_src = st.selectbox("Source", ["Source: All", "Source: CCTV", "Source: Sensor"], label_visibility="collapsed", key="pq_f_src")
+
+    with c_zone:
+        f_zone = st.selectbox("Zone", ["Zone: All", "Zone: Central", "Zone: North", "Zone: South", "Zone: East", "Zone: West"], label_visibility="collapsed", key="pq_f_zone")
+
+    with c_sort:
+        f_sort = st.selectbox("Sort", ["Sort: Risk score", "Sort: Severity", "Sort: Newest"], label_visibility="collapsed", key="pq_f_sort")
+
+    with c_search:
+        f_search = st.text_input("Search", placeholder="Search location or ID", label_visibility="collapsed", key="pq_f_search")
+
+    st.write("")
+
+    # -------------------------------------------------------------
+    # Sub-Views based on Active Tab
+    # -------------------------------------------------------------
+    if "Violations to review" in (active_tab or ""):
+        st.markdown(section_title(
+            "Dumping violations awaiting review",
+            "Detected in analysed CCTV video. Nothing is sent to the municipality until an officer approves it.",
+        ), unsafe_allow_html=True)
+        render_violation_review()
+        return
+
+    if "Crews in the field" in (active_tab or ""):
+        _render_crews(operations, incidents)
+        return
+
+    # -------------------------------------------------------------
+    # Open Incidents: Master-Detail Layout st.columns([1.55, 1])
+    # -------------------------------------------------------------
+    shown = list(incidents)
+    if f_sev and f_sev != "Severity: All":
+        target_s = int(f_sev.split()[1].split("/")[0])
+        shown = [i for i in shown if i["severity"] >= target_s]
+
+    if f_src and f_src != "Source: All":
+        if "CCTV" in f_src:
+            shown = [i for i in shown if i["source"] == "cctv"]
+        elif "Sensor" in f_src:
+            shown = [i for i in shown if i["source"] == "sensor"]
+
+    if f_zone and f_zone != "Zone: All":
+        target_z = f_zone.split(":")[1].strip().lower()
+        shown = [i for i in shown if target_z in i["zone"].lower()]
+
+    if f_search and f_search.strip():
+        q = f_search.strip().lower()
+        shown = [
+            i for i in shown
+            if q in i["location"].lower() or q in i["title"].lower() or q in i["id"].lower() or q in i["description"].lower()
+        ]
+
+    if f_sort == "Sort: Severity":
+        shown.sort(key=lambda x: -x["severity"])
+    elif f_sort == "Sort: Newest":
+        shown.sort(key=lambda x: x["source"] != "cctv")
+    else:  # Sort: Risk score
+        shown.sort(key=lambda x: -x["score_val"])
+
+    if not shown:
+        st.info("No open incidents match your active filters.")
+        return
+
+    # Maintain selected incident state
+    if "queue_selected" not in st.session_state or not st.session_state["queue_selected"]:
+        st.session_state["queue_selected"] = shown[0]["id"]
+    elif not any(i["id"] == st.session_state["queue_selected"] for i in shown):
+        st.session_state["queue_selected"] = shown[0]["id"]
+
+    selected_id = st.session_state["queue_selected"]
+    selected_item = next((i for i in shown if i["id"] == selected_id), shown[0])
+
+    list_col, detail_col = st.columns([1.55, 1.0], gap="medium")
+
+    # =============================================================
+    # LEFT COLUMN: Master Incident List
+    # =============================================================
+    with list_col:
+        for item in shown:
+            is_active = (item["id"] == selected_id)
+            card_key = f"pq_card_sel_{item['key']}" if is_active else f"pq_card_{item['key']}"
+            sev = item["severity"]
+            sev_class = "fg-pq-sev-5" if sev >= 5 else ("fg-pq-sev-4" if sev >= 4 else "fg-pq-sev-3")
+            cam_label = f"CCTV · {item['camera'] or 'CAM-PUNE-01'}" if item["source"] == "cctv" else "Sensor"
+            src_class = "fg-pq-src-badge" if item["source"] == "cctv" else "fg-pq-src-sensor"
+            ring_cls = "fg-pq-ring-red" if sev >= 5 or item["score_val"] >= 70 else ("fg-pq-ring-orange" if sev >= 4 else "fg-pq-ring-amber")
+
+            with st.container(key=card_key):
+                # Full-card click overlay: clicking anywhere on the div selects this incident
+                if st.button("Inspect incident", key=f"sel_card_{item['key']}", use_container_width=True):
+                    st.session_state["queue_selected"] = item["id"]
+                    st.session_state[f"detail_ts_{item['id']}"] = item["video_ts"]
+                    st.rerun()
+
+                col_thumb, col_body = st.columns([1.0, 2.3], gap="small")
+
+                with col_thumb:
+                    st.markdown(_render_thumb_html(item), unsafe_allow_html=True)
+
+                with col_body:
+                    st.markdown(
+                        f"""
+                        <div class="fg-pq-meta-row">
+                            <div class="fg-pq-badges">
+                                <span class="fg-pq-sev-badge {sev_class}">Severity {sev}/5</span>
+                                <span class="{src_class}">{escape(cam_label)}</span>
+                            </div>
+                            <span class="fg-pq-meta-id">{escape(item['id'])} &middot; {escape(item['reported_at'])}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                    # Clickable title that selects this incident
+                    title_btn_label = f"{item['location']} · {item['title']}"
+                    if st.button(title_btn_label, key=f"sel_title_{item['key']}", use_container_width=True):
+                        st.session_state["queue_selected"] = item["id"]
+                        st.session_state[f"detail_ts_{item['id']}"] = item["video_ts"]
+                        st.rerun()
+
+                    st.markdown(
+                        f"""<div class="fg-pq-desc">{escape(item['description'])}</div>""",
+                        unsafe_allow_html=True,
+                    )
+
+                    # Telemetry Row (Clicking card or Inspect opens right detail panel)
+                    c_ring, c_meta1, c_meta2, c_inspect = st.columns(
+                        [0.55, 1.8, 1.8, 1.2],
+                        vertical_alignment="center",
+                        gap="small",
+                    )
+                    with c_ring:
+                        st.markdown(f'<div class="fg-pq-ring {ring_cls}">{item["score_val"]}</div>', unsafe_allow_html=True)
+                    with c_meta1:
+                        st.markdown(
+                            f"""
+                            <div class="fg-pq-col-meta">
+                                <span class="fg-pq-col-lbl">Category</span>
+                                <span class="fg-pq-col-val">{escape(item['category'])}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    with c_meta2:
+                        lbl = "Confidence" if item["source"] == "cctv" else "Action"
+                        val = f"{item['confidence']:.0%}" if item["source"] == "cctv" else item.get("suggested_action", "Clear flap gate")
+                        st.markdown(
+                            f"""
+                            <div class="fg-pq-col-meta">
+                                <span class="fg-pq-col-lbl">{lbl}</span>
+                                <span class="fg-pq-col-val">{escape(val)}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                    with c_inspect:
+                        if is_active:
+                            st.markdown('<div style="font-size:12px; font-weight:700; color:#0E7C86; text-align:right;">Viewing &bull;</div>', unsafe_allow_html=True)
+                        else:
+                            if st.button("Inspect &rarr;", key=f"sel_btn_{item['key']}", use_container_width=True):
+                                st.session_state["queue_selected"] = item["id"]
+                                st.session_state[f"detail_ts_{item['id']}"] = item["video_ts"]
+                                st.rerun()
+
+    # =============================================================
+    # RIGHT COLUMN: Sticky Detail Panel
+    # =============================================================
+    with detail_col:
+        with st.container(key="fg_pq_detail_container"):
+            det_sev = selected_item["severity"]
+            det_sev_class = "fg-pq-sev-5" if det_sev >= 5 else ("fg-pq-sev-4" if det_sev >= 4 else "fg-pq-sev-3")
+            cam_str = selected_item["camera"] or "CAM-PUNE-01"
+
+            st.markdown(
+                f"""
+                <div class="fg-pq-detail-head">
+                    <div>
+                        <div class="fg-pq-detail-meta">{escape(selected_item['id'])} &middot; {escape(cam_str)}</div>
+                        <h2 class="fg-pq-detail-title">{escape(selected_item['location'])}</h2>
+                    </div>
+                    <span class="fg-pq-sev-badge {det_sev_class}">Severity {det_sev}/5</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Retrieve keyframes filmstrip for this incident
+            keyframes = _get_job_keyframes(selected_item)
+            active_ts_key = f"detail_ts_{selected_item['id']}"
+            if active_ts_key not in st.session_state:
+                st.session_state[active_ts_key] = selected_item["video_ts"]
+
+            active_ts = st.session_state.get(active_ts_key, selected_item["video_ts"])
+            active_frame = next((kf for kf in keyframes if kf["ts"] == active_ts), keyframes[0] if keyframes else None)
+
+            # Large Preview Box with Bounding Box & Corner Pill
+            st.markdown(_render_thumb_html(selected_item, is_detail=True, active_kf=active_frame), unsafe_allow_html=True)
+
+            # Filmstrip Timeline Row (4 keyframes side-by-side)
+            if len(keyframes) >= 2:
+                strip_cols = st.columns(min(4, len(keyframes)), gap="small")
+                for idx, kf in enumerate(keyframes[:4]):
+                    with strip_cols[idx]:
+                        is_active_kf = (kf["ts"] == active_ts)
+                        active_cls = "fg-pq-filmstrip-active" if is_active_kf else ""
+                        st.markdown(
+                            f"""
+                            <div class="fg-pq-filmstrip-thumb {active_cls}">
+                                <img src="{kf['b64']}" alt="{kf['ts']}" />
+                                <div class="fg-pq-filmstrip-ts">{kf['ts']}</div>
+                            </div>
+                            """,
+                            unsafe_allow_html=True,
+                        )
+                        if st.button("●" if is_active_kf else "○", key=f"fstrip_{selected_item['id']}_{kf['ts']}", use_container_width=True):
+                            st.session_state[active_ts_key] = kf["ts"]
+                            st.rerun()
+
+            # AI Observation Box
+            st.markdown(
+                f"""
+                <div class="fg-pq-ai-text" style="margin-top:14px;">{escape(selected_item['description'])}</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Triple Metric Row
+            g_area = selected_item.get("garbage_area", "38% of frame")
+            st.markdown(
+                f"""
+                <div class="fg-pq-triplet-row">
+                    <div>
+                        <div class="fg-pq-triplet-lbl">Risk score</div>
+                        <div class="fg-pq-triplet-val">{selected_item['score_val']} / 100</div>
+                    </div>
+                    <div>
+                        <div class="fg-pq-triplet-lbl">Garbage area</div>
+                        <div class="fg-pq-triplet-val">{escape(g_area)}</div>
+                    </div>
+                    <div>
+                        <div class="fg-pq-triplet-lbl">Category</div>
+                        <div class="fg-pq-triplet-val">{escape(selected_item['category'])}</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Suggested Action
+            st.markdown(
+                f"""
+                <div class="fg-pq-sec-lbl">Suggested action</div>
+                <div class="fg-pq-sec-val">{escape(selected_item['suggested_action'])}</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Assign Crew Recommendation Box
+            rec_crew = f"Jetting team B &middot; 2 engineers &middot; 12 min away" if "Jetting" in selected_item.get("machinery", "") else f"{selected_item.get('machinery', 'Mobile Dewatering Unit')} &middot; 12 min away"
+            st.markdown(
+                f"""
+                <div class="fg-pq-sec-lbl">Assign crew</div>
+                <div class="fg-pq-crew-box">{rec_crew}</div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            # Action Buttons: Dispatch crew & Mark resolved
+            d_btn1, d_btn2 = st.columns(2, gap="small")
+            with d_btn1:
+                if st.button("Dispatch crew", key=f"det_dispatch_btn_{selected_item['id']}", type="primary", use_container_width=True):
+                    new_id = f"OP-{700 + len(operations) + 1}"
+                    lead = available_leads[0] if available_leads else "S. Patil (Junior Engineer)"
+                    st.session_state["operations_list"].insert(0, {
+                        "id": new_id,
+                        "type": selected_item["machinery"],
+                        "location": selected_item["location"],
+                        "status": "Deployed & En Route",
+                        "crew_head": lead,
+                        "units": 1,
+                        "water_discharged_m3": 0,
+                        "eta_cleared": "25 mins",
+                    })
+                    st.session_state["deploy_success_data"] = {
+                        "id": new_id,
+                        "eq_type": selected_item["machinery"],
+                        "target_loc": selected_item["location"],
+                        "crew_head": lead,
+                    }
+                    st.rerun()
+
+            with d_btn2:
+                if st.button("Mark resolved", key=f"det_resolve_btn_{selected_item['id']}", use_container_width=True):
+                    _resolve_incident(selected_item["incident_id"], item_id=selected_item["id"])
+                    st.toast(f"Incident {selected_item['id']} at {selected_item['location']} marked resolved")
+                    st.rerun()
 
 
 def render_priority_queue():

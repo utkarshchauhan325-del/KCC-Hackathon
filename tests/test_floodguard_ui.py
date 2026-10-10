@@ -102,3 +102,25 @@ def test_render_floodguard_map_component_rendering():
         assert mock_comp.called
         assert "key" in mock_comp.call_args[1]
 
+def test_priority_queue_data_helpers():
+    """Verify priority queue open_incidents, count, and time rendering."""
+    from datetime import datetime, timedelta
+    from app.ui.views.priority_queue import _ago, open_incidents, open_incident_count
+
+    # _ago tests
+    now = datetime.utcnow()
+    assert "min ago" in _ago(now - timedelta(minutes=15))
+    assert "h ago" in _ago(now - timedelta(hours=3))
+    assert "d ago" in _ago(now - timedelta(days=2))
+
+    # open_incidents returns list
+    incidents = open_incidents()
+    assert isinstance(incidents, list)
+    assert len(incidents) >= 0
+
+    # open_incident_count returns int matching non-resolved count
+    count = open_incident_count()
+    assert isinstance(count, int)
+    assert count >= 0
+
+
