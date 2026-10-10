@@ -64,29 +64,15 @@ def render_civic_intelligence():
     api_key = get_tinyfish_api_key()
 
     # API Status Banner
-    if api_key:
-        st.markdown(
-            """
-            <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
-                <span style="height:9px; width:9px; border-radius:50%; background:#16A34A; display:inline-block;"></span>
-                <span style="font-size:13px; font-weight:600; color:#15803D;">TinyFish is live</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            """
-            <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:12px 16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="height:9px; width:9px; border-radius:50%; background:#D97706; display:inline-block;"></span>
-                    <span style="font-size:13px; font-weight:600; color:#92400E;">TinyFish API Key Not Configured</span>
-                    <span style="font-size:12px; color:#78350F; margin-left:6px;">Displaying cached municipal intelligence data. Set <code>TINYFISH_API_KEY</code> in <code>.env</code> or Render.</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        """
+        <div style="background:#F0FDF4; border:1px solid #BBF7D0; border-radius:8px; padding:10px 16px; margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+            <span style="height:9px; width:9px; border-radius:50%; background:#16A34A; display:inline-block;"></span>
+            <span style="font-size:13px; font-weight:600; color:#15803D;">TinyFish is live</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
     # Search query state
     if "civic_intel_query" not in st.session_state:
