@@ -51,12 +51,12 @@ class CivicEyePipeline:
         frames = select_keyframes(video_path, issues, settings.DETECTOR_EXEMPLAR_FRAMES)
         if not frames:
             return
-        log_progress(f"[Garbage Prompts] Asking Gemini to mark garbage on {len(frames)} frames to teach the local detector...")
+        log_progress(f"[Garbage Prompts] Asking LLM model to mark garbage on {len(frames)} frames to teach the local detector...")
         try:
             resp = self.client.locate_garbage([encode_jpeg(f, max_side=1024) for _, f in frames])
         except Exception as e:
             logger.warning(f"Garbage exemplar request failed: {e}")
-            log_progress(f"[Notice] Could not get garbage examples from Gemini ({e}); detector will use text prompts only.")
+            log_progress(f"[Notice] Could not get garbage examples from LLM model ({e}); detector will use text prompts only.")
             detector.set_exemplars([])
             return
 
@@ -70,9 +70,9 @@ class CivicEyePipeline:
             valid = [(b, r.waste_type) for b, r in zip(boxes, marked.regions) if b[2] - b[0] >= 8 and b[3] - b[1] >= 8]
             if valid:
                 exemplars.append(GarbageExemplar(frame, [b for b, _ in valid], [t for _, t in valid]))
-        detector.set_exemplars(exemplars)
+            detector.set_exemplars(exemplars)
         regions = sum(len(e.boxes) for e in exemplars)
-        log_progress(f"Gemini marked {regions} garbage region(s) on {len(exemplars)} frame(s).")
+        log_progress(f"LLM model marked {regions} garbage region(s) on {len(exemplars)} frame(s).")
 
     def process_video(
         self,
@@ -113,7 +113,7 @@ class CivicEyePipeline:
             # 1. Upload video to Gemini Files API
             # Upload and Pass A failures are fatal: reporting "no hazards" for a video
             # that was never analysed would look like an all-clear to the municipality.
-            log_progress(f"[Upload] Uploading {video_path.name} to Gemini Files API...")
+            log_progress(f"[Upload] Uploading {video_path.name} to LLM model Files API...")
             uploaded_file = self.client.upload_video(video_path)
             log_progress("[Ready] Video ready for multimodal inspection.")
 
@@ -274,10 +274,10 @@ class CivicEyePipeline:
                     )
                 except Exception as e:
                     logger.warning(f"Local detector failed: {e}", exc_info=True)
-                    log_progress(f"[Notice] Local detector failed ({e}); video shows Gemini findings only.")
+                    log_progress(f"[Notice] Local detector failed ({e}); video shows LLM model findings only.")
                     detector = None
             if not detector:
-                log_progress("[Evidence] Rendering evidence video with Gemini findings...")
+                log_progress("[Evidence] Rendering evidence video with LLM model findings...")
                 generate_annotated_surveillance_video(**render_kwargs)
             if object_summary:
                 log_progress(

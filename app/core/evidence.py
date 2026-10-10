@@ -337,7 +337,7 @@ def generate_annotated_surveillance_video(
             if waste:
                 text += "  ||  Waste: " + ", ".join(f"{WASTE_TYPE_LABELS[k]} {n}" for k, n in waste.items())
         else:
-            text = "Local detector off: showing Gemini findings only"
+            text = "Local detector off: showing LLM model findings only"
         b_h = max(28, int(h * 0.06))
         band = annotated.copy()
         cv2.rectangle(band, (0, h - b_h), (w, h), (15, 23, 42), -1)

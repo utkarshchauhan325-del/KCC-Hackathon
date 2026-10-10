@@ -464,7 +464,7 @@ def render_job_results():
                 _video_panel(video_path, job.filename, f"{site['name']} · job {job.id[:8]}", f"result_{job.id[:8]}")
             st.caption(
                 "Coloured outlines are per-object masks from the local detector, each with a track ID that follows it "
-                "across frames. White boxes marked VLM are Gemini's findings."
+                "across frames. White boxes marked VLM are LLM model findings."
             )
             st.markdown(section_title("Key frames"), unsafe_allow_html=True)
             render_frame_gallery(job_key_frames(job), key=f"res_{job.id[:8]}", columns=2)
@@ -482,7 +482,7 @@ def render_job_results():
                 '<div class="fg-grid fg-grid-2">'
                 + _score_tile("Composite risk", result.get("composite_score"), result.get("composite_band", ""))
                 + _score_tile("Drainage risk", result.get("drainage_score"), result.get("drainage_band", ""),
-                              "" if result.get("drainage_score") is not None else "Scored only when Gemini finds and inspects a drain")
+                              "" if result.get("drainage_score") is not None else "Scored only when LLM model finds and inspects a drain")
                 + _score_tile("Garbage risk", result.get("garbage_score"), result.get("garbage_band", ""))
                 + _stat_tile("Dumping violations", str(result.get("violations_count", 0)), "waiting for officer review in the queue")
                 + "</div>",
@@ -491,13 +491,13 @@ def render_job_results():
 
 
             if objects is None:
-                st.warning("The local detector did not run for this video, so only Gemini's findings are available.")
+                st.warning("The local detector did not run for this video, so only LLM model findings are available.")
             else:
                 _render_detector_summary(objects)
 
-            st.markdown(section_title("Gemini findings", f"{len(incidents)} issue(s), most severe first"), unsafe_allow_html=True)
+            st.markdown(section_title("LLM model findings", f"{len(incidents)} issue(s), most severe first"), unsafe_allow_html=True)
             if not incidents:
-                st.info("Gemini reported no drainage, garbage or road issues in this video.")
+                st.info("LLM model reported no drainage, garbage or road issues in this video.")
             for inc in incidents:
                 sev_level = "Critical" if inc.severity >= 5 else ("High" if inc.severity >= 4 else "Medium")
                 sent = {log.channel: log.status for log in inc.alerts}
@@ -567,7 +567,7 @@ def _render_detector_summary(objects: Dict[str, Any]) -> None:
     if tiles:
         st.markdown(f'<div class="fg-grid fg-grid-3">{"".join(tiles)}</div>', unsafe_allow_html=True)
     if not garbage_measured:
-        st.caption("Garbage was not measured by the local detector for this video, so the garbage score uses Gemini's severity rating.")
+        st.caption("Garbage was not measured by the local detector for this video, so the garbage score uses LLM model severity rating.")
 
 
 def _render_detector_charts(objects: Dict[str, Any]) -> None:
