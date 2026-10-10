@@ -192,11 +192,8 @@ def render_overview_dashboard():
                         unsafe_allow_html=True,
                     )
                     r_c6.markdown(f"<div class='fg-num' style='text-align:center'>{loc['blockage_pct']}%</div>", unsafe_allow_html=True)
-
-                busiest_note = f" &middot; Heaviest traffic: {busiest.get('name')}" if isinstance(busiest, dict) and busiest.get('name') else ""
                 st.markdown(
-                    f'<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding-top:8px;font-size:11.5px;color:#64708A;">'
-                    f'<span>Select a corridor to open its site report{busiest_note}</span>'
+                    f'<div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:8px;font-size:11.5px;color:#64708A;">'
                     f'<span class="fg-mono">Top {len(display_locs)} &middot; {zone_filter}</span></div>',
                     unsafe_allow_html=True,
                 )
