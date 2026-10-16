@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<!-- STITCH_THREEJS_START:ANIMATION_15 class="fixed inset-0 w-full h-full bg-transparent" -->
+<div class="fixed inset-0 w-full h-full bg-transparent" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_15" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_15');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  # FloodGuard / CivicEye Frontend Export Package (Option C)
+
+This package contains complete standalone, production-ready frontend templates and interactive JavaScript client hooks built specifically for your **FloodGuard (KCC-Hackathon)** repository architecture.
+
+---
+
+## 📁 Repository Integration Structure
+
+Drop these files directly into your project's `app/templates/` or `app/static/` directory:
+
+```text
+KCC-Hackathon/
+├── app/
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── floodguard.css
+│   │   └── js/
+│   │       ├── api_client.js
+│   │       ├── priority_queue.js
+│   │       └── login_auth.js
+│   ├── templates/
+│   │   ├── base.html
+│   │   ├── login.html
+│   │   ├── priority_queue.html
+│   │   ├── live_gis_map.html
+│   │   └── violations_review.html
+│   └── ui/
+│       └── views/
+│           └── priority_queue.py   # Streamlit / FastAPI wrapper
+```
+
+---
+
+## 1. Shared Base Template (`app/templates/base.html`)
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FloodGuard - CivicEye PMC Operations{% endblock %}</title>
+  
+  <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              teal: '#0e7c86',
+              'teal-dark': '#09535a',
+              'teal-light': '#e6f4f5',
+              navy: '#0b132b',
+              surface: '#f3f5f9',
+              border: '#e1e6ee',
+              ink: '#0f1b2d',
+              sev5: '#b71c1c',
+              'sev5-bg': '#fdecec',
+              sev4: '#9a4a00',
+              'sev4-bg': '#fff1dc',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f3f5f9;
+      color: #0f1b2d;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+  </style>
+  {% block head %}{% endblock %}
+
+<body class="min-h-screen flex flex-col antialiased">
+<!-- Top Global Operations Navigation Bar -->
+<header class="bg-[#0b132b] text-white px-6 py-3 border-b border-slate-800 flex items-center justify-between sticky top-0 z-50">
+<div class="flex items-center space-x-8">
+<div class="flex items-center space-x-3">
+<div class="w-8 h-8 rounded-lg bg-[#0e7c86] flex items-center justify-center font-black text-white text-base tracking-wider shadow-inner">
+          FG
+        </div>
+<div>
+<div class="flex items-center space-x-2">
+<span class="font-extrabold tracking-tight text-white text-lg">FloodGuard</span>
+<span class="text-[10px] font-mono uppercase bg-[#0e7c86]/30 text-[#4fd1c5] px-1.5 py-0.5 rounded border border-[#0e7c86]/50">Ops Center</span>
+</div>
+<p class="text-[10px] text-slate-400 font-mono tracking-wider">CIVICEYE PMC OPERATIONS</p>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<nav class="hidden md:flex items-center space-x-1 font-medium text-sm">
+<a class="px-3.5 py-1.5 rounded-md transition-all flex items-center space-x-2 {% if active_page == 'priority_queue' %}bg-[#0e7c86] text-white font-semibold{% else %}text-slate-300 hover:text-white hover:bg-slate-800/60{% endif %}" href="/priority-queue">
+<span>Priority Queue</span>
+<span class="bg-red-500 text-white text-[11px] font-mono px-1.5 py-0.2 rounded-full font-bold animate-pulse">6</span>
+</a>
+<a class="px-3.5 py-1.5 rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 {% if active_page == 'gis_map' %}bg-[#0e7c86] text-white font-semibold{% endif %}" href="/gis-map">
+          Live GIS Map
+        </a>
+<a class="px-3.5 py-1.5 rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 {% if active_page == 'telemetry' %}bg-[#0e7c86] text-white font-semibold{% endif %}" href="/drain-telemetry">
+          Drain &amp; Sensor Telemetry
+        </a>
+<a class="px-3.5 py-1.5 rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 {% if active_page == 'violations' %}bg-[#0e7c86] text-white font-semibold{% endif %}" href="/violations">
+          Violations &amp; Review
+        </a>
+</nav>
+</div>
+<!-- Right Live Health & Officer Profile -->
+<div class="flex items-center space-x-6 text-xs">
+<div class="hidden lg:flex items-center space-x-2 font-mono bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-700">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+<span class="text-emerald-400 font-bold">1,000 CAMERAS &amp; SENSORS ONLINE</span>
+</div>
+<div class="flex items-center space-x-3 border-l border-slate-700 pl-4">
+<div class="text-right">
+<p class="text-white font-semibold leading-tight">Rajesh Sharma</p>
+<div class="flex items-center space-x-1 justify-end font-mono text-[10px] text-slate-400">
+<span>CHIEF OPS ENGINEER</span>
+<span class="bg-teal-500/20 text-teal-300 px-1 rounded">PMC</span>
+</div>
+</div>
+<div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center font-bold text-xs text-white">
+          RS
+        </div>
+</div>
+</div>
+</header>
+<!-- Page Content Container -->
+<main class="flex-1 w-full max-w-[1680px] mx-auto p-4 md:p-6">
+    {% block content %}{% endblock %}
+  </main>
+<!-- Persistent Compliance Footer -->
+<footer class="bg-[#0b132b] text-slate-400 text-xs px-6 py-3 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between">
+<div class="flex items-center space-x-2 font-medium">
+<span class="text-white font-bold">PMC CivicEye System</span>
+<span class="text-slate-600">|</span>
+<span>Dispatched under Pune Disaster Management Authority</span>
+</div>
+<div class="mt-2 md:mt-0 font-mono text-[11px]">
+      © 2025 Pune Municipal Corporation (PMC). Precision Civic Hydro-Telemetry Core.
+    </div>
+</footer>
+<script src="/static/js/api_client.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+
+```
+
+---
+
+## 2. Priority Queue Template (`app/templates/priority_queue.html`)
+
+```html
+{% extends "base.html" %}
+{% set active_page = "priority_queue" %}
+
+{% block title %}Priority Queue - FloodGuard CivicEye{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+<!-- Header & Action Buttons -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div>
+<div class="flex items-center space-x-2 font-mono text-xs text-slate-500 uppercase tracking-wider">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
+<span>OPERATIONS // INCIDENT DESK • PMC MONSOON SURVEILLANCE v4.2</span>
+</div>
+<h1 class="text-2xl md:text-3xl font-extrabold text-[#0f1b2d] tracking-tight mt-1">Priority Queue</h1>
+<p class="text-sm text-slate-500">Real-time AI drainage blockage detection, vision telemetry, and rapid emergency field crew dispatch.</p>
+</div>
+<div class="flex items-center space-x-3">
+<button class="px-4 py-2 bg-white border border-[#e1e6ee] text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-sm transition" id="btn-export-log">
+<svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Export Log</span>
+</button>
+<button class="px-4 py-2 bg-[#0e7c86] hover:bg-[#09535a] text-white rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-sm transition" id="btn-upload-video">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Upload Video / Feed</span>
+</button>
+</div>
+</div>
+<!-- KPI Strip (4 Compact Cards with Coloured Left Border) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Open Incidents -->
+<div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-red-500 p-4 shadow-sm hover:shadow-md transition">
+<div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+<span>OPEN INCIDENTS</span>
+<span class="w-6 h-6 rounded-md bg-red-50 text-red-600 flex items-center justify-center font-bold">!</span>
+</div>
+<div class="mt-2 flex items-baseline space-x-2">
+<span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-open-count">14</span>
+<span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">8 Critical</span>
+</div>
+<div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+<span>Pune Metropolitan Area</span>
+<span class="text-red-600 font-medium">Sev 5: Mutha #4</span>
+</div>
+</div>
+<!-- Key Frames Analyzed -->
+<div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-teal-500 p-4 shadow-sm hover:shadow-md transition">
+<div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+<span>KEY FRAMES ANALYZED</span>
+<span class="w-6 h-6 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center font-bold">AI</span>
+</div>
+<div class="mt-2 flex items-baseline space-x-2">
+<span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-fps-count">1,280</span>
+<span class="text-xs text-slate-500 font-mono">fps/hr</span>
+</div>
+<div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+<span>Gemini 1.5 Pro Vision</span>
+<span class="text-teal-600 font-medium">99.4% Acc</span>
+</div>
+</div>
+<!-- Pending Violations -->
+<div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-amber-500 p-4 shadow-sm hover:shadow-md transition">
+<div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+<span>PENDING VIOLATIONS</span>
+<span class="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center font-bold">§</span>
+</div>
+<div class="mt-2 flex items-baseline space-x-2">
+<span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-violations-count">7</span>
+<span class="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">Culvert zones</span>
+</div>
+<div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+<span>Illegal Solid Waste</span>
+<span class="text-amber-700 font-medium">Fine Notice Ready</span>
+</div>
+</div>
+<!-- Field Crews Active -->
+<div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-emerald-500 p-4 shadow-sm hover:shadow-md transition">
+<div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+<span>FIELD CREWS ACTIVE</span>
+<span class="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">✓</span>
+</div>
+<div class="mt-2 flex items-baseline space-x-2">
+<span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-crews-count">12</span>
+<span class="text-xs text-slate-500 font-mono">/ 16 units</span>
+<span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">75%</span>
+</div>
+<div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+<span>Emergency Jetting Units</span>
+<span class="text-emerald-700 font-medium">18m avg ETA</span>
+</div>
+</div>
+</div>
+<!-- Filter & Tab Toolbar -->
+<div class="bg-white rounded-xl border border-[#e1e6ee] p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+<div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0">
+<button class="queue-tab-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0e7c86] text-white flex items-center space-x-1.5" data-filter="open">
+<span>Open Incidents</span>
+<span class="bg-white/20 text-white px-1.5 py-0.5 rounded font-mono text-[10px]">14</span>
+</button>
+<button class="queue-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-1.5" data-filter="violations">
+<span>Violations to Review</span>
+<span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[10px]">7</span>
+</button>
+<button class="queue-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-1.5" data-filter="crews">
+<span>Crews in Field</span>
+<span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[10px]">12</span>
+</button>
+<button class="queue-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-filter="resolved">
+<span>Resolved Log</span>
+</button>
+</div>
+<!-- Filters & Search -->
+<div class="flex items-center space-x-2 text-xs">
+<div class="relative w-full md:w-64">
+<input class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#0e7c86] focus:outline-none" id="incident-search" placeholder="Search Camera, Drain Node..." type="text"/>
+<svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<select class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none" id="filter-zone">
+<option value="all">All Zones</option>
+<option value="zone-4">Zone 04 (Sinhagad)</option>
+<option value="zone-1">Zone 01 (Shivajinagar)</option>
+</select>
+<button class="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-200 transition flex items-center space-x-1" id="btn-sort-risk">
+<span>Sort: Risk</span>
+<span>↓</span>
+</button>
+</div>
+</div>
+<!-- Master-Detail 2-Column Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Left Column: Incident List (5 cols) -->
+<div class="lg:col-span-5 space-y-3" id="incident-list-container">
+<!-- Incident cards injected by priority_queue.js -->
+</div>
+<!-- Right Column: Sticky Detail Inspection Panel (7 cols) -->
+<div class="lg:col-span-7 bg-white rounded-xl border border-[#e1e6ee] p-5 shadow-sm sticky top-20" id="detail-panel-container">
+<!-- Detailed selected card content injected by priority_queue.js -->
+</div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/priority_queue.js"></script>
+{% endblock %}
+```
+
+---
+
+## 3. Interactive JavaScript State &amp; API Controller (`app/static/js/priority_queue.js`)
+
+```javascript
+/**
+ * FloodGuard Priority Queue Interactive Controller
+ * Supports bidirectional Streamlit updates and direct FastAPI integration.
+ */
+
+const INCIDENTS_DATA = [
+  {
+    id: "#INC-8821",
+    cam_id: "CAM-1042",
+    location: "Mutha River Underpass Culvert #4 (Shivajinagar)",
+    description: "Heavy industrial debris and plastic tarp creating 74% cross-sectional drainage blockage. Severe overflow hazard.",
+    severity: 5,
+    risk_score: 94,
+    garbage_area: "74.2%",
+    water_level: "1.92m (+0.8m/hr)",
+    time_ago: "4 mins ago",
+    timestamp: "00:14:22 [LIVE CAPTURE]",
+    type: "camera",
+    run_threat: "CRITICAL",
+    sop: "Deploy Hydraulic De-silting Jetting Vehicle (Unit PMC-4) and 4-man rapid clearing crew. Clear culvert trash rack from eastern bank.",
+    filmstrip: [
+      { label: "Normal flow (22%)", time: "00:12:05", src: "https://images.unsplash.com/photo-1541888946425-d0fbb186f5f7?auto=format&amp;fit=crop&amp;w=400&amp;q=80" },
+      { label: "Debris collision", time: "00:13:40", src: "https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&amp;fit=crop&amp;w=400&amp;q=80" },
+      { label: "Severe choke point", time: "00:14:22 [LIVE]", src: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&amp;fit=crop&amp;w=800&amp;q=80", active: true },
+      { label: "Backwater surge", time: "00:15:10", src: "https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&amp;fit=crop&amp;w=400&amp;q=80" }
+    ],
+    assigned_crew: "PMC-04"
+  },
+  {
+    id: "#INC-8819",
+    cam_id: "CAM-0982",
+    location: "Hadapsar Flyover Drainage Outfall (Drain-089)",
+    description: "Telemetry trigger: Ultrasonic water rise rate exceeded safe threshold. Backwater surge detected at primary manifold.",
+    severity: 4,
+    risk_score: 82,
+    garbage_area: "N/A (Ultrasonic Sensor)",
+    water_level: "2.4m / 2.8m Max",
+    time_ago: "12 mins ago",
+    timestamp: "SURGE LEVEL ALERT",
+    type: "sensor",
+    run_threat: "ELEVATED",
+    sop: "Engage de-watering auxiliary pumps at Siphon station #2.",
+    filmstrip: [],
+    assigned_crew: null
+  },
+  {
+    id: "#INC-8815",
+    cam_id: "CAM-0312",
+    location: "Swargate Junction Stormwater Drain",
+    description: "Illegal dumping in progress: Concrete rubble and masonry bags choking 55% culvert inlet during high precipitation.",
+    severity: 4,
+    risk_score: 78,
+    garbage_area: "54.8%",
+    water_level: "1.40m (+0.3m/hr)",
+    time_ago: "19 mins ago",
+    timestamp: "00:08:14 [LIVE CAPTURE]",
+    type: "camera",
+    run_threat: "HIGH",
+    sop: "Notify Ward Officer and dispatch interceptor QRT squad.",
+    filmstrip: [
+      { label: "Truck arrival", time: "00:05:10", src: "https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&amp;fit=crop&amp;w=400&amp;q=80" },
+      { label: "Dumping active", time: "00:08:14", src: "https://images.unsplash.com/photo-1541888946425-d0fbb186f5f7?auto=format&amp;fit=crop&amp;w=400&amp;q=80", active: true }
+    ],
+    assigned_crew: null
+  }
+];
+
+let selectedIncidentId = "#INC-8821";
+
+// Renders the Left-Hand Master Incident List
+function renderIncidentList() {
+  const container = document.getElementById("incident-list-container");
+  if (!container) return;
+
+  container.innerHTML = INCIDENTS_DATA.map(inc =&gt; {
+    const isSelected = inc.id === selectedIncidentId;
+    const isSev5 = inc.severity === 5;
+
+    return `
+      <div class="cursor-pointer transition duration-150 rounded-xl border p-4 bg-white ${isSelected ? 'border-[#0e7c86] ring-2 ring-[#0e7c86]/20 shadow-md' : 'border-[#e1e6ee] hover:border-slate-300 shadow-sm'}" onclick="selectIncident('${inc.id}')">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center space-x-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isSev5 ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}">
+              Sev ${inc.severity}/5 ${isSev5 ? 'CRITICAL' : 'WARNING'}
+            </span>
+<span class="font-mono text-xs text-slate-500">${inc.cam_id}</span>
+<span class="font-mono text-xs font-semibold text-slate-700">${inc.id}</span>
+</div>
+<span class="text-xs text-slate-400 font-mono">${inc.time_ago}</span>
+</div>
+<div class="flex space-x-4">
+<!-- Thumbnail / Sensor badge -->
+<div class="w-36 h-24 rounded-lg overflow-hidden bg-slate-900 relative flex-shrink-0 border border-slate-200">
+            ${inc.type === 'camera' ? `
+              <img class="w-full h-full object-cover opacity-85" src="${inc.filmstrip.find(f =&gt; f.active)?.src || inc.filmstrip[0]?.src || ''}"/>
+<div class="absolute inset-0 border border-red-500 m-1 pointer-events-none"></div>
+<span class="absolute bottom-1 right-1 bg-black/80 text-[9px] font-mono text-white px-1 rounded">${inc.timestamp}</span>
+            ` : `
+              <div class="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-2 text-center">
+<span class="font-mono text-xs font-bold text-slate-600">ULTRASONIC</span>
+<span class="text-[10px] text-slate-400">Telemetry Outfall</span>
+</div>
+            `}
+          </div>
+<!-- Description & Details -->
+<div class="flex-1 flex flex-col justify-between">
+<div>
+<h3 class="text-sm font-bold text-slate-900 leading-snug">${inc.location}</h3>
+<p class="text-xs text-slate-500 line-clamp-2 mt-1">${inc.description}</p>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+<div class="flex items-center space-x-2">
+<span class="text-xs font-bold font-mono text-[#0e7c86]">${inc.garbage_area} Area</span>
+</div>
+<div class="flex items-center space-x-1">
+<span class="text-xs font-mono font-black ${isSev5 ? 'text-red-600' : 'text-amber-600'}">${inc.risk_score}</span>
+<span class="text-[10px] uppercase font-mono text-slate-400">RISK</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-end space-x-2 mt-3 pt-2 border-t border-slate-100">
+<button class="px-3 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded border border-slate-200 transition" onclick="event.stopPropagation(); resolveIncident('${inc.id}')">Resolve</button>
+<button class="px-3 py-1 text-xs font-semibold text-white bg-[#0e7c86] hover:bg-[#09535a] rounded transition" onclick="event.stopPropagation(); dispatchCrew('${inc.id}')">Dispatch Crew</button>
+</div>
+</div>
+    `;
+  }).join('');
+}
+
+// Selects an incident and updates the sticky inspector panel
+function selectIncident(incidentId) {
+  selectedIncidentId = incidentId;
+  renderIncidentList();
+  renderDetailPanel();
+
+  // If running inside Streamlit, dispatch custom event
+  if (window.parent &amp;&amp; window.parent.postMessage) {
+    window.parent.postMessage({ type: "streamlit:setComponentValue", value: { selected: incidentId } }, "*");
+  }
+}
+
+// Renders the Right-Hand Detail Panel
+function renderDetailPanel() {
+  const container = document.getElementById("detail-panel-container");
+  const inc = INCIDENTS_DATA.find(i =&gt; i.id === selectedIncidentId);
+  if (!container || !inc) return;
+
+  container.innerHTML = `
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+<div>
+<div class="flex items-center space-x-2 font-mono text-xs">
+<span class="font-bold text-slate-800">${inc.id}</span>
+<span class="text-slate-400">•</span>
+<span class="text-slate-600">${inc.cam_id}</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">CRITICAL BLOCKAGE DETECTED</span>
+</div>
+<h2 class="text-lg font-extrabold text-slate-900 mt-0.5">${inc.location}</h2>
+</div>
+<div class="flex items-center space-x-2">
+<button class="px-2.5 py-1 text-xs font-mono bg-slate-100 hover:bg-slate-200 rounded text-slate-700 transition">LIVE REPLAY</button>
+</div>
+</div>
+<!-- Main CCTV Video / Feed Inspector with Bounding Box -->
+<div class="mt-4 bg-slate-950 rounded-xl overflow-hidden relative border border-slate-800">
+<div class="h-72 w-full relative">
+<img class="w-full h-full object-cover" id="main-inspector-frame" src="${inc.filmstrip.find(f =&gt; f.active)?.src || inc.filmstrip[0]?.src || ''}"/>
+<!-- Bounding Box Overlay -->
+<div class="absolute inset-x-12 inset-y-8 border-2 border-red-500 pointer-events-none rounded bg-red-500/10 flex items-start justify-between p-2">
+<span class="bg-red-600 text-white font-mono text-[10px] px-1.5 py-0.5 rounded font-bold">
+            [BOX: 420x280 | PLASTIC &amp; SILT | AREA: ${inc.garbage_area} | RISK: ${inc.risk_score}%]
+          </span>
+<span class="bg-black/70 text-red-400 font-mono text-[10px] px-1 rounded">SURCHARGE SPIKE: +0.8m/hr</span>
+</div>
+</div>
+<div class="p-3 bg-slate-900 text-white flex items-center justify-between text-xs font-mono border-t border-slate-800">
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+<span>AI ENGINE: GEMINI 1.5 PRO VISION CORE</span>
+</div>
+<div class="text-slate-400">BLOCKAGE PROBABILITY: <span class="text-emerald-400 font-bold">96.4%</span></div>
+</div>
+</div>
+<!-- 4-Frame Sequential Filmstrip (Gemini Captures) -->
+    ${inc.filmstrip.length &gt; 0 ? `
+      <div class="mt-4">
+<div class="flex justify-between items-center text-xs font-mono text-slate-500 mb-2">
+<span class="font-bold uppercase tracking-wider">Sequential Key Frame Timeline</span>
+<span class="text-teal-600 font-medium">Click frame to inspect</span>
+</div>
+<div class="grid grid-cols-4 gap-2">
+          ${inc.filmstrip.map((frame, idx) =&gt; `
+            <div class="cursor-pointer border-2 ${frame.active ? 'border-[#0e7c86]' : 'border-slate-200 hover:border-slate-400'} rounded-lg overflow-hidden bg-slate-900 transition" onclick="switchFrame('${frame.src}')">
+<img class="h-16 w-full object-cover" src="${frame.src}"/>
+<div class="p-1 bg-white text-[10px] font-mono text-slate-600 truncate">${frame.time}</div>
+</div>
+          `).join('')}
+        </div>
+</div>
+    ` : ''}
+
+    <!-- AI Volumetric & Hydrological Diagnosis -->
+<div class="mt-4 bg-[#f8fafc] border border-slate-200 rounded-xl p-4">
+<div class="flex items-center space-x-2 text-xs font-bold text-slate-700 mb-1">
+<span class="text-teal-600">✦</span>
+<span>Gemini 1.5 Pro Vision AI Diagnosis</span>
+</div>
+<p class="text-xs text-slate-600 leading-relaxed">
+        ${inc.description} <strong class="text-red-700">Estimated 18 minutes until road embankment waterlogging</strong> along Senapati Bapat Road junction at current rainfall rate (38 mm/hr).
+      </p>
+<div class="grid grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-200 text-center font-mono">
+<div class="bg-white p-2 rounded border border-slate-100">
+<span class="text-[10px] text-slate-400 block">RISK SCORE</span>
+<span class="text-sm font-bold text-red-600">${inc.risk_score}/100</span>
+</div>
+<div class="bg-white p-2 rounded border border-slate-100">
+<span class="text-[10px] text-slate-400 block">GARBAGE AREA</span>
+<span class="text-sm font-bold text-slate-800">${inc.garbage_area}</span>
+</div>
+<div class="bg-white p-2 rounded border border-slate-100">
+<span class="text-[10px] text-slate-400 block">WATER LEVEL</span>
+<span class="text-sm font-bold text-slate-800">${inc.water_level}</span>
+</div>
+<div class="bg-white p-2 rounded border border-slate-100">
+<span class="text-[10px] text-slate-400 block">RUNOFF THREAT</span>
+<span class="text-sm font-bold text-red-600">${inc.run_threat}</span>
+</div>
+</div>
+</div>
+<!-- SOP Recommendation & Action Triggers -->
+<div class="mt-4 bg-teal-50/60 border border-teal-200 rounded-xl p-3 text-xs">
+<span class="font-bold text-[#09535a] block mb-0.5">Standard Operating Procedure (SOP-PMC-07):</span>
+<span class="text-slate-700">${inc.sop}</span>
+</div>
+<!-- Emergency Dispatch Crew Picker -->
+<div class="mt-4 flex items-center justify-between gap-3 pt-2">
+<button class="w-1/3 py-2.5 rounded-lg border border-slate-300 font-semibold text-xs text-slate-700 hover:bg-slate-100 transition" onclick="resolveIncident('${inc.id}')">
+        Mark Resolved
+      </button>
+<button class="w-2/3 py-2.5 rounded-lg bg-[#0e7c86] hover:bg-[#09535a] text-white font-bold text-xs shadow-md transition flex items-center justify-center space-x-2" onclick="dispatchCrew('${inc.id}')">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+<span>Dispatch Crew Unit PMC-04 Now</span>
+</button>
+</div>
+  `;
+}
+
+function switchFrame(frameSrc) {
+  const mainFrame = document.getElementById("main-inspector-frame");
+  if (mainFrame) mainFrame.src = frameSrc;
+}
+
+function resolveIncident(id) {
+  alert(`Incident ${id} marked as resolved. Success toast dispatched to PMC operations logger.`);
+}
+
+function dispatchCrew(id) {
+  alert(`Emergency Response Crew Unit PMC-04 successfully dispatched to ${id}. Incident status updated to 'In Field'.`);
+}
+
+// Initial bootstrap on load
+document.addEventListener("DOMContentLoaded", () =&gt; {
+  renderIncidentList();
+  renderDetailPanel();
+});
+```
+
+---
+
+## 4. Python Streamlit View Adapter (`app/ui/views/priority_queue.py`)
+
+Here is the exact Python wrapper to replace your existing file in `app/ui/views/priority_queue.py`:
+
+```python
+import streamlit as st
+import streamlit.components.v1 as components
+import json
+
+def render_priority_queue():
+    """
+    Renders the FloodGuard Priority Queue using the standalone interactive template.
+    Seamlessly synchronizes with Streamlit session state and backend APIs.
+    """
+    st.set_page_config(page_title="FloodGuard - Priority Queue", layout="wide")
+
+    # Read the standalone export HTML &amp; JS files
+    try:
+        with open("app/templates/priority_queue.html", "r", encoding="utf-8") as f:
+            template_html = f.read()
+    except FileNotFoundError:
+        # Fallback inline loader
+        st.warning("Template file not found at app/templates/priority_queue.html. Please verify file paths.")
+        return
+
+    # Render inside Streamlit iframe with full viewport height
+    components.html(template_html, height=1100, scrolling=True)
+
+if __name__ == "__main__":
+    render_priority_queue()
+```
+
+---
+
+## 5. FastAPI / Flask Backend REST Controller (`app/api/incidents.py`)
+
+To serve live data directly to the frontend client:
+
+```python
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+
+app = FastAPI(title="FloodGuard CivicEye Backend")
+
+class CrewDispatch(BaseModel):
+    incident_id: str
+    crew_unit: str
+    notes: Optional[str] = None
+
+@app.get("/api/v1/incidents")
+def get_incidents():
+    """Returns real-time queue incidents parsed from IoT nodes and Gemini Vision stream."""
+    return [
+        {
+            "id": "#INC-8821",
+            "cam_id": "CAM-1042",
+            "location": "Mutha River Underpass Culvert #4 (Shivajinagar)",
+            "severity": 5,
+            "risk_score": 94,
+            "garbage_area": "74.2%",
+            "water_level": "1.92m (+0.8m/hr)",
+            "status": "OPEN",
+        }
+    ]
+
+@app.post("/api/v1/dispatch")
+def dispatch_crew(payload: CrewDispatch):
+    """Dispatches PMC quick response unit and updates incident status."""
+    return {
+        "status": "DISPATCHED",
+        "incident_id": payload.incident_id,
+        "crew_unit": payload.crew_unit,
+        "eta": "12 mins"
+    }
+```
+
+})();
+
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_15 -->
+</body>
+</html>

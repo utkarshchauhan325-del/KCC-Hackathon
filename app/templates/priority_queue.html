@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% set active_page = "priority_queue" %}
+
+{% block title %}Priority Queue - FloodGuard CivicEye Operations{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Header & Action Buttons -->
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center space-x-2 font-mono text-xs text-slate-500 uppercase tracking-wider">
+        <span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span>
+        <span>OPERATIONS // INCIDENT DESK • PMC MONSOON SURVEILLANCE v4.2</span>
+      </div>
+      <h1 class="text-2xl md:text-3xl font-extrabold text-[#0f1b2d] tracking-tight mt-1 font-display">Priority Queue</h1>
+      <p class="text-sm text-slate-500">Real-time AI drainage blockage detection, vision telemetry, and rapid emergency field crew dispatch.</p>
+    </div>
+    <div class="flex items-center space-x-3">
+      <button class="px-4 py-2 bg-white border border-[#e1e6ee] text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-sm transition" id="btn-export-log">
+        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        <span>Export Log</span>
+      </button>
+      <button class="px-4 py-2 bg-[#0e7c86] hover:bg-[#09535a] text-white rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-sm transition" id="btn-upload-video" onclick="window.open('http://localhost:8501', '_blank')">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <span>Upload Video / Feed</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Strip (4 Compact Cards with Coloured Left Border) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Open Incidents -->
+    <div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-red-500 p-4 shadow-sm hover:shadow-md transition">
+      <div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+        <span>OPEN INCIDENTS</span>
+        <span class="w-6 h-6 rounded-md bg-red-50 text-red-600 flex items-center justify-center font-bold">!</span>
+      </div>
+      <div class="mt-2 flex items-baseline space-x-2">
+        <span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-open-count">14</span>
+        <span class="text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full" id="kpi-critical-sub">8 Critical</span>
+      </div>
+      <div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+        <span>Pune Municipal Area</span>
+        <span class="text-red-600 font-medium">Sev 5: Mutha #4</span>
+      </div>
+    </div>
+
+    <!-- Key Frames Analyzed -->
+    <div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-teal-500 p-4 shadow-sm hover:shadow-md transition">
+      <div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+        <span>KEY FRAMES ANALYZED</span>
+        <span class="w-6 h-6 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center font-bold">AI</span>
+      </div>
+      <div class="mt-2 flex items-baseline space-x-2">
+        <span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-fps-count">1,280</span>
+        <span class="text-xs text-slate-500 font-mono">fps/hr</span>
+      </div>
+      <div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+        <span>Gemini 1.5 Pro Vision</span>
+        <span class="text-teal-600 font-medium">99.4% Acc</span>
+      </div>
+    </div>
+
+    <!-- Pending Violations -->
+    <div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-amber-500 p-4 shadow-sm hover:shadow-md transition">
+      <div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+        <span>PENDING VIOLATIONS</span>
+        <span class="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center font-bold">§</span>
+      </div>
+      <div class="mt-2 flex items-baseline space-x-2">
+        <span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-violations-count">7</span>
+        <span class="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">Culvert zones</span>
+      </div>
+      <div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+        <span>Illegal Solid Waste</span>
+        <span class="text-amber-700 font-medium">Fine Notice Ready</span>
+      </div>
+    </div>
+
+    <!-- Field Crews Active -->
+    <div class="bg-white rounded-xl border border-[#e1e6ee] border-l-4 border-l-emerald-500 p-4 shadow-sm hover:shadow-md transition">
+      <div class="flex items-center justify-between text-xs text-slate-500 uppercase font-mono font-bold">
+        <span>FIELD CREWS ACTIVE</span>
+        <span class="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">✓</span>
+      </div>
+      <div class="mt-2 flex items-baseline space-x-2">
+        <span class="text-3xl font-extrabold text-slate-900 font-mono" id="kpi-crews-count">12</span>
+        <span class="text-xs text-slate-500 font-mono">/ 16 units</span>
+        <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">75%</span>
+      </div>
+      <div class="mt-2 text-xs text-slate-400 flex justify-between items-center">
+        <span>Emergency Jetting Units</span>
+        <span class="text-emerald-700 font-medium">18m avg ETA</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Tab Toolbar -->
+  <div class="bg-white rounded-xl border border-[#e1e6ee] p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+    <div class="flex items-center space-x-2 overflow-x-auto pb-1 md:pb-0" id="filter-tabs">
+      <button class="queue-tab-btn active px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0e7c86] text-white flex items-center space-x-1.5" data-filter="open">
+        <span>Open Incidents</span>
+        <span class="bg-white/20 text-white px-1.5 py-0.5 rounded font-mono text-[10px]" id="tab-open-badge">14</span>
+      </button>
+      <button class="queue-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-1.5" data-filter="violations">
+        <span>Violations to Review</span>
+        <span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[10px]" id="tab-violations-badge">7</span>
+      </button>
+      <button class="queue-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition flex items-center space-x-1.5" data-filter="crews">
+        <span>Crews in Field</span>
+        <span class="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-mono text-[10px]" id="tab-crews-badge">12</span>
+      </button>
+      <button class="queue-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-filter="resolved">
+        <span>Resolved Log</span>
+      </button>
+    </div>
+
+    <!-- Filters & Search -->
+    <div class="flex items-center space-x-2 text-xs">
+      <div class="relative w-full md:w-64">
+        <input type="text" id="incident-search" placeholder="Search Camera, Drain Node..." class="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#0e7c86] focus:outline-none">
+        <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      </div>
+      <select id="filter-zone" class="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none">
+        <option value="all">All Zones</option>
+        <option value="Sinhagad">Sinhagad Road (Zone 04)</option>
+        <option value="Shivajinagar">Shivajinagar (Zone 01)</option>
+        <option value="Hadapsar">Hadapsar (Zone 03)</option>
+        <option value="Swargate">Swargate (Zone 02)</option>
+      </select>
+      <button id="btn-sort-risk" class="px-2.5 py-1.5 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-200 transition flex items-center space-x-1">
+        <span>Sort: Risk</span>
+        <span id="sort-indicator">↓</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Master-Detail 2-Column Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <!-- Left Column: Incident List (5 cols) -->
+    <div class="lg:col-span-5 space-y-3" id="incident-list-container">
+      <!-- Dynamic Incident Cards populated by priority_queue.js -->
+    </div>
+
+    <!-- Right Column: Sticky Detail Inspection Panel (7 cols) -->
+    <div class="lg:col-span-7 bg-white rounded-xl border border-[#e1e6ee] p-5 shadow-sm sticky top-20" id="detail-panel-container">
+      <!-- Detailed inspection panel populated by priority_queue.js -->
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/api_client.js"></script>
+<script src="/static/js/priority_queue.js"></script>
+{% endblock %}

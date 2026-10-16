@@ -952,10 +952,17 @@ def render_priority_queue_and_interventions():
     # -------------------------------------------------------------
     st.markdown(
         """
-        <div class="fg-pq-title-group">
-            <div class="fg-eyebrow">OPERATIONS</div>
-            <h1>Priority queue</h1>
-            <p>Every hazard the LLM model finds in CCTV video lands here with its key frame. Review, dispatch workers, and verify site clearance.</p>
+        <div class="fg-pq-title-group" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+            <div>
+                <div class="fg-eyebrow">OPERATIONS</div>
+                <h1 style="margin:0;">Priority queue</h1>
+                <p style="margin:4px 0 0 0;">Every hazard the LLM model finds in CCTV video lands here with its key frame. Review, dispatch workers, and verify site clearance.</p>
+            </div>
+            <div>
+                <a href="http://localhost:8000/priority-queue" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:linear-gradient(135deg, #0e7c86, #14b8a6); color:#ffffff; font-weight:600; text-decoration:none; border-radius:8px; box-shadow:0 4px 12px rgba(14,124,134,0.3); font-size:13px;">
+                    ⚡ Open Stitch Web App (Port 8000) &rarr;
+                </a>
+            </div>
         </div>
         """,
         unsafe_allow_html=True,

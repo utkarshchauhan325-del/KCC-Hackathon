@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}FloodGuard - CivicEye PMC Operations{% endblock %}</title>
+  
+  <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+            display: ['"Space Grotesk"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              teal: '#0e7c86',
+              'teal-dark': '#09535a',
+              'teal-light': '#e6f4f5',
+              navy: '#0b132b',
+              surface: '#f3f5f9',
+              border: '#e1e6ee',
+              ink: '#0f1b2d',
+              sev5: '#b71c1c',
+              'sev5-bg': '#fdecec',
+              sev4: '#9a4a00',
+              'sev4-bg': '#fff1dc',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f3f5f9;
+      color: #0f1b2d;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .font-display {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+  <!-- Top Global Operations Navigation Bar -->
+  <header class="bg-[#0b132b] text-white px-6 py-3 border-b border-slate-800 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center space-x-8">
+      <div class="flex items-center space-x-3">
+        <div class="w-8 h-8 rounded-lg bg-[#0e7c86] flex items-center justify-center font-black text-white text-base tracking-wider shadow-inner">
+          FG
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-extrabold tracking-tight text-white text-lg">FloodGuard</span>
+            <span class="text-[10px] font-mono uppercase bg-[#0e7c86]/30 text-[#4fd1c5] px-1.5 py-0.5 rounded border border-[#0e7c86]/50">Ops Center</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-mono tracking-wider">CIVICEYE PMC OPERATIONS</p>
+        </div>
+      </div>
+      
+      <!-- Navigation Tabs -->
+      <nav class="hidden md:flex items-center space-x-1 font-medium text-sm">
+        <a href="/priority-queue" class="px-3.5 py-1.5 rounded-md transition-all flex items-center space-x-2 {% if active_page == 'priority_queue' %}bg-[#0e7c86] text-white font-semibold{% else %}text-slate-300 hover:text-white hover:bg-slate-800/60{% endif %}">
+          <span>Priority Queue</span>
+          <span id="nav-open-count" class="bg-red-500 text-white text-[11px] font-mono px-1.5 py-0.2 rounded-full font-bold animate-pulse">0</span>
+        </a>
+        <a href="/gis-map" class="px-3.5 py-1.5 rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 {% if active_page == 'gis_map' %}bg-[#0e7c86] text-white font-semibold{% endif %}">
+          Live GIS Map
+        </a>
+        <a href="/drain-telemetry" class="px-3.5 py-1.5 rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 {% if active_page == 'telemetry' %}bg-[#0e7c86] text-white font-semibold{% endif %}">
+          Drain & Sensor Telemetry
+        </a>
+        <a href="/civic-intel" class="px-3.5 py-1.5 rounded-md transition-all text-slate-300 hover:text-white hover:bg-slate-800/60 {% if active_page == 'civic_intel' %}bg-[#0e7c86] text-white font-semibold{% endif %}">
+          Civic Intel (TinyFish)
+        </a>
+        <a href="http://localhost:8501" target="_blank" class="px-3.5 py-1.5 rounded-md transition-all text-teal-400 hover:text-teal-300 hover:bg-slate-800/60 flex items-center space-x-1">
+          <span>Streamlit Dashboard</span>
+          <span class="text-xs">↗</span>
+        </a>
+      </nav>
+    </div>
+    
+    <!-- Right Live Health & Officer Profile -->
+    <div class="flex items-center space-x-6 text-xs">
+      <div class="hidden lg:flex items-center space-x-2 font-mono bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-700">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <span class="text-emerald-400 font-bold">1,000 CAMERAS & SENSORS ONLINE</span>
+      </div>
+      
+      <div class="flex items-center space-x-3 border-l border-slate-700 pl-4">
+        <div class="text-right">
+          <p class="text-white font-semibold leading-tight">PMC Operations</p>
+          <div class="flex items-center space-x-1 justify-end font-mono text-[10px] text-slate-400">
+            <span>CHIEF OPS ENGINEER</span>
+            <span class="bg-teal-500/20 text-teal-300 px-1 rounded">PMC</span>
+          </div>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-slate-700 border border-slate-500 flex items-center justify-center font-bold text-xs text-white">
+          PO
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page Content Container -->
+  <main class="flex-1 w-full max-w-[1680px] mx-auto p-4 md:p-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Persistent Compliance Footer -->
+  <footer class="bg-[#0b132b] text-slate-400 text-xs px-6 py-3 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between">
+    <div class="flex items-center space-x-2 font-medium">
+      <span class="text-white font-bold">PMC CivicEye System</span>
+      <span class="text-slate-600">|</span>
+      <span>Dispatched under Pune Disaster Management Authority</span>
+    </div>
+    <div class="mt-2 md:mt-0 font-mono text-[11px]">
+      © 2026 Pune Municipal Corporation (PMC). Precision Civic Hydro-Telemetry Core.
+    </div>
+  </footer>
+
+  <script src="/static/js/api_client.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
