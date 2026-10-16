@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import streamlit as st
+import streamlit.components.v1 as components
+import urllib.request
 from sqlalchemy.orm import joinedload
 
 from app.config import settings
@@ -948,25 +950,66 @@ def render_priority_queue_and_interventions():
     crit_count = sum(1 for i in incidents if i["severity"] >= 5)
 
     # -------------------------------------------------------------
-    # Page Header matching docs/queue_design.png
+    # Page Header & View Toggle
     # -------------------------------------------------------------
-    st.markdown(
-        """
-        <div class="fg-pq-title-group" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
-            <div>
+    header_cols = st.columns([3, 1.4], vertical_alignment="center")
+    with header_cols[0]:
+        st.markdown(
+            """
+            <div class="fg-pq-title-group">
                 <div class="fg-eyebrow">OPERATIONS</div>
                 <h1 style="margin:0;">Priority queue</h1>
                 <p style="margin:4px 0 0 0;">Every hazard the LLM model finds in CCTV video lands here with its key frame. Review, dispatch workers, and verify site clearance.</p>
             </div>
-            <div>
-                <a href="http://localhost:8000/priority-queue" target="_blank" style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; background:linear-gradient(135deg, #0e7c86, #14b8a6); color:#ffffff; font-weight:600; text-decoration:none; border-radius:8px; box-shadow:0 4px 12px rgba(14,124,134,0.3); font-size:13px;">
-                    ⚡ Open Stitch Web App (Port 8000) &rarr;
-                </a>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
+    with header_cols[1]:
+        view_mode = st.radio(
+            "Interface Mode",
+            ["Stitch Console", "Native Streamlit"],
+            horizontal=True,
+            index=0,
+            key="pq_interface_mode",
+            help="Toggle between the Stitch operations console and the classic Streamlit layout"
+        )
+
+    # -------------------------------------------------------------
+    # Embedded Stitch Console View
+    # -------------------------------------------------------------
+    if view_mode == "Stitch Console":
+        server_live = False
+        try:
+            with urllib.request.urlopen("http://localhost:8000/api/v1/stats", timeout=0.8) as resp:
+                if resp.status == 200:
+                    server_live = True
+        except Exception:
+            server_live = False
+
+        if server_live:
+            st.markdown(
+                """
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding:8px 14px; background:rgba(14,124,134,0.12); border:1px solid #0e7c86; border-radius:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#10b981; box-shadow:0 0 8px #10b981;"></span>
+                        <span style="font-size:13px; color:#14b8a6; font-weight:600;">Stitch Full-Screen Operations Console Connected</span>
+                        <span style="font-size:12px; color:#94a3b8;">(Port 8000 &bull; Real SQLite DB &bull; YOLOE Evidence)</span>
+                    </div>
+                    <a href="http://localhost:8000/priority-queue" target="_blank" style="display:inline-flex; align-items:center; gap:6px; color:#ffffff; font-size:12px; font-weight:600; text-decoration:none; background:#0e7c86; padding:5px 12px; border-radius:6px; box-shadow:0 2px 8px rgba(14,124,134,0.3);">
+                        Open in New Tab ↗
+                    </a>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            components.iframe("http://localhost:8000/priority-queue", height=950, scrolling=True)
+            return
+        else:
+            st.warning(
+                "⚠️ Stitch Operations Backend (Port 8000) is currently offline. "
+                "Run `./start.sh` or `.venv/bin/python -m uvicorn app.api.main:app --port 8000` to enable the Stitch console. "
+                "Showing Native Streamlit layout below in the meantime."
+            )
 
     # Toast feedback for actions
     toast_data = st.session_state.pop("deploy_success_data", None)
