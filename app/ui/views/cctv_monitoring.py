@@ -57,7 +57,7 @@ def _all_areas() -> List[Dict[str, Any]]:
     areas: List[Dict[str, Any]] = []
     by_id = {l["id"]: l for l in PUNE_LOCATIONS}
     for cam in ASSIGNED_CAMERAS:
-        loc = by_id.get(cam["location_id"], {})
+        loc = by_id.get(cam.get("location_id"), {})
         areas.append({
             "label": f"{cam['name']} ({cam['id']})",
             "name": loc.get("name", cam["name"]),
@@ -66,8 +66,11 @@ def _all_areas() -> List[Dict[str, Any]]:
             "lat": cam["lat"],
             "lng": cam["lng"],
             "drain_type": loc.get("drain_type", "Stormwater drain"),
-            "risk_level": _BAND_LEVEL.get(cam["risk_level"], "Medium"),
+            "risk_level": _BAND_LEVEL.get(cam.get("risk_level", "Medium"), "Medium"),
             "source": "Assigned camera",
+            "cam_id": cam["id"],
+            "location_id": cam.get("location_id", loc.get("id", "")),
+            "video": cam.get("video", ""),
         })
     for loc in sorted(PUNE_LOCATIONS, key=lambda l: (l["zone"], l["name"])):
         areas.append({
@@ -80,22 +83,86 @@ def _all_areas() -> List[Dict[str, Any]]:
             "drain_type": loc["drain_type"],
             "risk_level": loc["risk_level"],
             "source": "Monitored location",
-        })
-    for cam in CCTV_CAMERAS:
-        if cam in ASSIGNED_CAMERAS:
-            continue
-        areas.append({
-            "label": f"{cam['name']} ({cam['id']})",
-            "name": cam["name"],
-            "ward": f"{cam['zone']} corridor",
-            "zone": cam["zone"],
-            "lat": cam["lat"],
-            "lng": cam["lng"],
-            "drain_type": "Fixed CCTV view",
-            "risk_level": cam["risk_level"],
-            "source": "City camera",
+            "cam_id": loc.get("cctv_camera", ""),
+            "location_id": loc["id"],
+            "video": "",
         })
     return areas
+
+
+def _videos_for_area(area: Dict[str, Any], all_saved: List[Path]) -> List[Path]:
+    """Return only videos belonging to or associated with this specific location."""
+    import re
+    cam_video = area.get("video")
+    name_str = (area.get("name", "") + " " + area.get("ward", "") + " " + area.get("label", "")).lower()
+    clean_words = set(re.findall(r'[a-z0-9]{3,}', name_str))
+    for common_word in ("ward", "corridor", "zone", "camera", "road", "gate", "junction"):
+        clean_words.discard(common_word)
+
+    session_videos = st.session_state.get(f"tagged_videos_{area.get('label')}", set())
+
+    db = SessionLocal()
+    db_matched_filenames = set()
+    try:
+        lat, lng = area.get("lat"), area.get("lng")
+        if lat and lng:
+            lat_prefix = f"{lat:.2f}"
+            matching_jobs = db.query(Job.filename).filter(
+                Job.source_gps.like(f"%{lat_prefix}%")
+            ).all()
+            for row in matching_jobs:
+                if row[0]:
+                    db_matched_filenames.add(row[0])
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+    matched: List[Path] = []
+    for p in all_saved:
+        p_name = p.name
+        p_lower = p_name.lower()
+
+        if cam_video and p_name == cam_video:
+            matched.append(p)
+            continue
+
+        if p_name in session_videos:
+            matched.append(p)
+            continue
+
+        if p_name in db_matched_filenames:
+            matched.append(p)
+            continue
+
+        if ("surveillance" in p_lower or "urban" in p_lower) and "mg" in clean_words:
+            matched.append(p)
+            continue
+        if "traffic" in p_lower and ("fc" in clean_words or "ferguson" in clean_words or "shivajinagar" in clean_words):
+            matched.append(p)
+            continue
+        if ("ganga" in p_lower or "plastic" in p_lower) and ("deccan" in clean_words or "river" in clean_words or "outfall" in clean_words or "yerwada" in clean_words):
+            matched.append(p)
+            continue
+        if "chinch" in p_lower and ("kothrud" in clean_words or "chinch" in clean_words or "bridge" in clean_words):
+            matched.append(p)
+            continue
+        if p_lower == "a.mp4" and "swargate" in clean_words:
+            matched.append(p)
+            continue
+        if p_lower == "p.mp4" and "station" in clean_words:
+            matched.append(p)
+            continue
+        if p_lower == "gar.mp4" and ("bibvewadi" in clean_words or "market" in clean_words):
+            matched.append(p)
+            continue
+
+        p_words = set(re.findall(r'[a-z0-9]{3,}', p_lower))
+        if any(w in p_words for w in clean_words if len(w) >= 4):
+            matched.append(p)
+            continue
+
+    return matched
 
 
 def _video_info(path: Path) -> Dict[str, Any]:
@@ -157,47 +224,62 @@ def _render_camera_grid() -> None:
     locations = {l["id"]: l for l in get_weather_adjusted_locations()}
     db = SessionLocal()
     try:
-        cols = st.columns(len(ASSIGNED_CAMERAS), gap="medium")
-        for col, cam in zip(cols, ASSIGNED_CAMERAS):
-            loc = locations.get(cam["location_id"], {})
-            job = latest_job_for_video(db, cam.get("video", ""))
-            frames = job_key_frames(job) if job else []
-            with col:
-                level = _BAND_LEVEL.get(cam["risk_level"], "Medium")
-                st.markdown(
-                    f'<div class="fg-card" style="padding:14px 14px 4px 14px;margin-bottom:8px;">'
-                    f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
-                    f'<div style="min-width:0;"><div style="font-size:14px;font-weight:600;color:#0B1220;">{cam["name"]}</div>'
-                    f'<div class="fg-mono" style="font-size:11px;color:#64708A;">{cam["id"]} &middot; {loc.get("name", "")}</div></div>'
-                    f'{status_pill(level, cam["risk_level"])}</div></div>',
-                    unsafe_allow_html=True,
-                )
-                if frames:
-                    with st.container(key=f"fgframe_cam_{cam['id']}"):
-                        st.image(frames[0][0], use_container_width=True)
-                else:
+        chunk_size = 3
+        for i in range(0, len(ASSIGNED_CAMERAS), chunk_size):
+            cam_chunk = ASSIGNED_CAMERAS[i:i + chunk_size]
+            cols = st.columns(len(cam_chunk), gap="medium")
+            for col, cam in zip(cols, cam_chunk):
+                loc = locations.get(cam.get("location_id"), {})
+                job = latest_job_for_video(db, cam.get("video", ""))
+                if not job:
+                    lat_str = f"{cam['lat']:.2f}"
+                    job = (
+                        db.query(Job)
+                        .filter(Job.source_gps.like(f"%{lat_str}%"), Job.status == "completed")
+                        .order_by(Job.created_at.desc())
+                        .first()
+                    )
+                frames = job_key_frames(job) if job else []
+                with col:
+                    level = _BAND_LEVEL.get(cam.get("risk_level", "Medium"), "Medium")
                     st.markdown(
-                        f'<div class="fg-noframe">{icon("camera", 22)}<span>No analysed video yet</span>'
-                        f'<span class="fg-mono" style="font-size:10.5px;">{cam["lat"]}, {cam["lng"]}</span></div>',
+                        f'<div class="fg-card" style="padding:14px 14px 4px 14px;margin-bottom:8px;">'
+                        f'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">'
+                        f'<div style="min-width:0;"><div style="font-size:14px;font-weight:600;color:#0B1220;">{cam["name"]}</div>'
+                        f'<div class="fg-mono" style="font-size:11px;color:#64708A;">{cam["id"]} &middot; {loc.get("name", "")}</div></div>'
+                        f'{status_pill(level, cam.get("risk_level", "Medium"))}</div></div>',
                         unsafe_allow_html=True,
                     )
-                drainage = "Not assessed" if cam["drainage_score"] is None else f"{cam['drainage_score']}/100"
-                outlook = loc.get("overflow_outlook", "n/a")
-                st.markdown(
-                    f'<div class="fg-card" style="padding:12px 14px;margin-top:8px;">'
-                    f'{_score_tile_inner("Composite risk", cam["composite_score"], cam["risk_level"])}'
-                    f'<div class="fg-kv" style="margin-top:12px;grid-template-columns:1fr 1fr;">'
-                    f'<div><span class="fg-k">Drainage</span><span class="fg-v mono">{drainage}</span></div>'
-                    f'<div><span class="fg-k">Garbage</span><span class="fg-v mono">{cam["garbage_score"]}/100</span></div>'
-                    f'<div><span class="fg-k">Garbage cover</span><span class="fg-v mono">{cam["garbage_coverage_pct"]}%</span></div>'
-                    f'<div><span class="fg-k">Drain blockage</span><span class="fg-v mono">{cam["blockage_index"]}%</span></div>'
-                    f'<div><span class="fg-k">Dumping violations</span><span class="fg-v mono">{cam["violations"]}</span></div>'
-                    f'<div><span class="fg-k">Overflow (24 h)</span><span class="fg-v" style="font-size:12px;">{outlook}</span></div>'
-                    f'</div>'
-                    f'<div style="font-size:12px;color:#334155;margin-top:10px;padding-top:8px;border-top:1px solid #F1F5F9;">'
-                    f'<span class="fg-k">Last finding</span><br>{cam["ai_status"]}</div></div>',
-                    unsafe_allow_html=True,
-                )
+                    if frames:
+                        with st.container(key=f"fgframe_cam_{cam['id']}"):
+                            st.image(frames[0][0], use_container_width=True)
+                    else:
+                        st.markdown(
+                            f'<div class="fg-noframe">{icon("camera", 22)}<span>No analysed video yet</span>'
+                            f'<span class="fg-mono" style="font-size:10.5px;">{cam["lat"]}, {cam["lng"]}</span></div>',
+                            unsafe_allow_html=True,
+                        )
+                    drainage = "Not assessed" if cam.get("drainage_score") is None else f"{cam['drainage_score']}/100"
+                    garbage_score = cam.get("garbage_score", 0)
+                    garbage_pct = cam.get("garbage_coverage_pct", 0)
+                    blockage = cam.get("blockage_index", 0)
+                    violations = cam.get("violations", 0)
+                    outlook = loc.get("overflow_outlook", "n/a")
+                    st.markdown(
+                        f'<div class="fg-card" style="padding:12px 14px;margin-top:8px;">'
+                        f'{_score_tile_inner("Composite risk", cam.get("composite_score", 50), cam.get("risk_level", "Medium"))}'
+                        f'<div class="fg-kv" style="margin-top:12px;grid-template-columns:1fr 1fr;">'
+                        f'<div><span class="fg-k">Drainage</span><span class="fg-v mono">{drainage}</span></div>'
+                        f'<div><span class="fg-k">Garbage</span><span class="fg-v mono">{garbage_score}/100</span></div>'
+                        f'<div><span class="fg-k">Garbage cover</span><span class="fg-v mono">{garbage_pct}%</span></div>'
+                        f'<div><span class="fg-k">Drain blockage</span><span class="fg-v mono">{blockage}%</span></div>'
+                        f'<div><span class="fg-k">Dumping violations</span><span class="fg-v mono">{violations}</span></div>'
+                        f'<div><span class="fg-k">Overflow (24 h)</span><span class="fg-v" style="font-size:12px;">{outlook}</span></div>'
+                        f'</div>'
+                        f'<div style="font-size:12px;color:#334155;margin-top:10px;padding-top:8px;border-top:1px solid #F1F5F9;">'
+                        f'<span class="fg-k">Last finding</span><br>{cam.get("ai_status", "Active Monitoring")}</div></div>',
+                        unsafe_allow_html=True,
+                    )
     finally:
         db.close()
 
@@ -206,36 +288,87 @@ def _render_upload() -> None:
     areas = _all_areas()
     zones = ["All zones"] + sorted({a["zone"] for a in areas})
 
+    # Top Location Selection: Select Location FIRST so everything below is scoped to it
+    st.markdown(section_title("1. Select Monitoring Location / Camera"), unsafe_allow_html=True)
+    loc_col1, loc_col2, loc_col3 = st.columns([1, 2.2, 1.2], vertical_alignment="bottom")
+    zone = loc_col1.selectbox("Zone", zones, key="cctv_zone_filter")
+    options = [a for a in areas if zone == "All zones" or a["zone"] == zone]
+
+    area = loc_col2.selectbox(
+        f"Camera or Area ({len(options)})",
+        options,
+        index=0,
+        format_func=lambda a: a["label"],
+        key="cctv_selected_area",
+    )
+    gps = loc_col3.text_input("Camera GPS", value=f"{area['lat']:.4f}, {area['lng']:.4f}", key=f"gps_{area['label']}")
+
+    # Collect saved videos
+    all_saved = sorted(
+        (p for p in settings.UPLOADS_DIR.iterdir() if p.suffix.lower().lstrip(".") in VIDEO_TYPES),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    # Filter to ONLY videos belonging to this specific location
+    place_videos = _videos_for_area(area, all_saved)
+
+    st.markdown(section_title("2. CCTV Footage & AI Analysis"), unsafe_allow_html=True)
     col_details, col_video = st.columns([1, 1.25], gap="large")
 
-    # Right: drag and drop + preview
+    # Right: Footage selection / upload scoped specifically to this place
     with col_video:
-        st.markdown(section_title("Footage"), unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+            f'<span style="font-size:13.5px;font-weight:600;color:#0B1220;">Footage for {escape(area["name"])}</span>'
+            f'<span style="font-size:11px;color:#0e7c86;font-weight:600;">{len(place_videos)} clip(s) available</span></div>',
+            unsafe_allow_html=True
+        )
         uploaded = st.file_uploader(
-            "Video file",
+            f"Upload footage for {area['name']}",
             type=VIDEO_TYPES,
-            help="MP4, MOV, WEBM, M4V, AVI, MKV, MPEG, 3GP, WMV, FLV or TS, up to "
-                 f"{settings.MAX_UPLOAD_SIZE_MB} MB.",
+            help=f"Upload MP4/MOV CCTV video to be analyzed specifically for {area['name']}.",
             label_visibility="collapsed",
+            key=f"uploader_{area['label']}",
         )
-        saved = sorted(
-            (p for p in settings.UPLOADS_DIR.iterdir() if p.suffix.lower().lstrip(".") in VIDEO_TYPES),
-            key=lambda p: p.stat().st_mtime,
-            reverse=True,
-        )
+
         target: Optional[Path] = None
         if uploaded:
             target = settings.UPLOADS_DIR / Path(uploaded.name.replace(" ", "_")).name
             if not target.exists() or target.stat().st_size != uploaded.size:
                 target.write_bytes(uploaded.getbuffer())
-        elif saved:
-            pick = st.selectbox("Or choose an uploaded video", [p.name for p in saved])
-            target = settings.UPLOADS_DIR / pick
+            st.session_state.setdefault(f"tagged_videos_{area['label']}", set()).add(target.name)
+            if target not in place_videos:
+                place_videos.insert(0, target)
+        elif place_videos:
+            pick = st.selectbox(
+                f"Recorded CCTV footage for {area['name']}",
+                place_videos,
+                format_func=lambda p: p.name,
+                key=f"pick_video_{area['label']}",
+            )
+            target = pick
+        else:
+            show_all = st.checkbox(
+                f"No footage on file for {area['name']}. Show all videos to cross-assign?",
+                value=False,
+                key=f"show_all_{area['label']}",
+            )
+            if show_all and all_saved:
+                pick = st.selectbox(
+                    "Choose an existing video to assign to this location",
+                    all_saved,
+                    format_func=lambda p: p.name,
+                    key=f"pick_all_{area['label']}",
+                )
+                target = pick
+            else:
+                target = None
 
         if target and target.is_file():
             size_mb = target.stat().st_size / (1024 * 1024)
             if target.suffix.lower() in BROWSER_PLAYABLE:
-                _video_panel(target, target.name, f"{size_mb:.1f} MB", "preview")
+                _video_panel(target, target.name, f"{area['name']} · {size_mb:.1f} MB", f"preview_{area['label']}")
             else:
                 st.markdown(
                     f'<div class="fg-dropzone-empty">{icon("camera", 28)}<b style="color:#334155;">{escape(target.name)}</b>'
@@ -245,29 +378,13 @@ def _render_upload() -> None:
                 )
         else:
             st.markdown(
-                f'<div class="fg-dropzone-empty">{icon("camera", 30)}<b style="color:#334155;">No footage selected</b>'
-                f'<span style="font-size:12px;">Drop a video above to preview it here.</span></div>',
+                f'<div class="fg-dropzone-empty">{icon("camera", 30)}<b style="color:#334155;">No footage recorded for {escape(area["name"])}</b>'
+                f'<span style="font-size:12px;">Drop or upload a video above to analyze and link CCTV footage for this specific location.</span></div>',
                 unsafe_allow_html=True,
             )
 
-    # Left: where the video is from, what it is, what will run
+    # Left: Location metadata and Run Analysis button
     with col_details:
-        st.markdown(section_title("Video details"), unsafe_allow_html=True)
-        z_col, a_col = st.columns([1, 2.2])
-        zone = z_col.selectbox("Zone", zones)
-        options = [a for a in areas if zone == "All zones" or a["zone"] == zone]
-        # A camera's own footage defaults to that camera
-        own_cam = next((c for c in ASSIGNED_CAMERAS if target and c.get("video") == target.name), None)
-        default = next((i for i, a in enumerate(options) if own_cam and a["label"].endswith(f"({own_cam['id']})")), 0)
-        area = a_col.selectbox(
-            f"Camera or area ({len(options)})",
-            options,
-            index=default,
-            format_func=lambda a: a["label"],
-            key=f"area_{zone}_{target.name if target else ''}",
-        )
-        gps = st.text_input("Camera GPS", value=f"{area['lat']:.4f}, {area['lng']:.4f}", key=f"gps_{area['label']}")
-
         info = _video_info(target) if target and target.is_file() else {}
         fps_note = f" @ {info['fps']:.0f} fps" if info.get("fps") else ""
         file_rows = '<div><span class="fg-k">File</span><span class="fg-v">None selected</span></div>'
@@ -279,22 +396,23 @@ def _render_upload() -> None:
                 f'<div><span class="fg-k">Resolution</span><span class="fg-v mono">{info.get("width", "?")} x {info.get("height", "?")}'
                 f'{fps_note}</span></div>'
             )
+
+        status_text = f"{len(place_videos)} clip(s) on file" if place_videos else "No clips recorded"
         st.markdown(
             f'<div class="fg-card" style="padding:14px 16px;">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px;">'
             f'<span style="font-size:14px;font-weight:600;color:#0B1220;">{escape(area["name"])}</span>{status_pill(area["risk_level"])}</div>'
             f'<div style="font-size:12px;color:#64708A;margin-bottom:10px;">{escape(area["ward"])} &middot; {area["zone"]} zone &middot; '
-            f'{escape(area["drain_type"])} &middot; {area["source"]}</div>'
+            f'{escape(area["drain_type"])} &middot; <b>{status_text}</b></div>'
             f'<div class="fg-kv" style="grid-template-columns:1fr 1fr;">{file_rows}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
-
         run_pass_b = True
 
         if st.button("Run analysis", type="primary", use_container_width=True, disabled=target is None):
-            with st.spinner("Uploading video..."):
+            with st.spinner("Processing CCTV inspection..."):
                 try:
                     result = CivicEyePipeline().process_video(
                         video_path=target,
@@ -302,7 +420,8 @@ def _render_upload() -> None:
                         run_pass_b=run_pass_b,
                     )
                     st.session_state["active_job_id"] = result["job_id"]
-                    st.toast("Analysis complete. Key frames were added to the priority queue.")
+                    st.session_state.setdefault(f"tagged_videos_{area['label']}", set()).add(target.name)
+                    st.toast(f"Analysis complete for {area['name']}. Key frames added to priority queue.")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Video analysis failed: {e}")
@@ -429,10 +548,34 @@ def render_job_results():
             return
 
         st.markdown("<hr class='fg-rule'>", unsafe_allow_html=True)
-        head, pick = st.columns([1.3, 1], vertical_alignment="bottom")
-        head.markdown(section_title("Results"), unsafe_allow_html=True)
+        selected_area = st.session_state.get("cctv_selected_area")
+        head, filter_col, pick = st.columns([1.2, 0.9, 1.3], vertical_alignment="bottom")
+        head.markdown(section_title("Results & Keyframes"), unsafe_allow_html=True)
+
+        area_filter = False
+        if selected_area:
+            area_filter = filter_col.checkbox(
+                f"Filter: {selected_area['name']}",
+                value=False,
+                key=f"chk_res_filter_{selected_area['label']}",
+            )
+
+        if area_filter and selected_area:
+            target_loc_id = selected_area.get("location_id") or selected_area.get("id")
+            target_name = selected_area.get("name", "").lower()
+            matching_jobs = [
+                j for j in jobs
+                if location_for_job(j.filename, j.source_gps).get("id") == target_loc_id
+                or target_name in location_for_job(j.filename, j.source_gps).get("name", "").lower()
+            ]
+            display_jobs = matching_jobs if matching_jobs else jobs
+            if not matching_jobs:
+                st.caption(f"No completed jobs specifically tagged for {selected_area['name']}. Showing all recent jobs.")
+        else:
+            display_jobs = jobs
+
         active = st.session_state.get("active_job_id")
-        by_id = {j.id: j for j in jobs}
+        by_id = {j.id: j for j in display_jobs}
         ids = list(by_id)
         job_id = pick.selectbox(
             "Analysed video",
